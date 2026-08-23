@@ -5,11 +5,16 @@ import Footer from '../components/Footer'
 
 function TermsPage() {
   const [terms, setTerms] = useState(null)
+  const [banners, setBanners] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE}/api/terms`)
       .then(r => r.json())
       .then(setTerms)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
       .catch(() => {})
   }, [])
 
@@ -18,7 +23,7 @@ function TermsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85" alt="Terms and Conditions" />
+          <img src={banners.terms_banner || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85'} alt="Terms and Conditions" />
           <div className="terms-hero-overlay">
             <span>LEGAL</span>
             <h1>Terms &amp; Conditions</h1>

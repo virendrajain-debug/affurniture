@@ -29,11 +29,16 @@ const defaultShowrooms = [
 
 function ShowroomsPage() {
   const [data, setData] = useState(null)
+  const [banners, setBanners] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE}/api/showrooms`)
       .then(r => r.json())
       .then(setData)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
       .catch(() => {})
   }, [])
 
@@ -42,7 +47,7 @@ function ShowroomsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=2000&q=85" alt="Our Showrooms" />
+          <img src={banners.showrooms_banner || 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=2000&q=85'} alt="Our Showrooms" />
           <div className="terms-hero-overlay">
             <span>OUR LOCATIONS</span>
             <h1>Our Showrooms</h1>

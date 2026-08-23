@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { API_BASE } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -30,13 +32,22 @@ const moreProducts = [
 ]
 
 function WinzPage() {
+  const [banners, setBanners] = useState({})
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
+      .catch(() => {})
+  }, [])
+
   return (
     <>
       <Header />
       <main>
         <section className="winz-hero">
           <div className="winz-hero-img">
-            <img src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=85" alt="Modern home interior" />
+            <img src={banners.winz_banner || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1600&q=85'} alt="Modern home interior" />
           </div>
           <div className="winz-hero-copy">
             <span>AF FURNISHINGS</span>

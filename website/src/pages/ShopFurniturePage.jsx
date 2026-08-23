@@ -5,11 +5,16 @@ import Footer from '../components/Footer'
 
 function ShopFurniturePage() {
   const [data, setData] = useState(null)
+  const [banners, setBanners] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE}/api/shop-furniture`)
       .then(r => r.json())
       .then(setData)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
       .catch(() => {})
   }, [])
 
@@ -18,7 +23,7 @@ function ShopFurniturePage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85" alt="Shop Furniture" />
+          <img src={banners.shop_furniture_banner || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85'} alt="Shop Furniture" />
           <div className="terms-hero-overlay">
             <span>OUR COLLECTION</span>
             <h1>Shop Furniture</h1>

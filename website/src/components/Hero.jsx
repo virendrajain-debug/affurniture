@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { API_BASE } from '../config'
 
-const slides = [
+const defaultSlides = [
   {
     image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85',
     alt: 'Modern green sofa in a living room',
@@ -26,6 +27,16 @@ const slides = [
 
 function Hero() {
   const [current, setCurrent] = useState(0)
+  const [banners, setBanners] = useState({})
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
+      .catch(() => {})
+  }, [])
+
+  const slides = defaultSlides.map((s, i) => i === 0 && banners.home_hero_banner ? { ...s, image: banners.home_hero_banner } : s)
 
   useEffect(() => {
     const timer = setInterval(() => {

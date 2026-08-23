@@ -97,6 +97,12 @@ function Sidebar({ isOpen, onClose, profileImage, onLogout }) {
             <NavLink to="/dashboard/returns" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Returns</NavLink>
           </div>}
 
+          {/* Banners */}
+          <NavLink to="/dashboard/banners" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+            <Icon path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <span>Page Banners</span>
+          </NavLink>
+
           {/* Discount & Promotion */}
           <div className={`sidebar-link ${open === 'disc' ? 'active' : ''}`} onClick={() => toggle('disc')} style={{ cursor: 'pointer', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

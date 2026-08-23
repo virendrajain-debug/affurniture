@@ -34,6 +34,7 @@ import Showrooms from './Showrooms'
 import DeliveryInfo from './DeliveryInfo'
 import ShopFurniture from './ShopFurniture'
 import Returns from './Returns'
+import Banners from './Banners'
 
 function Dashboard({ onLogout, token }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -87,6 +88,9 @@ function Dashboard({ onLogout, token }) {
             <Route path="delivery-info" element={<DeliveryInfo token={token} />} />
             <Route path="shop-furniture" element={<ShopFurniture token={token} />} />
             <Route path="returns" element={<Returns token={token} />} />
+            
+            {/* Banners */}
+            <Route path="banners" element={<Banners token={token} />} />
             
             {/* Discount & Promo */}
             <Route path="discount-list" element={<DiscountList token={token} />} />

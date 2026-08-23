@@ -5,11 +5,16 @@ import Footer from '../components/Footer'
 
 function AboutPage() {
   const [about, setAbout] = useState(null)
+  const [banners, setBanners] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE}/api/about`)
       .then(r => r.json())
       .then(setAbout)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
       .catch(() => {})
   }, [])
 
@@ -18,7 +23,7 @@ function AboutPage() {
       <Header />
       <main className="about-page">
         <section className="about-hero-banner">
-          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85" alt="AF Furnishings showroom" />
+          <img src={banners.about_banner || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85'} alt="AF Furnishings showroom" />
           <div className="about-hero-overlay">
             <span>OUR STORY</span>
             <h1>About AF Furnishings</h1>

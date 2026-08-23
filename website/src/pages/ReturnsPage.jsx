@@ -5,11 +5,16 @@ import Footer from '../components/Footer'
 
 function ReturnsPage() {
   const [data, setData] = useState(null)
+  const [banners, setBanners] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE}/api/returns`)
       .then(r => r.json())
       .then(setData)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/settings`)
+      .then(r => r.json())
+      .then(setBanners)
       .catch(() => {})
   }, [])
 
@@ -18,7 +23,7 @@ function ReturnsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85" alt="Returns" />
+          <img src={banners.returns_banner || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85'} alt="Returns" />
           <div className="terms-hero-overlay">
             <span>EASY RETURNS</span>
             <h1>Returns &amp; Refunds</h1>
