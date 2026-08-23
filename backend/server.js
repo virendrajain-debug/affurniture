@@ -17,6 +17,9 @@ import socialRoutes from './routes/social.js';
 import settingsRoutes from './routes/settings.js';
 import winzQuotesRoutes from './routes/winz-quotes.js';
 import privacyRoutes from './routes/privacy.js';
+import showroomsRoutes from './routes/showrooms.js';
+import deliveryInfoRoutes from './routes/delivery-info.js';
+import shopFurnitureRoutes from './routes/shop-furniture.js';
 
 dotenv.config();
 
@@ -52,6 +55,9 @@ app.use('/api/social', socialRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/winz-quotes', winzQuotesRoutes);
 app.use('/api/privacy', privacyRoutes);
+app.use('/api/showrooms', showroomsRoutes);
+app.use('/api/delivery-info', deliveryInfoRoutes);
+app.use('/api/shop-furniture', shopFurnitureRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -187,6 +193,30 @@ function autoSetup() {
 
   pool.execute(`
     CREATE TABLE IF NOT EXISTS privacy_policy (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS showrooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS delivery_info (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS shop_furniture (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT,
       updated_at TEXT DEFAULT (datetime('now'))

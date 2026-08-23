@@ -66,13 +66,13 @@ function Footer() {
       <div className="footer-columns">
         <div>
           <h3>AF Furnishings</h3>
-          <a href="/#living">Showrooms</a>
+          <Link to="/showrooms">Showrooms</Link>
           <Link to="/contact">Contact us</Link>
-          <a href="/#sofas">Shop furniture</a>
+          <Link to="/shop-furniture">Shop furniture</Link>
         </div>
         <div>
           <h3>Customer care</h3>
-          <a href="/#deals">Delivery information</a>
+          <Link to="/delivery-info">Delivery information</Link>
           <a href="/#deals">Returns</a>
           <Link to="/terms">Terms &amp; Conditions</Link>
           <Link to="/privacy-policy">Privacy Policy</Link>

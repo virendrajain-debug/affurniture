@@ -17,6 +17,9 @@ import WinzPage from './pages/WinzPage'
 import WinzQuote from './pages/WinzQuote'
 import ProductDetail from './pages/ProductDetail'
 import PrivacyPage from './pages/PrivacyPage'
+import ShowroomsPage from './pages/ShowroomsPage'
+import DeliveryInfoPage from './pages/DeliveryInfoPage'
+import ShopFurniturePage from './pages/ShopFurniturePage'
 import './App.css'
 
 function ScrollToTop() {
@@ -103,6 +106,9 @@ function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy-policy" element={<PrivacyPage />} />
+        <Route path="/showrooms" element={<ShowroomsPage />} />
+        <Route path="/delivery-info" element={<DeliveryInfoPage />} />
+        <Route path="/shop-furniture" element={<ShopFurniturePage />} />
       </Routes>
     </HashRouter>
   )

@@ -30,6 +30,9 @@ import DiscountList from './DiscountList'
 import Profile from './Profile'
 import SocialLinks from './SocialLinks'
 import WinzQuotes from './WinzQuotes'
+import Showrooms from './Showrooms'
+import DeliveryInfo from './DeliveryInfo'
+import ShopFurniture from './ShopFurniture'
 
 function Dashboard({ onLogout, token }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -79,6 +82,9 @@ function Dashboard({ onLogout, token }) {
             <Route path="privacy-policy" element={<PrivacyPolicy token={token} />} />
             <Route path="contact" element={<Contact token={token} />} />
             <Route path="social-links" element={<SocialLinks token={token} />} />
+            <Route path="showrooms" element={<Showrooms token={token} />} />
+            <Route path="delivery-info" element={<DeliveryInfo token={token} />} />
+            <Route path="shop-furniture" element={<ShopFurniture token={token} />} />
             
             {/* Discount & Promo */}
             <Route path="discount-list" element={<DiscountList token={token} />} />

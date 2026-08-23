@@ -91,6 +91,9 @@ function Sidebar({ isOpen, onClose, profileImage, onLogout }) {
             <NavLink to="/dashboard/privacy-policy" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Privacy Policy</NavLink>
             <NavLink to="/dashboard/contact" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Contact Us</NavLink>
             <NavLink to="/dashboard/social-links" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Social Links</NavLink>
+            <NavLink to="/dashboard/showrooms" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Showrooms</NavLink>
+            <NavLink to="/dashboard/delivery-info" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Delivery Info</NavLink>
+            <NavLink to="/dashboard/shop-furniture" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Shop Furniture</NavLink>
           </div>}
 
           {/* Discount & Promotion */}
