@@ -13,6 +13,10 @@ import aboutRoutes from './routes/about.js';
 import termsRoutes from './routes/terms.js';
 import enquiryRoutes from './routes/enquiries.js';
 import dashboardRoutes from './routes/dashboard.js';
+import socialRoutes from './routes/social.js';
+import settingsRoutes from './routes/settings.js';
+import winzQuotesRoutes from './routes/winz-quotes.js';
+import privacyRoutes from './routes/privacy.js';
 
 dotenv.config();
 
@@ -44,6 +48,10 @@ app.use('/api/about', aboutRoutes);
 app.use('/api/terms', termsRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/social', socialRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/winz-quotes', winzQuotesRoutes);
+app.use('/api/privacy', privacyRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -110,6 +118,9 @@ function autoSetup() {
       product_id INTEGER,
       product_name TEXT,
       message TEXT,
+      reply TEXT DEFAULT NULL,
+      replied_at TEXT DEFAULT NULL,
+      reply_read INTEGER DEFAULT 0,
       status TEXT DEFAULT 'pending',
       type TEXT DEFAULT 'product',
       created_at TEXT DEFAULT (datetime('now')),
@@ -138,7 +149,70 @@ function autoSetup() {
     )
   `);
 
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS social_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL,
+      url TEXT NOT NULL,
+      icon TEXT DEFAULT '',
+      sort_order INTEGER DEFAULT 0,
+      enabled INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   console.log('Tables ready.');
+
+  // New tables
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS winz_quotes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      phone TEXT,
+      product_name TEXT,
+      message TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS privacy_policy (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Migrate: add new columns if missing
+  try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL"); } catch {}
+  try { pool.execute("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL"); } catch {}
+  try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply_read INTEGER DEFAULT 0"); } catch {}
+
+  const [socialExists] = pool.execute('SELECT id FROM social_links LIMIT 1');
+  if (socialExists.length === 0) {
+    pool.execute('INSERT INTO social_links (platform, url, icon, sort_order, enabled) VALUES (?, ?, ?, ?, ?)', ['Instagram', 'https://www.instagram.com/', 'instagram', 1, 1]);
+    pool.execute('INSERT INTO social_links (platform, url, icon, sort_order, enabled) VALUES (?, ?, ?, ?, ?)', ['Facebook', 'https://www.facebook.com/', 'facebook', 2, 1]);
+  }
+
+  const [settingsExist] = pool.execute('SELECT key FROM site_settings LIMIT 1');
+  if (settingsExist.length === 0) {
+    pool.execute("INSERT INTO site_settings (key, value) VALUES ('primary_color', '#28241f')");
+    pool.execute("INSERT INTO site_settings (key, value) VALUES ('accent_color', '#aa7a3e')");
+    pool.execute("INSERT INTO site_settings (key, value) VALUES ('bg_color', '#fffdf9')");
+    pool.execute("INSERT INTO site_settings (key, value) VALUES ('text_color', '#28241f')");
+    pool.execute("INSERT INTO site_settings (key, value) VALUES ('button_color', '#29251f')");
+    pool.execute("INSERT INTO site_settings (key, value) VALUES ('header_bg', '#29251f')");
+  }
 
   const hashedPassword = bcrypt.hashSync('admin123', 10);
   const [existing] = pool.execute('SELECT id FROM users WHERE email = ?', ['admin@gmail.com']);

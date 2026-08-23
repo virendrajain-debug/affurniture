@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import Header from './components/Header'
 import Hero from './components/Hero'
@@ -9,12 +9,14 @@ import PromoPoster from './components/PromoPoster'
 import Testimonials from './components/Testimonials'
 import Stores from './components/Stores'
 import AboutSection from './components/AboutSection'
-import ContactSection from './components/ContactSection'
 import Footer from './components/Footer'
 import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
 import AboutPage from './pages/AboutPage'
 import WinzPage from './pages/WinzPage'
+import WinzQuote from './pages/WinzQuote'
+import ProductDetail from './pages/ProductDetail'
+import PrivacyPage from './pages/PrivacyPage'
 import './App.css'
 
 function ScrollToTop() {
@@ -82,7 +84,6 @@ function HomePage() {
         <Testimonials />
         <Stores />
         <AboutSection />
-        <ContactSection />
       </main>
       <Footer />
     </>
@@ -91,16 +92,19 @@ function HomePage() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/winz" element={<WinzPage />} />
+        <Route path="/winz-quote" element={<WinzQuote />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy-policy" element={<PrivacyPage />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 

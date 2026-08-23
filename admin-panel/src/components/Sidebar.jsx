@@ -39,13 +39,14 @@ function Sidebar({ isOpen, onClose, profileImage, onLogout }) {
           <div className={`sidebar-link ${open === 'proj' ? 'active' : ''}`} onClick={() => toggle('proj')} style={{ cursor: 'pointer', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Icon path="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              <span>Project Management</span>
+              <span>Product Management</span>
             </div>
             <span style={{ fontSize: '12px', opacity: 0.6 }}>{open === 'proj' ? '▼' : '▶'}</span>
           </div>
           {open === 'proj' && <div style={{ paddingLeft: '32px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <NavLink to="/dashboard/categories" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Categories</NavLink>
             <NavLink to="/dashboard/subcategories" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Subcategories</NavLink>
+            <NavLink to="/dashboard/add-product" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Add Product</NavLink>
             <NavLink to="/dashboard/products" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Product List</NavLink>
           </div>}
 
@@ -73,6 +74,7 @@ function Sidebar({ isOpen, onClose, profileImage, onLogout }) {
           {open === 'enquiry' && <div style={{ paddingLeft: '32px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <NavLink to="/dashboard/active-enquiry" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Active Enquiry</NavLink>
             <NavLink to="/dashboard/past-enquiry" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Past Enquiry</NavLink>
+            <NavLink to="/dashboard/winz-quotes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>WinZ Quotes</NavLink>
           </div>}
 
           {/* Pages and Media */}
@@ -88,6 +90,7 @@ function Sidebar({ isOpen, onClose, profileImage, onLogout }) {
             <NavLink to="/dashboard/terms" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Terms & Condition</NavLink>
             <NavLink to="/dashboard/privacy-policy" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Privacy Policy</NavLink>
             <NavLink to="/dashboard/contact" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Contact Us</NavLink>
+            <NavLink to="/dashboard/social-links" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Social Links</NavLink>
           </div>}
 
           {/* Discount & Promotion */}

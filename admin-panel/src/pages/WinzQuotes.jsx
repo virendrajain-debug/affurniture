@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../config'
 
-function PastEnquiry({ token }) {
-  const [enquiries, setEnquiries] = useState([])
+function WinzQuotes({ token }) {
+  const [quotes, setQuotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [toast, setToast] = useState(null)
@@ -12,42 +12,35 @@ function PastEnquiry({ token }) {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const fetchEnquiries = async () => {
+  const fetchQuotes = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/enquiries?status=replied`, {
+      const res = await fetch(`${API_BASE}/api/winz-quotes`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
         const data = await res.json()
-        setEnquiries(data)
-      }
-      const res2 = await fetch(`${API_BASE}/api/enquiries?status=closed`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res2.ok) {
-        const data2 = await res2.json()
-        setEnquiries(prev => [...prev, ...data2])
+        setQuotes(data)
       }
     } catch {
-      showToast('Failed to load enquiries', 'error')
+      showToast('Failed to load quotes', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchEnquiries() }, [])
+  useEffect(() => { fetchQuotes() }, [])
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this enquiry?')) return
+    if (!confirm('Delete this quote request?')) return
     try {
-      const res = await fetch(`${API_BASE}/api/enquiries/${id}`, {
+      const res = await fetch(`${API_BASE}/api/winz-quotes/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
-        showToast('Enquiry deleted', 'success')
+        showToast('Quote deleted', 'success')
         setSelected(null)
-        fetchEnquiries()
+        fetchQuotes()
       }
     } catch {
       showToast('Server error', 'error')
@@ -59,28 +52,26 @@ function PastEnquiry({ token }) {
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
       <div className="section-header">
-        <h2>Past Enquiries</h2>
-        <p>Resolved and closed customer enquiries</p>
+        <h2>WinZ Quote Requests</h2>
+        <p>Quote requests from the WinZ page</p>
       </div>
 
       {loading ? (
         <p style={{ padding: '40px', textAlign: 'center' }}>Loading...</p>
-      ) : enquiries.length === 0 ? (
-        <div className="empty-state"><p>No past enquiries</p></div>
+      ) : quotes.length === 0 ? (
+        <div className="empty-state"><p>No quote requests yet</p></div>
       ) : (
         <div className="categories-grid">
-          {enquiries.map(enq => (
-            <div className="category-card" key={enq.id} style={{ display: 'block', padding: '20px', opacity: 0.85, cursor: 'pointer' }} onClick={() => setSelected(enq)}>
+          {quotes.map(q => (
+            <div className="category-card" key={q.id} style={{ display: 'block', padding: '20px', cursor: 'pointer' }} onClick={() => setSelected(q)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px' }}>{enq.name}</h3>
-                <span className={`status-badge ${enq.status}`} style={{ fontSize: '11px', padding: '2px 8px' }}>
-                  {enq.status}
-                </span>
+                <h3 style={{ margin: 0, fontSize: '16px' }}>{q.name}</h3>
+                <span className="status-badge pending" style={{ fontSize: '11px', padding: '2px 8px' }}>{q.status}</span>
               </div>
-              <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 4px' }}>{enq.email}</p>
-              {enq.product_name && <p style={{ fontSize: '13px', color: '#aa7a3e', margin: '0 0 4px' }}>Re: {enq.product_name}</p>}
-              <p style={{ fontSize: '14px', color: '#555', margin: '8px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{enq.message || 'No message'}</p>
-              <p style={{ fontSize: '12px', color: '#999', margin: '8px 0 0' }}>{new Date(enq.created_at).toLocaleDateString()}</p>
+              <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 4px' }}>{q.email}</p>
+              {q.product_name && <p style={{ fontSize: '13px', color: '#aa7a3e', margin: '0 0 4px' }}>Re: {q.product_name}</p>}
+              <p style={{ fontSize: '14px', color: '#555', margin: '8px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.message || 'No message'}</p>
+              <p style={{ fontSize: '12px', color: '#999', margin: '8px 0 0' }}>{new Date(q.created_at).toLocaleDateString()}</p>
             </div>
           ))}
         </div>
@@ -98,7 +89,7 @@ function PastEnquiry({ token }) {
                 <p>{selected.email}</p>
                 {selected.phone && <p style={{ fontSize: '13px', color: '#888' }}>{selected.phone}</p>}
               </div>
-              <span className={`status-badge ${selected.status}`} style={{ marginLeft: 'auto' }}>{selected.status}</span>
+              <span className="status-badge pending" style={{ marginLeft: 'auto' }}>{selected.status}</span>
             </div>
 
             {selected.product_name && (
@@ -113,17 +104,9 @@ function PastEnquiry({ token }) {
                 <p>{selected.message || 'No message provided'}</p>
                 <span className="enquiry-msg-time">{new Date(selected.created_at).toLocaleString()}</span>
               </div>
-
-              {selected.reply && (
-                <div className="enquiry-msg enquiry-msg-admin">
-                  <span className="enquiry-msg-label">Admin Reply</span>
-                  <p>{selected.reply}</p>
-                  {selected.replied_at && <span className="enquiry-msg-time">{new Date(selected.replied_at).toLocaleString()}</span>}
-                </div>
-              )}
             </div>
 
-            <div className="enquiry-modal-actions" style={{ justifyContent: 'flex-end' }}>
+            <div className="enquiry-modal-actions" style={{ padding: '16px 20px', borderTop: '1px solid #eee', display: 'flex', gap: '10px' }}>
               <button className="btn-delete-sm" onClick={() => handleDelete(selected.id)}>Delete</button>
             </div>
           </div>
@@ -133,4 +116,4 @@ function PastEnquiry({ token }) {
   )
 }
 
-export default PastEnquiry
+export default WinzQuotes

@@ -3,13 +3,13 @@ import { API_BASE } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
-function TermsPage() {
-  const [terms, setTerms] = useState(null)
+function PrivacyPage() {
+  const [privacy, setPrivacy] = useState(null)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/terms`)
+    fetch(`${API_BASE}/api/privacy`)
       .then(r => r.json())
-      .then(setTerms)
+      .then(setPrivacy)
       .catch(() => {})
   }, [])
 
@@ -18,18 +18,18 @@ function TermsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85" alt="Terms and Conditions" />
+          <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=2000&q=85" alt="Privacy & Security" />
           <div className="terms-hero-overlay">
-            <span>LEGAL</span>
-            <h1>Terms &amp; Conditions</h1>
-            <p>Please read these terms carefully before using our services</p>
+            <span>YOUR PRIVACY</span>
+            <h1>Privacy Policy</h1>
+            <p>How we collect, use and protect your personal information</p>
           </div>
         </section>
 
         <section className="terms-section" style={{ paddingTop: '60px' }}>
           <div className="terms-content">
             <div className="terms-text">
-              {terms?.content || 'Terms & Conditions content is being updated. Please check back later.'}
+              {privacy?.content || 'Privacy Policy content is being updated. Please check back later.'}
             </div>
           </div>
         </section>
@@ -39,4 +39,4 @@ function TermsPage() {
   )
 }
 
-export default TermsPage
+export default PrivacyPage

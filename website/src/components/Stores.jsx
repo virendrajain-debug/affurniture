@@ -14,7 +14,7 @@ const stores = [
     linkText: 'Book a visit',
   },
   {
-    img: 'https://images.unsplash.com/photo-1617104551722-3b2d51366481?auto=format&fit=crop&w=900&q=80',
+    img: 'https://images.unsplash.com/photo-1631679706909-1844bbd07221?auto=format&fit=crop&w=900&q=80',
     city: 'Online consultations',
     desc: 'Meet with our furnishing team from wherever you are. Virtual showroom tours available.',
     link: 'tel:12345667890',

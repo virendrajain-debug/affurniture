@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -6,19 +7,16 @@ const catalogProducts = [
     name: 'Haven Sofa',
     desc: 'A welcoming three-seat sofa with soft cushions, supportive seating and a relaxed modern look for your living room.',
     img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=80',
-    link: 'mailto:affurniture@gmail.com?subject=Haven%20Sofa%20quote',
   },
   {
     name: 'Willow Bedroom Set',
     desc: 'A simple bedroom foundation with warm finishes and practical storage to help create a calm, comfortable space.',
     img: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80',
-    link: 'mailto:affurniture@gmail.com?subject=Willow%20Bedroom%20Set%20quote',
   },
   {
     name: 'Haven Dining Set',
     desc: 'An everyday table setting made for shared meals, family conversations and easy gatherings at home.',
     img: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=900&q=80',
-    link: 'mailto:affurniture@gmail.com?subject=Haven%20Dining%20Set%20quote',
   },
 ]
 
@@ -78,7 +76,7 @@ function WinzPage() {
                 </div>
                 <div className="range-card-body">
                   <p>{p.desc}</p>
-                  <a href={p.link} className="btn-enquiry">Get a quote</a>
+                  <Link to={`/winz-quote?product=${encodeURIComponent(p.name)}`} className="btn-enquiry">Get a quote</Link>
                 </div>
               </article>
             ))}
@@ -99,7 +97,7 @@ function WinzPage() {
                 </div>
                 <div className="more-card-body">
                   <p>{p.desc}</p>
-                  <a href={`mailto:affurniture@gmail.com?subject=${encodeURIComponent(p.name)}%20quote`} className="btn-enquiry">Get a quote</a>
+                  <Link to={`/winz-quote?product=${encodeURIComponent(p.name)}`} className="btn-enquiry">Get a quote</Link>
                 </div>
               </article>
             ))}

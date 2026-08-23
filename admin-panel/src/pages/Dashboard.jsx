@@ -28,6 +28,8 @@ import PrivacyPolicy from './PrivacyPolicy'
 import Contact from './Contact'
 import DiscountList from './DiscountList'
 import Profile from './Profile'
+import SocialLinks from './SocialLinks'
+import WinzQuotes from './WinzQuotes'
 
 function Dashboard({ onLogout, token }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -69,12 +71,14 @@ function Dashboard({ onLogout, token }) {
             {/* Enquiry Management */}
             <Route path="active-enquiry" element={<ActiveEnquiry token={token} />} />
             <Route path="past-enquiry" element={<PastEnquiry token={token} />} />
+            <Route path="winz-quotes" element={<WinzQuotes token={token} />} />
             
             {/* Pages and Media */}
             <Route path="terms" element={<Terms token={token} />} />
             <Route path="about" element={<About token={token} />} />
             <Route path="privacy-policy" element={<PrivacyPolicy token={token} />} />
             <Route path="contact" element={<Contact token={token} />} />
+            <Route path="social-links" element={<SocialLinks token={token} />} />
             
             {/* Discount & Promo */}
             <Route path="discount-list" element={<DiscountList token={token} />} />

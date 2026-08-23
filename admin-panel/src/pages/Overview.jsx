@@ -1,22 +1,17 @@
-// ============================================================
-// Dashboard Overview Component
-// ============================================================
-// Shows key statistics and recent enquiries.
-// Fetches data from GET /api/dashboard (requires auth token).
-//
-// DISPLAYS:
-//   - 6 stat cards: Categories, Products, Enquiries, In Stock, Out of Stock, Contact Enquiries
-//   - Recent enquiries table with status badges
-// ============================================================
-
 import { useEffect, useState } from 'react'
 import { API_BASE } from '../config'
 
 function Overview({ token }) {
   const [stats, setStats] = useState(null)
   const [enquiries, setEnquiries] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [toast, setToast] = useState(null)
 
-  // Fetch dashboard data on mount
+  const showToast = (msg, type) => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -33,7 +28,26 @@ function Overview({ token }) {
     fetchData()
   }, [token])
 
-  // Stat card configurations with SVG icons
+  const handleView = (enq) => {
+    setSelected({ ...enq, message: enq.message || 'No message provided', phone: enq.phone || '' })
+  }
+
+  const handleResolve = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/enquiries/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'closed' }),
+      })
+      if (res.ok) {
+        showToast('Enquiry closed', 'success')
+        setSelected(null)
+      }
+    } catch {
+      showToast('Server error', 'error')
+    }
+  }
+
   const counters = [
     { label: 'Total Category', value: stats?.totalCategories ?? '...', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
     { label: 'Total Products', value: stats?.totalProducts ?? '...', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
@@ -45,12 +59,13 @@ function Overview({ token }) {
 
   return (
     <div className="overview">
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+
       <div className="section-header">
         <h2>Dashboard Overview</h2>
         <p>Welcome back, here's what's happening today</p>
       </div>
 
-      {/* Stats Cards Grid */}
       <div className="counters-grid">
         {counters.map((c) => (
           <div className="counter-card" key={c.label}>
@@ -67,7 +82,6 @@ function Overview({ token }) {
         ))}
       </div>
 
-      {/* Recent Enquiries Table */}
       <div className="recent-section">
         <div className="section-header">
           <h2>Recent Enquiries</h2>
@@ -84,6 +98,7 @@ function Overview({ token }) {
                 <th>Message</th>
                 <th>Date</th>
                 <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -100,10 +115,18 @@ function Overview({ token }) {
                       {q.status.charAt(0).toUpperCase() + q.status.slice(1)}
                     </span>
                   </td>
+                  <td>
+                    <button className="view-btn" onClick={() => handleView(q)} title="View details">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                  </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     <div className="empty-state">
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -118,6 +141,50 @@ function Overview({ token }) {
           </table>
         </div>
       </div>
+
+      {selected && (
+        <div className="enquiry-modal-overlay" onClick={() => setSelected(null)}>
+          <div className="enquiry-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="enquiry-modal-close" onClick={() => setSelected(null)}>&times;</button>
+
+            <div className="enquiry-modal-header">
+              <div className="enquiry-modal-avatar">{selected.name?.charAt(0)?.toUpperCase()}</div>
+              <div>
+                <h3>{selected.name}</h3>
+                <p>{selected.email}</p>
+                {selected.phone && <p style={{ fontSize: '13px', color: '#888' }}>{selected.phone}</p>}
+              </div>
+              <span className={`status-badge ${selected.status}`} style={{ marginLeft: 'auto' }}>{selected.status}</span>
+            </div>
+
+            {selected.product_name && (
+              <div className="enquiry-modal-product">
+                <strong>Product:</strong> {selected.product_name}
+              </div>
+            )}
+
+            <div className="enquiry-modal-messages">
+              <div className="enquiry-msg enquiry-msg-user">
+                <span className="enquiry-msg-label">Customer Message</span>
+                <p>{selected.message || 'No message provided'}</p>
+                <span className="enquiry-msg-time">{new Date(selected.created_at).toLocaleString()}</span>
+              </div>
+
+              {selected.reply && (
+                <div className="enquiry-msg enquiry-msg-admin">
+                  <span className="enquiry-msg-label">Admin Reply</span>
+                  <p>{selected.reply}</p>
+                  {selected.replied_at && <span className="enquiry-msg-time">{new Date(selected.replied_at).toLocaleString()}</span>}
+                </div>
+              )}
+            </div>
+
+            <div className="enquiry-modal-actions" style={{ padding: '16px 20px', borderTop: '1px solid #eee', display: 'flex', gap: '10px' }}>
+              <button className="btn-secondary" onClick={() => handleResolve(selected.id)}>Mark Resolved</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

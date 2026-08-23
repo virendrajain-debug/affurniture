@@ -1,10 +1,16 @@
+import Header from '../components/Header'
 import ContactSection from '../components/ContactSection'
+import Footer from '../components/Footer'
 
 function ContactPage() {
   return (
-    <main style={{ paddingTop: '120px' }}>
-      <ContactSection />
-    </main>
+    <>
+      <Header />
+      <main style={{ paddingTop: '120px' }}>
+        <ContactSection />
+      </main>
+      <Footer />
+    </>
   )
 }
 

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { API_BASE } from '../config'
 
 const defaultProducts = [
-  { id: 1, name: 'Marina Lounge Chair', mrp: 1299, selling_price: 1099, images: ['https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Grey' },
-  { id: 2, name: 'Haven Three Seat Sofa', mrp: 2499, selling_price: 2199, images: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'], material: 'Pine Wood', color: 'Green' },
-  { id: 3, name: 'Ember Two Seat Sofa', mrp: 1899, selling_price: 1699, images: ['https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=800&q=80'], material: 'Metal Frame', color: 'Charcoal' },
-  { id: 4, name: 'Harbour Corner Sofa', mrp: 3299, selling_price: 2899, images: ['https://images.unsplash.com/photo-1540574163026-643ea20ade25?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Beige' },
+  { id: 1, name: 'Marina Lounge Chair', mrp: 1299, selling_price: 1099, images: ['https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Grey', category_name: 'Living Room' },
+  { id: 2, name: 'Haven Three Seat Sofa', mrp: 2499, selling_price: 2199, images: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'], material: 'Pine Wood', color: 'Green', category_name: 'Living Room' },
+  { id: 3, name: 'Ember Two Seat Sofa', mrp: 1899, selling_price: 1699, images: ['https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=800&q=80'], material: 'Metal Frame', color: 'Charcoal', category_name: 'Living Room' },
+  { id: 4, name: 'Harbour Corner Sofa', mrp: 3299, selling_price: 2899, images: ['https://images.unsplash.com/photo-1540574163026-643ea20ade25?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Beige', category_name: 'Living Room' },
 ]
 
 function ProductGrid({ sectionId, label, title, category, compact }) {
@@ -15,7 +16,11 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
   const [slidesPerView, setSlidesPerView] = useState(4)
 
   useEffect(() => {
-    const updateSPV = () => setSlidesPerView(window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 4)
+    const updateSPV = () => {
+      if (window.innerWidth < 600) setSlidesPerView(1)
+      else if (window.innerWidth < 900) setSlidesPerView(2)
+      else setSlidesPerView(4)
+    }
     updateSPV()
     window.addEventListener('resize', updateSPV)
     return () => window.removeEventListener('resize', updateSPV)
@@ -29,7 +34,7 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
           : `${API_BASE}/api/products?limit=8`
         const res = await fetch(url)
         const data = await res.json()
-        if (data.length > 0) setProducts(data)
+        if (Array.isArray(data) && data.length > 0) setProducts(data)
       } catch {}
     }
     fetchProducts()
@@ -38,12 +43,50 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
   const displayProducts = products.length > 0 ? products : defaultProducts
   const maxSlide = Math.max(0, displayProducts.length - slidesPerView)
 
-  const nextSlide = () => setCurrentSlide((p) => Math.min(p + 1, maxSlide))
-  const prevSlide = () => setCurrentSlide((p) => Math.max(p - 1, 0))
+  const nextSlide = () => {
+    const next = Math.min(currentSlide + 1, maxSlide)
+    setCurrentSlide(next)
+    scrollToSlide(next)
+  }
+  const prevSlide = () => {
+    const prev = Math.max(currentSlide - 1, 0)
+    setCurrentSlide(prev)
+    scrollToSlide(prev)
+  }
+
+  const scrollToSlide = (index) => {
+    if (!sliderRef.current) return
+    const track = sliderRef.current
+    const cardWidth = track.scrollWidth / displayProducts.length
+    track.scrollTo({ left: index * cardWidth, behavior: 'smooth' })
+  }
+
+  const handleScroll = () => {
+    if (!sliderRef.current) return
+    const track = sliderRef.current
+    const cardWidth = track.scrollWidth / displayProducts.length
+    const idx = Math.round(track.scrollLeft / cardWidth)
+    setCurrentSlide(Math.min(idx, maxSlide))
+  }
 
   const getWeeklyPrice = (price) => {
     if (!price) return null
     return Math.ceil(Number(price) / 52)
+  }
+
+  const getImg = (p) => {
+    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images[0]
+    return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
+  }
+
+  const getColorHex = (name) => {
+    const map = {
+      'White': '#FFFFFF', 'Black': '#1a1a1a', 'Grey': '#808080', 'Charcoal': '#36454F',
+      'Beige': '#F5F5DC', 'Cream': '#FFFDD0', 'Brown': '#6B4226', 'Walnut': '#5B4332',
+      'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
+      'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
+    }
+    return map[name] || '#ccc'
   }
 
   return (
@@ -56,53 +99,55 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
       )}
 
       <div className="product-slider-wrapper">
-        <button className="slider-btn slider-btn-prev" onClick={prevSlide} disabled={currentSlide === 0}>&#8249;</button>
-        <div className="product-slider" ref={sliderRef}>
-          <div
-            className="product-slider-track"
-            style={{ transform: `translateX(-${currentSlide * (100 / slidesPerView)}%)` }}
-          >
-            {displayProducts.map((p) => {
-              const imgSrc = p.images && p.images.length > 0 && !p.images[0].startsWith('[') ? p.images[0] : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
-              const weekly = getWeeklyPrice(p.selling_price || p.mrp)
-              const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
-              return (
-                <article key={p.id} className="product-card">
-                  <div className="product-card-img">
-                    <img src={imgSrc} alt={p.name} />
-                    {hasDiscount && <span className="product-badge">SALE</span>}
-                  </div>
-                  <div className="product-card-body">
+        <div className="product-slider" ref={sliderRef} onScroll={handleScroll}>
+          {displayProducts.map((p) => {
+            const imgSrc = getImg(p)
+            const weekly = getWeeklyPrice(p.selling_price || p.mrp)
+            const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
+            return (
+              <article key={p.id} className="product-card">
+                <Link to={`/product/${p.id}`} className="product-card-img">
+                  <img src={imgSrc} alt={p.name} loading="lazy" />
+                  {hasDiscount && <span className="product-badge">SALE</span>}
+                </Link>
+                <div className="product-card-body">
+                  <Link to={`/product/${p.id}`} className="product-card-link">
                     <h3>{p.name}</h3>
-                    <div className="product-pricing">
-                      {p.selling_price && (
-                        <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>
-                      )}
-                      {p.mrp && p.selling_price && Number(p.mrp) !== Number(p.selling_price) && (
-                        <span className="product-mrp">${Number(p.mrp).toLocaleString()}</span>
-                      )}
-                      {!p.selling_price && p.mrp && (
-                        <span className="product-price">${Number(p.mrp).toLocaleString()}</span>
-                      )}
-                    </div>
-                    {weekly && (
-                      <p className="product-weekly">Or just <strong>${weekly}/week</strong> on finance</p>
+                  </Link>
+                  <div className="product-pricing">
+                    {p.selling_price && (
+                      <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>
                     )}
-                    {p.material && <p className="product-meta">{p.material}{p.color ? ` - ${p.color}` : ''}</p>}
-                    <button className="btn-shop-now">Shop Now</button>
+                    {p.mrp && p.selling_price && Number(p.mrp) !== Number(p.selling_price) && (
+                      <span className="product-mrp">${Number(p.mrp).toLocaleString()}</span>
+                    )}
+                    {!p.selling_price && p.mrp && (
+                      <span className="product-price">${Number(p.mrp).toLocaleString()}</span>
+                    )}
                   </div>
-                </article>
-              )
-            })}
-          </div>
+                  {weekly && (
+                    <p className="product-weekly">Or just <strong>${weekly}/week</strong> on finance</p>
+                  )}
+                  {p.material && <p className="product-meta">{p.material}{p.color ? ` - ${p.color}` : ''}</p>}
+                  {p.color && (
+                    <div className="product-colors">
+                      <span className="product-color-dot" title={p.color} style={{ background: getColorHex(p.color) }} />
+                      <span className="product-color-name">{p.color}</span>
+                    </div>
+                  )}
+                  <Link to={`/product/${p.id}`} className="btn-shop-now" onClick={() => {}}>Shop Now</Link>
+                </div>
+              </article>
+            )
+          })}
         </div>
-        <button className="slider-btn slider-btn-next" onClick={nextSlide} disabled={currentSlide >= maxSlide}>&#8250;</button>
       </div>
 
-      <div className="slider-arrows">
-        <button className="arrow-btn" onClick={prevSlide} disabled={currentSlide === 0}>&#8249;</button>
-        <button className="arrow-btn" onClick={nextSlide} disabled={currentSlide >= maxSlide}>&#8250;</button>
+      <div className="slider-arrows-below">
+        <button className="arrow-btn-below" onClick={prevSlide} disabled={currentSlide === 0}>&#8249;</button>
+        <button className="arrow-btn-below" onClick={nextSlide} disabled={currentSlide >= maxSlide}>&#8250;</button>
       </div>
+
     </section>
   )
 }

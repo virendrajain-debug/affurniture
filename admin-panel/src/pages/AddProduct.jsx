@@ -1,30 +1,34 @@
-// ============================================================
-// Add Product Page Component
-// ============================================================
-// Full product creation form with all fields.
-// Calls POST /api/products (multipart form data for images).
-//
-// FORM FIELDS:
-//   - Name, Category, MRP, Selling Price, Discounted Price
-//   - Material, Color, Size, Dimensions, Weight
-//   - Stock, Warranty, Delivery Info, Description
-//   - Featured/New Arrival checkboxes
-//   - Image upload (multiple files)
-// ============================================================
-
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../config'
 
+const COLOR_SWATCHES = [
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Black', hex: '#1a1a1a' },
+  { name: 'Grey', hex: '#808080' },
+  { name: 'Charcoal', hex: '#36454F' },
+  { name: 'Beige', hex: '#F5F5DC' },
+  { name: 'Cream', hex: '#FFFDD0' },
+  { name: 'Brown', hex: '#6B4226' },
+  { name: 'Walnut', hex: '#5B4332' },
+  { name: 'Oak', hex: '#C19A6B' },
+  { name: 'Tan', hex: '#D2B48C' },
+  { name: 'Red', hex: '#C0392B' },
+  { name: 'Navy Blue', hex: '#1B2A4A' },
+  { name: 'Blue', hex: '#2E86C1' },
+  { name: 'Green', hex: '#27AE60' },
+  { name: 'Teal', hex: '#1ABC9C' },
+  { name: 'Gold', hex: '#AA7A3E' },
+]
+
 function AddProduct({ token }) {
-  // Form state - all product fields
   const [form, setForm] = useState({
     name: '', category_id: '', mrp: '', selling_price: '', discounted_price: '',
     description: '', stock: '', material: '', color: '', size: '',
     dimensions: '', weight: '', warranty: '', delivery_info: '',
     featured: false, new_arrival: false
   })
-  const [categories, setCategories] = useState([]) // Available categories
-  const [images, setImages] = useState([])         // Selected image files
+  const [categories, setCategories] = useState([])
+  const [images, setImages] = useState([])
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -33,7 +37,6 @@ function AddProduct({ token }) {
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Load categories for the dropdown
   useEffect(() => {
     fetch(`${API_BASE}/api/categories`)
       .then(r => r.json())
@@ -41,13 +44,11 @@ function AddProduct({ token }) {
       .catch(() => {})
   }, [])
 
-  // Generic form field change handler
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setForm({ ...form, [name]: type === 'checkbox' ? checked : value })
   }
 
-  // Handle image file selection - read as base64 for preview
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files)
     files.forEach(file => {
@@ -59,12 +60,10 @@ function AddProduct({ token }) {
     })
   }
 
-  // Remove image from selection
   const removeImage = (index) => {
     setImages(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Submit form to API
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name || !form.mrp) {
@@ -73,7 +72,6 @@ function AddProduct({ token }) {
 
     setSubmitting(true)
     try {
-      // Use FormData for file upload support
       const formData = new FormData()
       Object.entries(form).forEach(([key, val]) => {
         if (typeof val === 'boolean') {
@@ -82,7 +80,6 @@ function AddProduct({ token }) {
           formData.append(key, val)
         }
       })
-      // Append image files
       images.forEach(img => {
         formData.append('images', img.file)
       })
@@ -95,7 +92,6 @@ function AddProduct({ token }) {
 
       if (res.ok) {
         showToast('Product added successfully', 'success')
-        // Reset form
         setForm({
           name: '', category_id: '', mrp: '', selling_price: '', discounted_price: '',
           description: '', stock: '', material: '', color: '', size: '',
@@ -123,7 +119,6 @@ function AddProduct({ token }) {
       </div>
 
       <form className="product-form" onSubmit={handleSubmit}>
-        {/* Product Name & Category */}
         <div className="form-row">
           <div className="input-group">
             <label>Product Name *</label>
@@ -140,7 +135,6 @@ function AddProduct({ token }) {
           </div>
         </div>
 
-        {/* Pricing Section */}
         <div className="form-section-title">Pricing</div>
         <div className="form-row form-row-3">
           <div className="input-group">
@@ -157,7 +151,6 @@ function AddProduct({ token }) {
           </div>
         </div>
 
-        {/* Price Summary */}
         {form.mrp && form.discounted_price && (
           <div className="price-summary">
             <span className="price-mrp">MRP: ${Number(form.mrp).toLocaleString()}</span>
@@ -168,20 +161,12 @@ function AddProduct({ token }) {
           </div>
         )}
 
-        {/* Product Details */}
         <div className="form-section-title">Product Details</div>
         <div className="form-row">
           <div className="input-group">
             <label>Material</label>
             <input type="text" name="material" placeholder="e.g. Solid Oak Wood" value={form.material} onChange={handleChange} />
           </div>
-          <div className="input-group">
-            <label>Color</label>
-            <input type="text" name="color" placeholder="e.g. Walnut Brown" value={form.color} onChange={handleChange} />
-          </div>
-        </div>
-
-        <div className="form-row">
           <div className="input-group">
             <label>Size</label>
             <select name="size" value={form.size} onChange={handleChange}>
@@ -193,32 +178,55 @@ function AddProduct({ token }) {
               <option value="Custom">Custom</option>
             </select>
           </div>
+        </div>
+
+        <div className="input-group">
+          <label>Color</label>
+          <div className="color-swatches">
+            {COLOR_SWATCHES.map(c => (
+              <button
+                key={c.name}
+                type="button"
+                className={`color-swatch ${form.color === c.name ? 'selected' : ''}`}
+                title={c.name}
+                onClick={() => setForm({ ...form, color: c.name })}
+                style={{ background: c.hex, border: c.hex === '#FFFFFF' ? '2px solid #d0d0d0' : '2px solid transparent' }}
+              >
+                {form.color === c.name && <span className="color-check">&#10003;</span>}
+              </button>
+            ))}
+          </div>
+          {form.color && <p className="color-selected-name">Selected: <strong>{form.color}</strong></p>}
+        </div>
+
+        <div className="form-row">
           <div className="input-group">
             <label>Dimensions (L x W x H)</label>
             <input type="text" name="dimensions" placeholder="e.g. 120cm x 80cm x 75cm" value={form.dimensions} onChange={handleChange} />
           </div>
-        </div>
-
-        <div className="form-row">
           <div className="input-group">
             <label>Weight (kg)</label>
             <input type="number" name="weight" placeholder="e.g. 25" value={form.weight} onChange={handleChange} />
           </div>
+        </div>
+
+        <div className="form-row">
           <div className="input-group">
             <label>Stock Quantity</label>
             <input type="number" name="stock" placeholder="e.g. 50" value={form.stock} onChange={handleChange} />
+          </div>
+          <div className="input-group">
+            <label>Warranty</label>
+            <input type="text" name="warranty" placeholder="e.g. 1 Year Manufacturer Warranty" value={form.warranty} onChange={handleChange} />
           </div>
         </div>
 
         <div className="form-row">
           <div className="input-group">
-            <label>Warranty</label>
-            <input type="text" name="warranty" placeholder="e.g. 1 Year Manufacturer Warranty" value={form.warranty} onChange={handleChange} />
-          </div>
-          <div className="input-group">
             <label>Delivery Info</label>
             <input type="text" name="delivery_info" placeholder="e.g. Free delivery in 5-7 days" value={form.delivery_info} onChange={handleChange} />
           </div>
+          <div className="input-group" />
         </div>
 
         <div className="input-group">
@@ -226,7 +234,6 @@ function AddProduct({ token }) {
           <textarea name="description" rows="4" placeholder="Write a short product description..." value={form.description} onChange={handleChange} />
         </div>
 
-        {/* Labels */}
         <div className="form-section-title">Labels</div>
         <div className="form-row">
           <label className="checkbox-group">
@@ -239,7 +246,6 @@ function AddProduct({ token }) {
           </label>
         </div>
 
-        {/* Image Upload */}
         <div className="input-group">
           <label>Product Images</label>
           <label className="upload-area">
@@ -252,7 +258,6 @@ function AddProduct({ token }) {
             <p>Click to upload or drag and drop</p>
             <span>PNG, JPG up to 5MB each</span>
           </label>
-          {/* Image preview grid */}
           {images.length > 0 && (
             <div className="image-preview-grid">
               {images.map((img, i) => (
@@ -270,7 +275,6 @@ function AddProduct({ token }) {
           )}
         </div>
 
-        {/* Actions */}
         <div className="form-actions">
           <button type="button" className="btn-secondary" onClick={() => {
             setForm({ name: '', category_id: '', mrp: '', selling_price: '', discounted_price: '', description: '', stock: '', material: '', color: '', size: '', dimensions: '', weight: '', warranty: '', delivery_info: '', featured: false, new_arrival: false })
