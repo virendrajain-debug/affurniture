@@ -20,6 +20,7 @@ import privacyRoutes from './routes/privacy.js';
 import showroomsRoutes from './routes/showrooms.js';
 import deliveryInfoRoutes from './routes/delivery-info.js';
 import shopFurnitureRoutes from './routes/shop-furniture.js';
+import returnsRoutes from './routes/returns.js';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use('/api/privacy', privacyRoutes);
 app.use('/api/showrooms', showroomsRoutes);
 app.use('/api/delivery-info', deliveryInfoRoutes);
 app.use('/api/shop-furniture', shopFurnitureRoutes);
+app.use('/api/returns', returnsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -217,6 +219,14 @@ function autoSetup() {
 
   pool.execute(`
     CREATE TABLE IF NOT EXISTS shop_furniture (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      content TEXT,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS returns (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT,
       updated_at TEXT DEFAULT (datetime('now'))

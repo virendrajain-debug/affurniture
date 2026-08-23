@@ -94,6 +94,7 @@ function Sidebar({ isOpen, onClose, profileImage, onLogout }) {
             <NavLink to="/dashboard/showrooms" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Showrooms</NavLink>
             <NavLink to="/dashboard/delivery-info" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Delivery Info</NavLink>
             <NavLink to="/dashboard/shop-furniture" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Shop Furniture</NavLink>
+            <NavLink to="/dashboard/returns" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>Returns</NavLink>
           </div>}
 
           {/* Discount & Promotion */}

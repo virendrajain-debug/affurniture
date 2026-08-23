@@ -20,6 +20,7 @@ import PrivacyPage from './pages/PrivacyPage'
 import ShowroomsPage from './pages/ShowroomsPage'
 import DeliveryInfoPage from './pages/DeliveryInfoPage'
 import ShopFurniturePage from './pages/ShopFurniturePage'
+import ReturnsPage from './pages/ReturnsPage'
 import './App.css'
 
 function ScrollToTop() {
@@ -109,6 +110,7 @@ function App() {
         <Route path="/showrooms" element={<ShowroomsPage />} />
         <Route path="/delivery-info" element={<DeliveryInfoPage />} />
         <Route path="/shop-furniture" element={<ShopFurniturePage />} />
+        <Route path="/returns" element={<ReturnsPage />} />
       </Routes>
     </HashRouter>
   )

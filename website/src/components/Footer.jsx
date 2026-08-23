@@ -73,7 +73,7 @@ function Footer() {
         <div>
           <h3>Customer care</h3>
           <Link to="/delivery-info">Delivery information</Link>
-          <a href="/#deals">Returns</a>
+          <Link to="/returns">Returns</Link>
           <Link to="/terms">Terms &amp; Conditions</Link>
           <Link to="/privacy-policy">Privacy Policy</Link>
         </div>
