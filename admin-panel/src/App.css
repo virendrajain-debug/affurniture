@@ -459,6 +459,24 @@ body {
   opacity: 1;
 }
 
+.sub-link {
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: rgba(255,255,255,0.4) !important;
+  border-radius: 8px !important;
+}
+
+.sub-link:hover {
+  color: #fff !important;
+}
+
+.sub-link.active {
+  color: #fff !important;
+  font-weight: 600 !important;
+  background: rgba(255,255,255,0.1) !important;
+}
+
 .sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);

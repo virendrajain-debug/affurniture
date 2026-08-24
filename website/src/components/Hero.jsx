@@ -28,6 +28,7 @@ const defaultSlides = [
 function Hero() {
   const [current, setCurrent] = useState(0)
   const [banners, setBanners] = useState({})
+  const [adminSlides, setAdminSlides] = useState([])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/settings`)
@@ -36,14 +37,29 @@ function Hero() {
       .catch(() => {})
   }, [])
 
-  const slides = defaultSlides.map((s, i) => i === 0 && banners.home_hero_banner ? { ...s, image: banners.home_hero_banner } : s)
+  useEffect(() => {
+    fetch(`${API_BASE}/api/hero-sliders/active`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAdminSlides(data) })
+      .catch(() => {})
+  }, [])
+
+  const slides = adminSlides.length > 0
+    ? adminSlides.map(s => ({
+        image: s.image || defaultSlides[0].image,
+        alt: s.alt || '',
+        tagline: s.tagline || '',
+        title: s.title || '',
+        desc: s.description || '',
+      }))
+    : defaultSlides.map((s, i) => i === 0 && banners.home_hero_banner ? { ...s, image: banners.home_hero_banner } : s)
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length)
     }, 5000)
     return () => clearInterval(timer)
-  }, [])
+  }, [slides.length])
 
   return (
     <section className="hero" id="home">
@@ -58,9 +74,9 @@ function Hero() {
       <div className="hero-shade"></div>
       <div className="hero-curve" aria-hidden="true"></div>
       <div className="hero-copy" key={current}>
-        <span>{slides[current].tagline}</span>
-        <h1>{slides[current].title}</h1>
-        <p>{slides[current].desc}</p>
+        <span>{slides[current]?.tagline}</span>
+        <h1>{slides[current]?.title}</h1>
+        <p>{slides[current]?.desc}</p>
       </div>
       <div className="hero-dots">
         {slides.map((_, i) => (

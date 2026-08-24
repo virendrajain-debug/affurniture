@@ -1,27 +1,11 @@
-// ============================================================
-// About Page Editor Component
-// ============================================================
-// Edit company information displayed on the website About section.
-//
-// API CALLS:
-//   GET  /api/about  - Fetch current about info
-//   PUT  /api/about  - Save updated about info
-//
-// FIELDS:
-//   Company Name, Tagline, Description, Address, Phone, Email
-// ============================================================
-
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../config'
 
 function About({ token }) {
-  const [company, setCompany] = useState({
-    company_name: '',
-    tagline: '',
-    description: '',
-    address: '',
-    phone: '',
-    email: '',
+  const [sections, setSections] = useState({
+    main_banner: { title: '', description: '', image: '' },
+    primary_section: { title: '', description: '', image: '' },
+    features: { title: '', description: '', image: '' },
   })
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
@@ -31,31 +15,35 @@ function About({ token }) {
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Fetch about info on mount
   useEffect(() => {
-    fetch(`${API_BASE}/api/about`)
+    fetch(`${API_BASE}/api/about-sections`)
       .then(r => r.json())
       .then(data => {
-        if (data.company_name) setCompany(data)
+        if (Array.isArray(data)) {
+          const map = {}
+          data.forEach(s => {
+            map[s.type] = { title: s.title || '', description: s.description || '', image: s.image || '' }
+          })
+          setSections(prev => ({ ...prev, ...map }))
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
-  const handleChange = (field, value) => {
-    setCompany({ ...company, [field]: value })
+  const handleChange = (type, field, value) => {
+    setSections(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }))
   }
 
-  // Save about info to API
-  const handleSave = async () => {
+  const handleSave = async (type) => {
     try {
-      const res = await fetch(`${API_BASE}/api/about`, {
+      const res = await fetch(`${API_BASE}/api/about-sections/${type}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(company),
+        body: JSON.stringify(sections[type]),
       })
       if (res.ok) {
-        showToast('About info updated', 'success')
+        showToast(`${type.replace(/_/g, ' ')} saved`, 'success')
       } else {
         showToast('Failed to save', 'error')
       }
@@ -64,51 +52,82 @@ function About({ token }) {
     }
   }
 
+  const SectionCard = ({ type, label, showImage = true }) => (
+    <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2d7c5', padding: '24px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '18px', fontWeight: '600', color: '#1a2744', margin: 0 }}>{label}</h3>
+        <button className="btn-primary" onClick={() => handleSave(type)} disabled={loading}>Save</button>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#2a3f6e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Title</label>
+        <input
+          type="text"
+          value={sections[type].title}
+          onChange={(e) => handleChange(type, 'title', e.target.value)}
+          disabled={loading}
+          style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1.5px solid #c5d5e8', fontSize: '14px', background: '#fffdf9', color: '#1a1a2e', outline: 'none' }}
+          placeholder="Enter title..."
+        />
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#2a3f6e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Description</label>
+        <textarea
+          rows={5}
+          value={sections[type].description}
+          onChange={(e) => handleChange(type, 'description', e.target.value)}
+          disabled={loading}
+          style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1.5px solid #c5d5e8', fontSize: '14px', background: '#fffdf9', color: '#1a1a2e', outline: 'none', resize: 'vertical', lineHeight: '1.6' }}
+          placeholder="Enter description..."
+        />
+      </div>
+
+      {showImage && (
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#2a3f6e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Image URL</label>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+            {sections[type].image && (
+              <div style={{ width: '200px', height: '130px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2d7c5', flexShrink: 0 }}>
+                <img
+                  src={sections[type].image}
+                  alt={label}
+                  onError={(e) => { e.target.style.display = 'none' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+            )}
+            <div style={{ flex: 1 }}>
+              <input
+                type="text"
+                value={sections[type].image}
+                onChange={(e) => handleChange(type, 'image', e.target.value)}
+                disabled={loading}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1.5px solid #c5d5e8', fontSize: '13px', background: '#fffdf9', color: '#1a1a2e', outline: 'none', fontFamily: 'monospace' }}
+                placeholder="Paste image URL (Unsplash, Cloudinary, etc.)"
+              />
+              <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#888' }}>
+                Paste a direct image link. Works with Unsplash, Cloudinary, or any image URL.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className="about-page">
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
       <div className="section-header">
-        <h2>About Company</h2>
-        <p>Update your company information visible to customers</p>
+        <h2>About Us Page Editor</h2>
+        <p>Edit the About Us page sections visible to customers</p>
       </div>
 
-      <div className="about-form">
-        <div className="input-group">
-          <label>Company Name</label>
-          <input type="text" value={company.company_name} onChange={(e) => handleChange('company_name', e.target.value)} disabled={loading} />
-        </div>
-
-        <div className="input-group">
-          <label>Tagline</label>
-          <input type="text" value={company.tagline} onChange={(e) => handleChange('tagline', e.target.value)} disabled={loading} />
-        </div>
-
-        <div className="input-group">
-          <label>Description</label>
-          <textarea rows="6" value={company.description} onChange={(e) => handleChange('description', e.target.value)} disabled={loading} />
-        </div>
-
-        <div className="form-row">
-          <div className="input-group">
-            <label>Address</label>
-            <input type="text" value={company.address} onChange={(e) => handleChange('address', e.target.value)} disabled={loading} />
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="input-group">
-            <label>Phone</label>
-            <input type="text" value={company.phone} onChange={(e) => handleChange('phone', e.target.value)} disabled={loading} />
-          </div>
-          <div className="input-group">
-            <label>Email</label>
-            <input type="email" value={company.email} onChange={(e) => handleChange('email', e.target.value)} disabled={loading} />
-          </div>
-        </div>
-
-        <button className="btn-primary" onClick={handleSave} disabled={loading}>Save Changes</button>
-      </div>
+      <SectionCard type="main_banner" label="Main Banner" />
+      <SectionCard type="primary_section" label="Primary Section" />
+      <SectionCard type="features" label="Features Grid" showImage={false} />
     </div>
   )
 }

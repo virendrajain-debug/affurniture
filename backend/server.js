@@ -23,6 +23,9 @@ import shopFurnitureRoutes from './routes/shop-furniture.js';
 import returnsRoutes from './routes/returns.js';
 import financeApplicationRoutes from './routes/finance-applications.js';
 import storeLocationRoutes from './routes/store-locations.js';
+import heroSliderRoutes from './routes/hero-sliders.js';
+import discountCodeRoutes from './routes/discount-codes.js';
+import aboutSectionsRoutes from './routes/about-sections.js';
 
 dotenv.config();
 
@@ -64,6 +67,9 @@ app.use('/api/shop-furniture', shopFurnitureRoutes);
 app.use('/api/returns', returnsRoutes);
 app.use('/api/finance-applications', financeApplicationRoutes);
 app.use('/api/store-locations', storeLocationRoutes);
+app.use('/api/hero-sliders', heroSliderRoutes);
+app.use('/api/discount-codes', discountCodeRoutes);
+app.use('/api/about-sections', aboutSectionsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -277,6 +283,46 @@ function autoSetup() {
     )
   `);
 
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS hero_sliders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      image TEXT NOT NULL DEFAULT '',
+      alt TEXT DEFAULT '',
+      tagline TEXT DEFAULT '',
+      title TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS discount_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      value TEXT DEFAULT '10%',
+      type TEXT DEFAULT 'percentage',
+      min_order REAL DEFAULT 0,
+      max_uses INTEGER DEFAULT 0,
+      expires_at TEXT,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS about_sections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL UNIQUE,
+      title TEXT DEFAULT '',
+      description TEXT DEFAULT '',
+      image TEXT DEFAULT '',
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Migrate: add new columns if missing
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL"); } catch {}
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL"); } catch {}
@@ -319,6 +365,18 @@ function autoSetup() {
       'INSERT INTO about (company_name, tagline, description, address, phone, email) VALUES (?, ?, ?, ?, ?, ?)',
       ['AF Furnishings', 'Comfort made for everyday living.', 'AF Furnishings provides quality furniture, beds and appliances to make your home feel complete.', 'Auckland, New Zealand', '12345667890', 'affurniture@gmail.com']
     );
+  }
+
+  const aboutSectionTypes = [
+    { type: 'main_banner', title: 'Welcome to AF Furnishings', description: 'We provide quality furniture, beds and appliances to make your home feel complete.' },
+    { type: 'primary_section', title: 'About Us', description: 'AF Furnishings is a family-owned New Zealand furniture retailer with over 15 years of experience.' },
+    { type: 'features', title: 'Why Choose Us', description: '' }
+  ];
+  for (const sec of aboutSectionTypes) {
+    const [secExists] = pool.execute('SELECT id FROM about_sections WHERE type=?', [sec.type]);
+    if (secExists.length === 0) {
+      pool.execute('INSERT INTO about_sections (type, title, description, image) VALUES (?, ?, ?, ?)', [sec.type, sec.title, sec.description, '']);
+    }
   }
 
   const [termsExists] = pool.execute('SELECT id FROM terms LIMIT 1');
