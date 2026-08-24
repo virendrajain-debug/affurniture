@@ -56,19 +56,20 @@ function Footer() {
 
       <nav className="footer-nav">
         <Link to="/">Home</Link>
-        <a href="/#sofas">Sofas</a>
-        <a href="/#bedroom">Bedroom</a>
-        <a href="/#dining">Dining</a>
-        <a href="/#living">Living</a>
+        <Link to="/category/lounge-suite">Lounge Suite</Link>
+        <Link to="/category/bedroom">Bedroom</Link>
+        <Link to="/category/dining">Dining</Link>
+        <Link to="/category/living">Living</Link>
         <Link to="/about">About</Link>
       </nav>
 
       <div className="footer-columns">
         <div>
           <h3>AF Furnishings</h3>
+          <Link to="/store-locations">Store Locations</Link>
           <Link to="/showrooms">Showrooms</Link>
           <Link to="/contact">Contact us</Link>
-          <Link to="/shop-furniture">Shop furniture</Link>
+          <Link to="/apply-for-finance">Apply for Finance</Link>
         </div>
         <div>
           <h3>Customer care</h3>

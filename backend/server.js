@@ -21,6 +21,8 @@ import showroomsRoutes from './routes/showrooms.js';
 import deliveryInfoRoutes from './routes/delivery-info.js';
 import shopFurnitureRoutes from './routes/shop-furniture.js';
 import returnsRoutes from './routes/returns.js';
+import financeApplicationRoutes from './routes/finance-applications.js';
+import storeLocationRoutes from './routes/store-locations.js';
 
 dotenv.config();
 
@@ -28,18 +30,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 5005;
+const PORT = process.env.PORT || process.env.NODE_PORT || 5000;
 
 app.use(cors({
-  origin: [
-    'https://affurnishings.techniks.co.nz',
-    'https://affurnishingsadmin.techniks.co.nz',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5005',
-  ],
+  origin: function(origin, callback) {
+    callback(null, true);
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+app.options('*', cors());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -60,9 +62,15 @@ app.use('/api/showrooms', showroomsRoutes);
 app.use('/api/delivery-info', deliveryInfoRoutes);
 app.use('/api/shop-furniture', shopFurnitureRoutes);
 app.use('/api/returns', returnsRoutes);
+app.use('/api/finance-applications', financeApplicationRoutes);
+app.use('/api/store-locations', storeLocationRoutes);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
+});
+
+app.get('/api/cors-test', (req, res) => {
+  res.json({ status: 'cors ok', origin: req.headers.origin });
 });
 
 function autoSetup() {
@@ -233,6 +241,42 @@ function autoSetup() {
     )
   `);
 
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS finance_applications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      first_name TEXT NOT NULL,
+      last_name TEXT,
+      email TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      address TEXT,
+      city TEXT,
+      state TEXT,
+      income_source TEXT,
+      products TEXT,
+      documents TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS store_locations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      address TEXT,
+      city TEXT,
+      phone TEXT,
+      email TEXT,
+      google_map_url TEXT,
+      latitude TEXT,
+      longitude TEXT,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Migrate: add new columns if missing
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL"); } catch {}
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL"); } catch {}
@@ -285,6 +329,18 @@ function autoSetup() {
   }
 
   const [productExists] = pool.execute('SELECT id FROM products LIMIT 1');
+
+  const [storeExists] = pool.execute('SELECT id FROM store_locations LIMIT 1');
+  if (storeExists.length === 0) {
+    pool.execute(
+      'INSERT INTO store_locations (name, address, city, phone, email, google_map_url, latitude, longitude, description, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['AF Furnishings Auckland', '123 Queen Street', 'Auckland', '12345667890', 'affurniture@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3192.3!2d174.76!3d-36.85!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1', '-36.85', '174.76', 'Central Auckland showroom with over 200 furniture displays.', 1]
+    );
+    pool.execute(
+      'INSERT INTO store_locations (name, address, city, phone, email, google_map_url, latitude, longitude, description, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['AF Furnishings Wellington', '45 Cuba Street', 'Wellington', '12345667890', 'affurniture@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3192.3!2d174.77!3d-41.29!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1', '-41.29', '174.77', 'Wellington design studio with curated collections.', 2]
+    );
+  }
   if (productExists.length === 0) {
     const sampleProducts = [
       { name: 'Marina Lounge Chair', cat: 'Living Room', mrp: 1299, selling: 1099, desc: 'Comfortable lounge chair with premium fabric upholstery.', stock: 15, material: 'Oak Wood', color: 'Grey', size: 'Medium', featured: 1 },

@@ -1,35 +1,46 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { API_BASE } from '../config'
 
 const navCategories = [
   {
-    label: 'Bedroom',
-    href: '#bedroom-products',
+    label: 'Lounge Suite',
+    href: '/category/lounge-suite',
     subcategories: [
-      { label: 'All Bedroom', href: '#bedroom-products' },
-      { label: 'Bed Frames', href: '#bedroom-products' },
-      { label: 'Mattresses', href: '#bedroom-products' },
-      { label: 'Bedroom Sets', href: '#bedroom-products' },
+      { label: 'All Lounge Suite', href: '/category/lounge-suite' },
+      { label: 'Sofas', href: '/category/lounge-suite?sub=sofas' },
+      { label: 'Armchairs', href: '/category/lounge-suite?sub=armchairs' },
+      { label: 'Coffee Tables', href: '/category/lounge-suite?sub=coffee-tables' },
+    ],
+  },
+  {
+    label: 'Bedroom',
+    href: '/category/bedroom',
+    subcategories: [
+      { label: 'All Bedroom', href: '/category/bedroom' },
+      { label: 'Bed Frames', href: '/category/bedroom?sub=bed-frames' },
+      { label: 'Mattresses', href: '/category/bedroom?sub=mattresses' },
+      { label: 'Bedroom Sets', href: '/category/bedroom?sub=bedroom-sets' },
     ],
   },
   {
     label: 'Dining',
-    href: '#dining-products',
+    href: '/category/dining',
     subcategories: [
-      { label: 'All Dining', href: '#dining-products' },
-      { label: 'Dining Suites', href: '#dining-products' },
-      { label: 'Dining Tables', href: '#dining-products' },
-      { label: 'Dining Chairs', href: '#dining-products' },
+      { label: 'All Dining', href: '/category/dining' },
+      { label: 'Dining Suites', href: '/category/dining?sub=dining-suites' },
+      { label: 'Dining Tables', href: '/category/dining?sub=dining-tables' },
+      { label: 'Dining Chairs', href: '/category/dining?sub=dining-chairs' },
     ],
   },
   {
     label: 'Living',
-    href: '#sofas',
+    href: '/category/living',
     subcategories: [
-      { label: 'All Living', href: '#sofas' },
-      { label: 'Coffee Tables', href: '#sofas' },
-      { label: 'Console Tables', href: '#sofas' },
-      { label: 'Bar Stools', href: '#sofas' },
+      { label: 'All Living', href: '/category/living' },
+      { label: 'Coffee Tables', href: '/category/living?sub=coffee-tables' },
+      { label: 'Console Tables', href: '/category/living?sub=console-tables' },
+      { label: 'Bar Stools', href: '/category/living?sub=bar-stools' },
     ],
   },
 ]
@@ -86,12 +97,7 @@ function Header() {
     e.preventDefault()
     if (searchQuery.trim()) {
       setSearchOpen(false)
-      if (isHome) {
-        const el = document.getElementById('sofas')
-        if (el) el.scrollIntoView({ behavior: 'smooth' })
-      } else {
-        navigate('/#sofas')
-      }
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
 
@@ -132,25 +138,40 @@ function Header() {
             </div>
           ))}
           <Link to="/winz">WinZ</Link>
-          <Link to="/about">About</Link>
-          <a className="sale-link" href="#deals" onClick={(e) => { e.preventDefault(); handleNavClick('#deals') }}>On Sale!</a>
+          <a className="sale-link" href="/on-sale" onClick={(e) => { e.preventDefault(); handleNavClick('/on-sale') }}>On Sale!</a>
         </nav>
 
         <div className="header-tools">
-          <form className="header-search-bar-desktop" onSubmit={handleSearch}>
-            <input type="search" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            <button type="submit">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="header-tools-top">
+            <button className="header-search-toggle" onClick={() => setSearchOpen(!searchOpen)} aria-label="Search">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </button>
-          </form>
-          <button className="header-search-toggle" onClick={() => setSearchOpen(!searchOpen)} aria-label="Search">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </button>
-          <a href="#deals" className="btn-finance" onClick={(e) => { e.preventDefault(); handleNavClick('#deals') }}>Apply for finance</a>
+            <Link to="/apply-for-finance" className="btn-finance">Apply for Finance</Link>
+          </div>
+          <div className="header-tools-bottom">
+            <form className="header-search-bar-desktop" onSubmit={handleSearch}>
+              <input type="search" placeholder="Search Here..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+              <button type="submit">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </button>
+            </form>
+            <div className="header-social-icons">
+              <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="header-social-icon" title="Instagram">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                </svg>
+              </a>
+              <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="header-social-icon" title="Facebook">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+                </svg>
+              </a>
+            </div>
+          </div>
         </div>
 
         {searchOpen && (
@@ -166,7 +187,7 @@ function Header() {
       {menuOpen && (
         <div className="mobile-nav-overlay">
           <div className="mobile-nav-panel" style={{ top: panelTop + 'px', maxHeight: `calc(100vh - ${panelTop}px)` }}>
-            <a className="mobile-nav-finance" href="#deals" onClick={(e) => { e.preventDefault(); handleNavClick('#deals') }}>APPLY FOR FINANCE</a>
+            <Link className="mobile-nav-finance" to="/apply-for-finance" onClick={() => setMenuOpen(false)}>APPLY FOR FINANCE</Link>
             <a className="mobile-nav-item" href="/" onClick={(e) => { e.preventDefault(); handleNavClick('/') }}>HOME</a>
             {navCategories.map((cat) => (
               <div key={cat.label} className="mobile-nav-item-group">
@@ -186,8 +207,7 @@ function Header() {
               </div>
             ))}
             <a className="mobile-nav-item" href="/winz" onClick={(e) => { e.preventDefault(); handleNavClick('/winz') }}>WINZ</a>
-            <a className="mobile-nav-item" href="/about" onClick={(e) => { e.preventDefault(); handleNavClick('/about') }}>ABOUT</a>
-            <a className="mobile-nav-sale" href="#deals" onClick={(e) => { e.preventDefault(); handleNavClick('#deals') }}>ON SALE!</a>
+            <a className="mobile-nav-sale" href="/on-sale" onClick={(e) => { e.preventDefault(); handleNavClick('/on-sale') }}>ON SALE!</a>
           </div>
           <div className="mobile-nav-backdrop" onClick={() => { setMenuOpen(false); setExpandedCat(null) }} />
         </div>

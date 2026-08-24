@@ -1,4 +1,9 @@
+import { Link } from 'react-router-dom'
+
 function Category({ id, title, subtitle, image, link, reverse }) {
+  const slug = title.toLowerCase().replace(/\s+/g, '-').replace('suite', '').replace('--', '-')
+  const categoryLink = `/category/${slug}`
+
   return (
     <section className={`category ${reverse ? 'reverse' : ''}`} id={id}>
       <div className="category-hero">
@@ -6,7 +11,7 @@ function Category({ id, title, subtitle, image, link, reverse }) {
         <div>
           <h2>{title}</h2>
           <p>{subtitle}</p>
-          <a className="primary" href={link}>Shop {title.toLowerCase()}</a>
+          <Link to={categoryLink} className="primary">Shop {title.toLowerCase()}</Link>
         </div>
       </div>
     </section>

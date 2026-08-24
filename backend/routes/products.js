@@ -50,7 +50,7 @@ const router = Router();
 // -----------------------------------------------------------
 router.get('/', async (req, res) => {
   try {
-    const { category, search, featured, new_arrival, limit } = req.query;
+    const { category, search, featured, new_arrival, limit, on_sale, subcategory } = req.query;
     
     // Build query dynamically based on filters
     let query = `
@@ -65,6 +65,27 @@ router.get('/', async (req, res) => {
     if (category) {
       query += ' AND c.name = ?';
       params.push(category);
+    }
+
+    // Filter by subcategory (match product name using keyword mapping)
+    if (subcategory) {
+      const subKeywords = {
+        'sofas': ['sofa', 'sofas', 'lounge'],
+        'armchairs': ['armchair', 'armchairs', 'chair'],
+        'coffee-tables': ['coffee table', 'coffee tables'],
+        'bed-frames': ['bed frame', 'bed frames', 'bed'],
+        'mattresses': ['mattress', 'mattresses'],
+        'bedroom-sets': ['bedroom set', 'bedroom sets', 'bedroom suite'],
+        'dining-suites': ['dining suite', 'dining suites', 'dining set'],
+        'dining-tables': ['dining table', 'dining tables'],
+        'dining-chairs': ['dining chair', 'dining chairs'],
+        'console-tables': ['console table', 'console tables'],
+        'bar-stools': ['bar stool', 'bar stools', 'stool'],
+      };
+      const keywords = subKeywords[subcategory] || [subcategory.replace(/-/g, ' ')];
+      const likeClauses = keywords.map(() => 'LOWER(p.name) LIKE ?').join(' OR ');
+      query += ` AND (${likeClauses})`;
+      keywords.forEach(kw => params.push(`%${kw}%`));
     }
     
     // Search in product name and description
@@ -83,10 +104,47 @@ router.get('/', async (req, res) => {
       query += ' AND p.new_arrival = 1';
     }
 
+    // Filter on-sale products (have discounted price)
+    if (on_sale === 'true') {
+      query += ' AND p.discounted_price IS NOT NULL AND p.discounted_price > 0 AND p.discounted_price < p.mrp';
+    }
+
     query += ' ORDER BY p.created_at DESC';
     
+    // Pagination (only when page param is provided)
+    const page = parseInt(req.query.page);
+    const usePagination = !isNaN(page);
+    const perPage = parseInt(req.query.per_page) || 12;
+    const offset = (usePagination ? (page - 1) * perPage : 0);
+
+    // Get total count for pagination
+    let totalProducts = 0;
+    let totalPages = 0;
+    if (usePagination) {
+      let countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1`;
+      const countParams = [];
+      if (category) { countQuery += ' AND c.name = ?'; countParams.push(category); }
+      if (subcategory) {
+        const subKeywords = { 'sofas': ['sofa','sofas','lounge'], 'armchairs': ['armchair','armchairs','chair'], 'coffee-tables': ['coffee table','coffee tables'], 'bed-frames': ['bed frame','bed frames','bed'], 'mattresses': ['mattress','mattresses'], 'bedroom-sets': ['bedroom set','bedroom sets','bedroom suite'], 'dining-suites': ['dining suite','dining suites','dining set'], 'dining-tables': ['dining table','dining tables'], 'dining-chairs': ['dining chair','dining chairs'], 'console-tables': ['console table','console tables'], 'bar-stools': ['bar stool','bar stools','stool'] };
+        const keywords = subKeywords[subcategory] || [subcategory.replace(/-/g, ' ')];
+        const likeClauses = keywords.map(() => 'LOWER(p.name) LIKE ?').join(' OR ');
+        countQuery += ` AND (${likeClauses})`;
+        keywords.forEach(kw => countParams.push(`%${kw}%`));
+      }
+      if (search) { countQuery += ' AND (p.name LIKE ? OR p.description LIKE ?)'; countParams.push(`%${search}%`, `%${search}%`); }
+      if (featured === 'true') { countQuery += ' AND p.featured = 1'; }
+      if (new_arrival === 'true') { countQuery += ' AND p.new_arrival = 1'; }
+      if (on_sale === 'true') { countQuery += ' AND p.discounted_price IS NOT NULL AND p.discounted_price > 0 AND p.discounted_price < p.mrp'; }
+      const [countResult] = await pool.execute(countQuery, countParams);
+      totalProducts = countResult[0].total;
+      totalPages = Math.ceil(totalProducts / perPage);
+    }
+
     // Limit number of results
-    if (limit) {
+    if (usePagination) {
+      query += ' LIMIT ? OFFSET ?';
+      params.push(perPage, offset);
+    } else if (limit) {
       query += ' LIMIT ?';
       params.push(parseInt(limit));
     }
@@ -99,7 +157,19 @@ router.get('/', async (req, res) => {
       images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images
     }));
 
-    res.json(parsed);
+    if (usePagination) {
+      res.json({
+        products: parsed,
+        pagination: {
+          page,
+          per_page: perPage,
+          total: totalProducts,
+          total_pages: totalPages
+        }
+      });
+    } else {
+      res.json(parsed);
+    }
   } catch (error) {
     console.error('Get products error:', error);
     res.status(500).json({ message: 'Server error' });

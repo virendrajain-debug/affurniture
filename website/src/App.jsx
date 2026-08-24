@@ -21,6 +21,11 @@ import ShowroomsPage from './pages/ShowroomsPage'
 import DeliveryInfoPage from './pages/DeliveryInfoPage'
 import ShopFurniturePage from './pages/ShopFurniturePage'
 import ReturnsPage from './pages/ReturnsPage'
+import ApplyForFinance from './pages/ApplyForFinance'
+import CategoryPage from './pages/CategoryPage'
+import OnSalePage from './pages/OnSalePage'
+import StoreLocationPage from './pages/StoreLocationPage'
+import SearchPage from './pages/SearchPage'
 import './App.css'
 
 function ScrollToTop() {
@@ -42,7 +47,7 @@ function HomePage() {
           title="Lounge Suite"
           subtitle="Comfort for every day"
           image="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=85"
-          link="#sofas"
+          link="/category/lounge-suite"
         />
 
         <ProductGrid
@@ -57,7 +62,7 @@ function HomePage() {
           title="Bedroom"
           subtitle="Rest beautifully"
           image="https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85"
-          link="#bedroom-products"
+          link="/category/bedroom"
           reverse
         />
 
@@ -74,7 +79,7 @@ function HomePage() {
           title="Dining"
           subtitle="Gather around good moments"
           image="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=1800&q=85"
-          link="#dining-products"
+          link="/category/dining"
         />
 
         <ProductGrid
@@ -101,6 +106,11 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/on-sale" element={<OnSalePage />} />
+        <Route path="/store-locations" element={<StoreLocationPage />} />
+        <Route path="/apply-for-finance" element={<ApplyForFinance />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/winz" element={<WinzPage />} />
         <Route path="/winz-quote" element={<WinzQuote />} />
         <Route path="/contact" element={<ContactPage />} />

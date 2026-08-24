@@ -35,6 +35,8 @@ import DeliveryInfo from './DeliveryInfo'
 import ShopFurniture from './ShopFurniture'
 import Returns from './Returns'
 import Banners from './Banners'
+import FinanceApplications from './FinanceApplications'
+import StoreLocations from './StoreLocations'
 
 function Dashboard({ onLogout, token }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -91,6 +93,10 @@ function Dashboard({ onLogout, token }) {
             
             {/* Banners */}
             <Route path="banners" element={<Banners token={token} />} />
+            
+            {/* Finance & Store */}
+            <Route path="finance-applications" element={<FinanceApplications token={token} />} />
+            <Route path="store-locations" element={<StoreLocations token={token} />} />
             
             {/* Discount & Promo */}
             <Route path="discount-list" element={<DiscountList token={token} />} />
