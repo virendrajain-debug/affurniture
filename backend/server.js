@@ -26,6 +26,7 @@ import storeLocationRoutes from './routes/store-locations.js';
 import heroSliderRoutes from './routes/hero-sliders.js';
 import discountCodeRoutes from './routes/discount-codes.js';
 import aboutSectionsRoutes from './routes/about-sections.js';
+import uploadRoutes from './routes/upload.js';
 
 dotenv.config();
 
@@ -70,6 +71,7 @@ app.use('/api/store-locations', storeLocationRoutes);
 app.use('/api/hero-sliders', heroSliderRoutes);
 app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/about-sections', aboutSectionsRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../config'
 
 function About({ token }) {
@@ -8,7 +8,9 @@ function About({ token }) {
     features: { title: '', description: '', image: '' },
   })
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(null)
   const [toast, setToast] = useState(null)
+  const fileInputs = useRef({})
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
@@ -33,6 +35,31 @@ function About({ token }) {
 
   const handleChange = (type, field, value) => {
     setSections(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }))
+  }
+
+  const handleFileUpload = async (type, file) => {
+    if (!file) return
+    setUploading(type)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        handleChange(type, 'image', `${API_BASE}${data.url}`)
+        showToast('Image uploaded', 'success')
+      } else {
+        showToast('Upload failed', 'error')
+      }
+    } catch {
+      showToast('Upload error', 'error')
+    } finally {
+      setUploading(null)
+    }
   }
 
   const handleSave = async (type) => {
@@ -85,7 +112,7 @@ function About({ token }) {
 
       {showImage && (
         <div>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#2a3f6e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Image URL</label>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#2a3f6e', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Image</label>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
             {sections[type].image && (
               <div style={{ width: '200px', height: '130px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2d7c5', flexShrink: 0 }}>
@@ -98,16 +125,34 @@ function About({ token }) {
               </div>
             )}
             <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => fileInputs.current[type]?.click()}
+                  disabled={uploading === type}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  {uploading === type ? 'Uploading...' : 'Upload from Computer'}
+                </button>
+              </div>
+              <input
+                ref={el => fileInputs.current[type] = el}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => handleFileUpload(type, e.target.files[0])}
+              />
               <input
                 type="text"
                 value={sections[type].image}
                 onChange={(e) => handleChange(type, 'image', e.target.value)}
                 disabled={loading}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: '1.5px solid #c5d5e8', fontSize: '13px', background: '#fffdf9', color: '#1a1a2e', outline: 'none', fontFamily: 'monospace' }}
-                placeholder="Paste image URL (Unsplash, Cloudinary, etc.)"
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2d7c5', fontSize: '13px', background: '#fffdf9', color: '#1a1a2e', outline: 'none', fontFamily: 'monospace' }}
+                placeholder="Or paste image URL..."
               />
               <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#888' }}>
-                Paste a direct image link. Works with Unsplash, Cloudinary, or any image URL.
+                Upload from computer or paste a URL (Unsplash, Cloudinary, etc.)
               </p>
             </div>
           </div>

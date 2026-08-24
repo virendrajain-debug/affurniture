@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../config'
 
 const bannerKeys = [
@@ -23,6 +23,11 @@ function Banners({ token }) {
 
   const [newSlide, setNewSlide] = useState({ image: '', alt: '', tagline: '', title: '', description: '', sort_order: 0 })
   const [editingSlide, setEditingSlide] = useState(null)
+
+  const [uploadingSlider, setUploadingSlider] = useState(null)
+  const [uploadingBanner, setUploadingBanner] = useState(null)
+  const sliderFileRef = useRef(null)
+  const bannerFileRefs = useRef({})
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
@@ -61,8 +66,83 @@ function Banners({ token }) {
     }
   }
 
+  const handleUploadForNewSlide = async (file) => {
+    if (!file) return
+    setUploadingSlider('new')
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setNewSlide(prev => ({ ...prev, image: `${API_BASE}${data.url}` }))
+        showToast('Image uploaded', 'success')
+      } else {
+        showToast('Upload failed', 'error')
+      }
+    } catch {
+      showToast('Upload error', 'error')
+    } finally {
+      setUploadingSlider(null)
+    }
+  }
+
+  const handleUploadForEditSlide = async (file) => {
+    if (!file || !editingSlide) return
+    setUploadingSlider(editingSlide._id || editingSlide.id)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setEditingSlide(prev => ({ ...prev, image: `${API_BASE}${data.url}` }))
+        showToast('Image uploaded', 'success')
+      } else {
+        showToast('Upload failed', 'error')
+      }
+    } catch {
+      showToast('Upload error', 'error')
+    } finally {
+      setUploadingSlider(null)
+    }
+  }
+
+  const handleUploadForBanner = async (key, file) => {
+    if (!file) return
+    setUploadingBanner(key)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        handleBannerChange(key, `${API_BASE}${data.url}`)
+        showToast('Image uploaded', 'success')
+      } else {
+        showToast('Upload failed', 'error')
+      }
+    } catch {
+      showToast('Upload error', 'error')
+    } finally {
+      setUploadingBanner(null)
+    }
+  }
+
   const handleAddSlide = async () => {
-    if (!newSlide.image.trim()) return showToast('Enter image URL', 'warning')
+    if (!newSlide.image.trim()) return showToast('Enter or upload an image', 'warning')
     try {
       const res = await fetch(`${API_BASE}/api/hero-sliders`, {
         method: 'POST',
@@ -136,6 +216,67 @@ function Banners({ token }) {
   const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2d7c5', fontSize: '13px', color: '#28241f', background: '#fffdf9', fontFamily: 'monospace' }
   const labelStyle = { fontSize: '12px', fontWeight: '600', color: '#2a3f6e', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.8px' }
 
+  const UploadButton = ({ onFile, uploading, label }) => (
+    <>
+      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) onFile(e.target.files[0]); e.target.value = '' }} ref={el => { if (el) el._uploadFn = onFile }} />
+      <button
+        className="btn-secondary"
+        onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (e) => { if (e.target.files[0]) onFile(e.target.files[0]) }; input.click() }}
+        disabled={!!uploading}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', fontSize: '13px' }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        {uploading ? 'Uploading...' : (label || 'Upload')}
+      </button>
+    </>
+  )
+
+  const SlideForm = ({ slide, setSlide, onSave, onCancel, onUpload, uploading, saveLabel }) => (
+    <div style={{ padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h4 style={{ margin: 0, fontSize: '14px', color: '#1a2744' }}>{saveLabel || 'New Slide'}</h4>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn-secondary" onClick={onCancel} style={{ padding: '6px 14px', fontSize: '12px' }}>Cancel</button>
+          <button className="btn-primary" onClick={onSave} style={{ padding: '6px 14px', fontSize: '12px' }}>{saveLabel === 'Save' ? 'Save' : 'Add Slide'}</button>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gap: '10px' }}>
+        <div>
+          <label style={labelStyle}>Image *</label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input type="text" value={slide.image} onChange={(e) => setSlide({ ...slide, image: e.target.value })} placeholder="Paste image URL or upload..." style={{ ...inputStyle, flex: 1 }} />
+            <UploadButton onFile={onUpload} uploading={uploading} label="Upload" />
+          </div>
+        </div>
+        {slide.image && (
+          <div style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2d7c5' }}>
+            <img src={slide.image} alt="Preview" onError={(e) => { e.target.style.display = 'none' }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={labelStyle}>Tagline</label>
+            <input type="text" value={slide.tagline} onChange={(e) => setSlide({ ...slide, tagline: e.target.value })} placeholder="e.g. AF FURNISHINGS" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Title (HTML allowed)</label>
+            <input type="text" value={slide.title} onChange={(e) => setSlide({ ...slide, title: e.target.value })} placeholder="e.g. Comfort made for everyday living." style={inputStyle} />
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={labelStyle}>Description</label>
+            <input type="text" value={slide.description} onChange={(e) => setSlide({ ...slide, description: e.target.value })} placeholder="Short description..." style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Sort Order</label>
+            <input type="number" value={slide.sort_order} onChange={(e) => setSlide({ ...slide, sort_order: Number(e.target.value) })} style={inputStyle} />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="terms-page">
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
@@ -145,59 +286,24 @@ function Banners({ token }) {
         <p>Manage hero slider images and page banner images</p>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button
-          className={activeTab === 'hero' ? 'btn-primary' : 'btn-secondary'}
-          onClick={() => setActiveTab('hero')}
-        >
-          Hero Slider ({sliders.length})
-        </button>
-        <button
-          className={activeTab === 'banners' ? 'btn-primary' : 'btn-secondary'}
-          onClick={() => setActiveTab('banners')}
-        >
-          Page Banners
-        </button>
+        <button className={activeTab === 'hero' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('hero')}>Hero Slider ({sliders.length})</button>
+        <button className={activeTab === 'banners' ? 'btn-primary' : 'btn-secondary'} onClick={() => setActiveTab('banners')}>Page Banners</button>
       </div>
 
       {activeTab === 'hero' && (
         <div>
           {/* Add New Slide */}
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2d7c5', marginBottom: '24px' }}>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: '16px', fontWeight: '600', color: '#1a2744', margin: '0 0 16px' }}>Add New Slide</h3>
-            <div style={{ display: 'grid', gap: '12px' }}>
-              <div>
-                <label style={labelStyle}>Image URL *</label>
-                <input type="text" value={newSlide.image} onChange={(e) => setNewSlide({ ...newSlide, image: e.target.value })} placeholder="Paste image URL..." style={inputStyle} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>Tagline</label>
-                  <input type="text" value={newSlide.tagline} onChange={(e) => setNewSlide({ ...newSlide, tagline: e.target.value })} placeholder="e.g. AF FURNISHINGS" style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Title (HTML allowed)</label>
-                  <input type="text" value={newSlide.title} onChange={(e) => setNewSlide({ ...newSlide, title: e.target.value })} placeholder="e.g. Comfort made for everyday living." style={inputStyle} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>Description</label>
-                  <input type="text" value={newSlide.description} onChange={(e) => setNewSlide({ ...newSlide, description: e.target.value })} placeholder="Short description..." style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Sort Order</label>
-                  <input type="number" value={newSlide.sort_order} onChange={(e) => setNewSlide({ ...newSlide, sort_order: Number(e.target.value) })} style={inputStyle} />
-                </div>
-              </div>
-              {newSlide.image && (
-                <div style={{ width: '100%', height: '160px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2d7c5' }}>
-                  <img src={newSlide.image} alt="Preview" onError={(e) => { e.target.style.display = 'none' }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              )}
-              <button className="btn-primary" onClick={handleAddSlide} style={{ alignSelf: 'flex-start' }}>Add Slide</button>
-            </div>
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2d7c5', marginBottom: '24px', overflow: 'hidden' }}>
+            <SlideForm
+              slide={newSlide}
+              setSlide={setNewSlide}
+              onSave={handleAddSlide}
+              onCancel={() => setNewSlide({ image: '', alt: '', tagline: '', title: '', description: '', sort_order: 0 })}
+              onUpload={handleUploadForNewSlide}
+              uploading={uploadingSlider === 'new'}
+              saveLabel="Add Slide"
+            />
           </div>
 
           {/* Existing Slides */}
@@ -205,31 +311,16 @@ function Banners({ token }) {
             {sliders.map((slide, idx) => (
               <div key={slide.id} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2d7c5', overflow: 'hidden' }}>
                 {editingSlide && editingSlide._id === slide.id ? (
-                  /* Edit Mode */
-                  <div style={{ padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', color: '#1a2744' }}>Editing Slide #{idx + 1}</h4>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="btn-secondary" onClick={() => setEditingSlide(null)} style={{ padding: '6px 14px', fontSize: '12px' }}>Cancel</button>
-                        <button className="btn-primary" onClick={() => handleUpdateSlide(slide.id)} style={{ padding: '6px 14px', fontSize: '12px' }}>Save</button>
-                      </div>
-                    </div>
-                    <div style={{ display: 'grid', gap: '10px' }}>
-                      <input type="text" value={editingSlide.image} onChange={(e) => setEditingSlide({ ...editingSlide, image: e.target.value })} placeholder="Image URL" style={inputStyle} />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <input type="text" value={editingSlide.tagline} onChange={(e) => setEditingSlide({ ...editingSlide, tagline: e.target.value })} placeholder="Tagline" style={inputStyle} />
-                        <input type="text" value={editingSlide.title} onChange={(e) => setEditingSlide({ ...editingSlide, title: e.target.value })} placeholder="Title" style={inputStyle} />
-                      </div>
-                      <input type="text" value={editingSlide.description} onChange={(e) => setEditingSlide({ ...editingSlide, description: e.target.value })} placeholder="Description" style={inputStyle} />
-                      {editingSlide.image && (
-                        <div style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2d7c5' }}>
-                          <img src={editingSlide.image} alt="Preview" onError={(e) => { e.target.style.display = 'none' }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <SlideForm
+                    slide={editingSlide}
+                    setSlide={setEditingSlide}
+                    onSave={() => handleUpdateSlide(slide.id)}
+                    onCancel={() => setEditingSlide(null)}
+                    onUpload={handleUploadForEditSlide}
+                    uploading={uploadingSlider === slide.id}
+                    saveLabel="Save"
+                  />
                 ) : (
-                  /* View Mode */
                   <div style={{ display: 'flex', gap: '16px', padding: '16px', alignItems: 'center' }}>
                     <div style={{ width: '200px', height: '120px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2d7c5', flexShrink: 0, background: '#f5f5f5' }}>
                       {slide.image ? (
@@ -244,11 +335,7 @@ function Banners({ token }) {
                           <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{slide.tagline || 'No tagline'}</span>
                           <h4 style={{ margin: '2px 0 0', fontSize: '15px', color: '#1a2744' }}>{slide.title || 'No title'}</h4>
                         </div>
-                        <span
-                          className={`status-badge ${slide.active ? 'active' : 'pending'}`}
-                          style={{ cursor: 'pointer', flexShrink: 0 }}
-                          onClick={() => handleToggleSlide(slide.id, slide.active)}
-                        >
+                        <span className={`status-badge ${slide.active ? 'active' : 'pending'}`} style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => handleToggleSlide(slide.id, slide.active)}>
                           {slide.active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
@@ -266,9 +353,7 @@ function Banners({ token }) {
                 )}
               </div>
             ))}
-            {sliders.length === 0 && (
-              <div className="empty-state"><p>No hero slides yet</p><span>Add your first slide above</span></div>
-            )}
+            {sliders.length === 0 && <div className="empty-state"><p>No hero slides yet</p><span>Add your first slide above</span></div>}
           </div>
         </div>
       )}
@@ -289,15 +374,30 @@ function Banners({ token }) {
                       <img src={url} alt={label} onError={(e) => { e.target.src = fallback }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <input type="text" value={banners[key] || ''} onChange={(e) => handleBannerChange(key, e.target.value)} placeholder={fallback} disabled={loading} style={inputStyle} />
-                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#888' }}>Paste an image URL (Unsplash, Cloudinary, or any direct image link)</p>
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <UploadButton
+                          onFile={(file) => handleUploadForBanner(key, file)}
+                          uploading={uploadingBanner === key}
+                          label="Upload"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        value={banners[key] || ''}
+                        onChange={(e) => handleBannerChange(key, e.target.value)}
+                        placeholder={fallback}
+                        disabled={loading}
+                        style={inputStyle}
+                      />
+                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#888' }}>
+                        Upload from computer or paste an image URL
+                      </p>
                     </div>
                   </div>
                 </div>
               )
             })}
           </div>
-
           <div className="editor-actions" style={{ marginTop: '24px' }}>
             <button className="btn-primary" onClick={handleSaveBanners}>Save All Banners</button>
           </div>
