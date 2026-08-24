@@ -27,6 +27,7 @@ import heroSliderRoutes from './routes/hero-sliders.js';
 import discountCodeRoutes from './routes/discount-codes.js';
 import aboutSectionsRoutes from './routes/about-sections.js';
 import uploadRoutes from './routes/upload.js';
+import pageBannerRoutes from './routes/page-banners.js';
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use('/api/hero-sliders', heroSliderRoutes);
 app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/about-sections', aboutSectionsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/page-banners', pageBannerRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -322,6 +324,16 @@ function autoSetup() {
       description TEXT DEFAULT '',
       image TEXT DEFAULT '',
       updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS page_banners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      page_key TEXT NOT NULL UNIQUE,
+      label TEXT DEFAULT '',
+      image TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
     )
   `);
 
