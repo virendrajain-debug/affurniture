@@ -372,7 +372,8 @@ function autoSetup() {
   const aboutSectionTypes = [
     { type: 'main_banner', title: 'Welcome to AF Furnishings', description: 'We provide quality furniture, beds and appliances to make your home feel complete.' },
     { type: 'primary_section', title: 'About Us', description: 'AF Furnishings is a family-owned New Zealand furniture retailer with over 15 years of experience.' },
-    { type: 'features', title: 'Why Choose Us', description: '' }
+    { type: 'features', title: 'Why Choose Us', description: '' },
+    { type: 'conclusion', title: 'Conclusion', description: '' }
   ];
   for (const sec of aboutSectionTypes) {
     const [secExists] = pool.execute('SELECT id FROM about_sections WHERE type=?', [sec.type]);
