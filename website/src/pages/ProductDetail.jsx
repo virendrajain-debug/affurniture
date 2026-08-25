@@ -24,6 +24,8 @@ function ProductDetail() {
   const [zoomOpen, setZoomOpen] = useState(false)
   const [zoomScale, setZoomScale] = useState(1)
   const [selectedImg, setSelectedImg] = useState(0)
+  const [selectedConfig, setSelectedConfig] = useState('')
+  const [selectedColor, setSelectedColor] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -106,34 +108,67 @@ function ProductDetail() {
             <span className="pd-category">{product.category_name}</span>
             <h1>{product.name}</h1>
 
-            <div className="pd-pricing">
-              {product.selling_price && <span className="pd-price">${Number(product.selling_price).toLocaleString()}</span>}
-              {hasDiscount && <span className="pd-mrp">${Number(product.mrp).toLocaleString()}</span>}
-              {!product.selling_price && product.mrp && <span className="pd-price">${Number(product.mrp).toLocaleString()}</span>}
+            <div className="pd-rating-row">
+              <span className="pd-rating-stars-inline">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
+              <span className="pd-rating-link">4.8 &middot; 24 customer reviews</span>
             </div>
 
-            {weekly && <p className="pd-weekly">Or just <strong>${weekly}/week</strong> on flexible finance</p>}
+            <p className="pd-desc">{product.description || 'A comfortable piece designed for long evenings, slow Sundays and everyday family living.'}</p>
 
-            {product.description && <p className="pd-desc">{product.description}</p>}
-
-            <div className="pd-meta-grid">
-              {product.material && <div><strong>Material</strong><span>{product.material}</span></div>}
-              {product.color && <div><strong>Color</strong><span>{product.color}</span></div>}
-              {product.size && <div><strong>Size</strong><span>{product.size}</span></div>}
-              {product.dimensions && <div><strong>Dimensions</strong><span>{product.dimensions}</span></div>}
-              {product.weight && <div><strong>Weight</strong><span>{product.weight} kg</span></div>}
-              {product.warranty && <div><strong>Warranty</strong><span>{product.warranty}</span></div>}
-              <div><strong>Stock</strong><span>{product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}</span></div>
+            {/* Configuration Selector */}
+            <div className="pd-option-group">
+              <label>Choose a configuration</label>
+              <div className="pd-option-pills">
+                {['3 + 2 + 1', '3 + 2', 'Single recliner'].map(cfg => (
+                  <button key={cfg} className={`pd-pill ${selectedConfig === cfg ? 'active' : ''}`} onClick={() => setSelectedConfig(cfg)}>{cfg}</button>
+                ))}
+              </div>
             </div>
 
+            {/* Colour Selector */}
+            <div className="pd-option-group">
+              <label>Choose a colour</label>
+              <div className="pd-colour-swatches">
+                {[
+                  { name: 'Beige', color: '#c9b99a' },
+                  { name: 'Grey', color: '#a0a0a0' },
+                  { name: 'Black', color: '#2d2d2d' },
+                ].map(c => (
+                  <button key={c.name} className={`pd-swatch ${selectedColor === c.name ? 'active' : ''}`} style={{ background: c.color }} onClick={() => setSelectedColor(c.name)} title={c.name}>
+                    {selectedColor === c.name && <span className="pd-swatch-check">&#10003;</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Weekly Payment Guide */}
+            <div className="pd-payment-guide">
+              <div className="pd-payment-left">
+                <span className="pd-payment-label">Weekly payment guide</span>
+                <div className="pd-payment-price">
+                  <span className="pd-payment-dollar">${weekly || '00'}</span>
+                  <span className="pd-payment-period">per week</span>
+                </div>
+              </div>
+              <a href="#order-details" className="pd-order-details-link">Order details</a>
+            </div>
+
+            {/* Enquiry Button */}
             <button className="pd-enquiry-btn" onClick={() => setShowModal(true)}>
-              Enquire Now
+              ADD TO ENQUIRY
             </button>
+
+            {/* Trust Checkmarks */}
+            <div className="pd-trust-row">
+              <span>&#10003; Friendly assistance</span>
+              <span>&#10003; Delivery options available</span>
+              <span>&#10003; Enquire for availability</span>
+            </div>
           </div>
         </div>
 
         {/* Order Details Section */}
-        <section className="pd-order-details">
+        <section className="pd-order-details" id="order-details">
           <div className="pd-order-inner">
             <div className="pd-order-content">
               <span className="pd-section-label">ORDER DETAILS</span>
