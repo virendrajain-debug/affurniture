@@ -141,30 +141,18 @@ function ProductDetail() {
               <p>{product.description || 'The ' + product.name + ' combines generous cushioning, supportive design and smooth finishing. The flexible configuration lets you choose a setup that makes sense for your room.'}</p>
 
               <div className="pd-specs-table">
-                {product.material && (
-                  <div className="pd-spec-row">
-                    <strong>Materials</strong>
-                    <span>{product.material}{product.color ? ` - ${product.color}` : ''}. {product.description || 'Quality construction for lasting comfort.'}</span>
-                  </div>
-                )}
-                {product.delivery_info && (
-                  <div className="pd-spec-row">
-                    <strong>Delivery</strong>
-                    <span>{product.delivery_info}</span>
-                  </div>
-                )}
-                {!product.material && (
-                  <div className="pd-spec-row">
-                    <strong>What's included</strong>
-                    <span>Selected configuration, seat cushions and care guide.</span>
-                  </div>
-                )}
-                {!product.delivery_info && (
-                  <div className="pd-spec-row">
-                    <strong>Delivery</strong>
-                    <span>Our team will confirm delivery options after your enquiry.</span>
-                  </div>
-                )}
+                <div className="pd-spec-row">
+                  <strong>What's included</strong>
+                  <span>Selected configuration, seat cushions and care guide.</span>
+                </div>
+                <div className="pd-spec-row">
+                  <strong>Materials</strong>
+                  <span>{product.material || 'Easy-care upholstery'}{product.color ? ` - ${product.color}` : ''}. {product.warranty || 'Supportive foam and solid internal frame.'}</span>
+                </div>
+                <div className="pd-spec-row">
+                  <strong>Delivery</strong>
+                  <span>{product.delivery_info || 'Our team will confirm delivery options after your enquiry.'}</span>
+                </div>
               </div>
             </div>
 

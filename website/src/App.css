@@ -372,10 +372,10 @@ footer a:hover{color:#e2b76f}
 .pd-order-content h2{font:400 clamp(32px,4vw,50px) "Cormorant Garamond",serif;color:var(--ink);margin:0 0 16px;line-height:1.15}
 .pd-order-content>p{color:#72695d;line-height:1.7;font-size:15px;margin:0 0 32px;max-width:540px}
 .pd-specs-table{display:flex;flex-direction:column;gap:0}
-.pd-spec-row{display:grid;grid-template-columns:160px 1fr;gap:20px;padding:18px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
+.pd-spec-row{display:flex;align-items:baseline;gap:20px;padding:18px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
 .pd-spec-row:last-child{border-bottom:none}
-.pd-spec-row strong{font:600 14px "DM Sans";color:var(--ink)}
-.pd-spec-row span{font:400 14px "DM Sans";color:#72695d;line-height:1.6}
+.pd-spec-row strong{font:600 14px "DM Sans";color:var(--ink);min-width:140px;flex-shrink:0}
+.pd-spec-row span{font:400 14px "DM Sans";color:#72695d;line-height:1.6;flex:1}
 .pd-help-card{background:var(--ink);border-radius:20px;padding:36px 32px;color:white}
 .pd-help-card h3{font:400 26px "Cormorant Garamond",serif;margin:0 0 14px;color:white}
 .pd-help-card p{font:400 14px "DM Sans";color:rgba(255,255,255,0.7);line-height:1.6;margin:0 0 24px}
@@ -392,8 +392,8 @@ footer a:hover{color:#e2b76f}
 .pd-rating-stars{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .pd-rating-stars span:first-child{color:var(--gold);font-size:18px;letter-spacing:2px}
 .pd-rating-count{font:400 13px "DM Sans";color:#999}
-.pd-reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1200px;margin:0 auto 40px}
-.pd-review-card{background:var(--beige);border-radius:16px;padding:32px 28px;text-align:left}
+.pd-reviews-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:24px;max-width:1200px;margin:0 auto 40px;width:100%}
+.pd-review-card{background:var(--beige);border-radius:16px;padding:32px 28px;text-align:left;display:flex;flex-direction:column;justify-content:space-between}
 .pd-review-text{font:400 18px "Cormorant Garamond",serif;color:var(--ink);line-height:1.5;margin:0 0 20px;min-height:80px}
 .pd-review-author{font:400 13px "DM Sans";color:#72695d}
 .pd-review-stars{color:var(--gold);letter-spacing:1px}
@@ -403,7 +403,7 @@ footer a:hover{color:#e2b76f}
 /* Related Products */
 .pd-related{padding:70px 7vw;text-align:center}
 .pd-related h2{font:400 clamp(32px,4vw,50px) "Cormorant Garamond",serif;color:var(--ink);margin:0 0 35px}
-.pd-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1200px;margin:0 auto}
+.pd-related-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:24px;max-width:1200px;margin:0 auto;width:100%}
 .pd-related-card{display:block;border-radius:16px;overflow:hidden;text-decoration:none;color:var(--ink);background:var(--paper);transition:transform 0.3s ease,box-shadow 0.3s ease}
 .pd-related-card:hover{transform:translateY(-5px);box-shadow:0 12px 32px rgba(0,0,0,0.1)}
 .pd-related-img{overflow:hidden}
@@ -496,10 +496,11 @@ footer a:hover{color:#e2b76f}
   .footer-logo{margin-bottom:30px}
   .pd-grid{grid-template-columns:1fr;gap:30px;padding:0 24px 40px}
   .pd-meta-grid{grid-template-columns:1fr}
-  .pd-related-grid{grid-template-columns:1fr;max-width:400px}
   .pd-order-inner{grid-template-columns:1fr;gap:30px}
-  .pd-spec-row{grid-template-columns:1fr;gap:6px}
-  .pd-reviews-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto 40px}
+  .pd-spec-row{flex-direction:column;gap:6px}
+  .pd-spec-row strong{min-width:auto}
+  .pd-reviews-grid{grid-template-columns:1fr!important;max-width:440px;margin:0 auto 40px}
+  .pd-related-grid{grid-template-columns:1fr!important;max-width:400px}
   .pd-help-card{padding:28px 24px}
   .pd-thumbnails{overflow-x:auto;gap:8px}
   .pd-thumb{width:60px;height:60px;flex-shrink:0}
