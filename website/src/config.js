@@ -1,1 +1,1 @@
-export const API_BASE = 'https://backend.affurnitures.co.nz'
+export const API_BASE = 'https://backend.affurnishings.co.nz'

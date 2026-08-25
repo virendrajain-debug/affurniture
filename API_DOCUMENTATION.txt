@@ -1,490 +1,159 @@
-# ============================================================
-# AF Furnishings - Complete API Reference
-# ============================================================
-# Base URL: http://localhost:5005/api
-#
-# This document lists every API endpoint, what it does,
-# what data it expects, and what it returns.
-#
-# HOW TO CONNECT:
-#   1. Start MySQL and create database: CREATE DATABASE af_furniture;
-#   2. Run migrations: cd backend && npm run migrate
-#   3. Seed data: npm run seed
-#   4. Start backend: npm run dev
-#   5. Start admin panel: cd ../admin-panel && npm run dev
-#   6. Start website: cd ../website && npm run dev
-#
-# AUTHENTICATION:
-#   Protected endpoints require a JWT token in the header:
-#   Authorization: Bearer <your-jwt-token>
-#   Get the token from POST /api/auth/login
-# ============================================================
+# AF Furnishings Backend API Documentation
+# Base URL: https://backend.affurnishings.co.nz
+# Authentication: Bearer Token in Authorization header (required for protected endpoints)
+# Content-Type: application/json (unless noted as multipart/form-data)
 
-
-# ============================================================
-# 1. AUTHENTICATION ROUTES
-# ============================================================
-
-# ---- POST /api/auth/login ----
-# Login with email and password. Returns JWT token.
-#
-# Request Body:
-#   {
-#     "email": "admin@gmail.com",
-#     "password": "admin123"
-#   }
-#
-# Success Response (200):
-#   {
-#     "message": "Login successful",
-#     "token": "eyJhbGciOiJIUzI1NiIs...",
-#     "user": {
-#       "id": 1,
-#       "name": "Admin",
-#       "email": "admin@gmail.com",
-#       "role": "admin",
-#       "profile_image": null
-#     }
-#   }
-#
-# Error Response (401):
-#   { "message": "Invalid credentials" }
-
-
-# ---- POST /api/auth/forgot-password ----
-# Request a password reset OTP (sent to email).
-#
-# Request Body:
-#   { "email": "admin@gmail.com" }
-#
-# Response (200):
-#   { "message": "OTP sent to your email" }
-#
-# NOTE: In development, the OTP is logged to the server console.
-#       Check the terminal running the backend to see it.
-
-
-# ---- POST /api/auth/verify-otp ----
-# Verify the 6-digit OTP code.
-#
-# Request Body:
-#   {
-#     "email": "admin@gmail.com",
-#     "otp": "123456"
-#   }
-#
-# Success Response (200):
-#   {
-#     "message": "OTP verified successfully",
-#     "resetToken": "eyJhbGciOiJIUzI1NiIs..."
-#   }
-#
-# Error Response (400):
-#   { "message": "Invalid OTP" }
-
-
-# ---- POST /api/auth/reset-password ----
-# Set a new password using the reset token.
-#
-# Request Body:
-#   {
-#     "email": "admin@gmail.com",
-#     "newPassword": "newpassword123",
-#     "resetToken": "eyJhbGciOiJIUzI1NiIs..."
-#   }
-#
-# Response (200):
-#   { "message": "Password reset successful" }
-
-
-# ---- GET /api/auth/profile ----
-# Get the logged-in user's profile.
-# REQUIRES AUTHENTICATION
-#
-# Headers:
-#   Authorization: Bearer <token>
-#
-# Response (200):
-#   {
-#     "id": 1,
-#     "name": "Admin",
-#     "email": "admin@gmail.com",
-#     "profile_image": "data:image/jpeg;base64,...",
-#     "role": "admin"
-#   }
-
-
-# ---- PUT /api/auth/profile ----
-# Update the logged-in user's profile.
-# REQUIRES AUTHENTICATION
-#
-# Headers:
-#   Authorization: Bearer <token>
-#
-# Request Body:
-#   {
-#     "name": "New Name",
-#     "email": "new@email.com",
-#     "profile_image": "data:image/jpeg;base64,..."
-#   }
-#
-# Response (200):
-#   { "message": "Profile updated successfully" }
-
-
-# ---- PUT /api/auth/change-password ----
-# Change the logged-in user's password.
-# REQUIRES AUTHENTICATION
-#
-# Headers:
-#   Authorization: Bearer <token>
-#
-# Request Body:
-#   {
-#     "currentPassword": "admin123",
-#     "newPassword": "newpassword123"
-#   }
-#
-# Response (200):
-#   { "message": "Password changed successfully" }
-#
-# Error Response (401):
-#   { "message": "Current password is incorrect" }
-
-
-# ============================================================
-# 2. PRODUCT ROUTES
-# ============================================================
-
-# ---- GET /api/products ----
-# List all products with optional filters.
-# PUBLIC (no authentication required)
-#
-# Query Parameters (all optional):
-#   ?category=Living Room    - Filter by category name
-#   ?search=sofa             - Search in name and description
-#   ?featured=true           - Only featured products
-#   ?new_arrival=true        - Only new arrivals
-#   ?limit=4                 - Limit number of results
-#
-# Example:
-#   GET /api/products?category=Bedroom&limit=2
-#
-# Response (200):
-#   [
-#     {
-#       "id": 1,
-#       "name": "Marina Lounge Chair",
-#       "category_id": 1,
-#       "category_name": "Living Room",
-#       "mrp": 1299,
-#       "selling_price": 1099,
-#       "discounted_price": null,
-#       "description": "Comfortable lounge chair...",
-#       "stock": 15,
-#       "material": "Oak Wood",
-#       "color": "Grey",
-#       "size": "Medium",
-#       "dimensions": null,
-#       "weight": null,
-#       "warranty": null,
-#       "delivery_info": null,
-#       "featured": 1,
-#       "new_arrival": 0,
-#       "images": [],
-#       "created_at": "2026-08-21T00:00:00.000Z"
-#     },
-#     ...
-#   ]
-
-
-# ---- GET /api/products/:id ----
-# Get a single product by ID.
-# PUBLIC
-#
-# Example: GET /api/products/5
-#
-# Response (200):
-#   { "id": 5, "name": "Willow Bedroom Set", ... }
-
-
-# ---- POST /api/products ----
-# Create a new product. REQUIRES AUTHENTICATION.
-# Supports multipart form data for image uploads.
-#
-# Headers:
-#   Authorization: Bearer <token>
-#
-# Request Body (multipart/form-data):
-#   name              (required) - Product name
-#   category_id       (optional) - Category ID
-#   mrp               (required) - Maximum Retail Price
-#   selling_price     (optional) - Current selling price
-#   discounted_price  (optional) - Discounted price
-#   description       (optional) - Product description
-#   stock             (optional) - Stock quantity
-#   material          (optional) - Material info
-#   color             (optional) - Color info
-#   size              (optional) - Size
-#   dimensions        (optional) - Dimensions
-#   weight            (optional) - Weight in kg
-#   warranty          (optional) - Warranty info
-#   delivery_info     (optional) - Delivery information
-#   featured          (optional) - "true" or "false"
-#   new_arrival       (optional) - "true" or "false"
-#   images            (optional) - File uploads (up to 10)
-#
-# Response (201):
-#   { "message": "Product created successfully", "id": 13 }
-
-
-# ---- PUT /api/products/:id ----
-# Update an existing product. REQUIRES AUTHENTICATION.
-# Same fields as POST /api/products.
-#
-# Response (200):
-#   { "message": "Product updated successfully" }
-
-
-# ---- DELETE /api/products/:id ----
-# Delete a product. REQUIRES AUTHENTICATION.
-#
-# Response (200):
-#   { "message": "Product deleted successfully" }
-
-
-# ============================================================
-# 3. CATEGORY ROUTES
-# ============================================================
-
-# ---- GET /api/categories ----
-# List all categories with product counts.
-# PUBLIC
-#
-# Response (200):
-#   [
-#     { "id": 1, "name": "Bedroom", "product_count": 4, "created_at": "..." },
-#     { "id": 2, "name": "Dining", "product_count": 4, "created_at": "..." },
-#     { "id": 3, "name": "Living Room", "product_count": 4, "created_at": "..." }
-#   ]
-
-
-# ---- POST /api/categories ----
-# Create a new category. REQUIRES AUTHENTICATION.
-#
-# Request Body:
-#   { "name": "Office" }
-#
-# Response (201):
-#   { "message": "Category created", "id": 6, "name": "Office" }
-
-
-# ---- DELETE /api/categories/:id ----
-# Delete a category. REQUIRES AUTHENTICATION.
-# Products in this category will have category_id set to NULL.
-#
-# Response (200):
-#   { "message": "Category deleted" }
-
-
-# ============================================================
-# 4. ABOUT ROUTES
-# ============================================================
-
-# ---- GET /api/about ----
-# Get company information for the About section.
-# PUBLIC
-#
-# Response (200):
-#   {
-#     "id": 1,
-#     "company_name": "AF Furnishings",
-#     "tagline": "Comfort made for everyday living.",
-#     "description": "AF Furnishings provides quality furniture...",
-#     "address": "Auckland, New Zealand",
-#     "phone": "12345667890",
-#     "email": "affurniture@gmail.com"
-#   }
-
-
-# ---- PUT /api/about ----
-# Update company information. REQUIRES AUTHENTICATION.
-#
-# Request Body:
-#   {
-#     "company_name": "AF Furnishings",
-#     "tagline": "Your new tagline",
-#     "description": "Updated description...",
-#     "address": "New Address",
-#     "phone": "1234567890",
-#     "email": "new@email.com"
-#   }
-#
-# Response (200):
-#   { "message": "About info updated" }
-
-
-# ============================================================
-# 5. TERMS & CONDITIONS ROUTES
-# ============================================================
-
-# ---- GET /api/terms ----
-# Get the Terms & Conditions content.
-# PUBLIC
-#
-# Response (200):
-#   {
-#     "id": 1,
-#     "content": "Terms & Conditions\n\n1. General\nThese terms...",
-#     "updated_at": "2026-08-21T00:00:00.000Z"
-#   }
-
-
-# ---- PUT /api/terms ----
-# Update Terms & Conditions content. REQUIRES AUTHENTICATION.
-#
-# Request Body:
-#   { "content": "Your full terms and conditions text here..." }
-#
-# Response (200):
-#   { "message": "Terms & Conditions updated" }
-
-
-# ============================================================
-# 6. ENQUIRY ROUTES
-# ============================================================
-
-# ---- GET /api/enquiries ----
-# List all enquiries. REQUIRES AUTHENTICATION.
-#
-# Query Parameters (optional):
-#   ?type=product    - Filter by type (product or contact)
-#   ?status=pending  - Filter by status (pending, replied, closed)
-#
-# Response (200):
-#   [
-#     {
-#       "id": 1,
-#       "name": "John Smith",
-#       "email": "john@example.com",
-#       "phone": "1234567890",
-#       "product_id": 1,
-#       "product_name": "Marina Lounge Chair",
-#       "message": "Is this available in walnut finish?",
-#       "status": "pending",
-#       "type": "product",
-#       "created_at": "2026-08-21T00:00:00.000Z"
-#     },
-#     ...
-#   ]
-
-
-# ---- POST /api/enquiries ----
-# Submit a new enquiry. PUBLIC (no authentication needed).
-# Used by the website's "Add to enquiry" button and Contact form.
-#
-# Request Body:
-#   {
-#     "name": "John Smith",
-#     "email": "john@example.com",
-#     "phone": "1234567890",          (optional)
-#     "product_id": 1,                (optional - for product enquiries)
-#     "product_name": "Marina Lounge Chair", (optional)
-#     "message": "Is this available in walnut finish?", (optional)
-#     "type": "product"               (or "contact" for contact form)
-#   }
-#
-# Response (201):
-#   { "message": "Enquiry submitted successfully", "id": 1 }
-
-
-# ---- PUT /api/enquiries/:id/status ----
-# Update an enquiry's status. REQUIRES AUTHENTICATION.
-#
-# Request Body:
-#   { "status": "replied" }   (pending, replied, or closed)
-#
-# Response (200):
-#   { "message": "Status updated" }
-
-
-# ---- DELETE /api/enquiries/:id ----
-# Delete an enquiry. REQUIRES AUTHENTICATION.
-#
-# Response (200):
-#   { "message": "Enquiry deleted" }
-
-
-# ============================================================
-# 7. DASHBOARD ROUTES
-# ============================================================
-
-# ---- GET /api/dashboard ----
-# Get dashboard statistics and recent enquiries.
-# REQUIRES AUTHENTICATION
-#
-# Headers:
-#   Authorization: Bearer <token>
-#
-# Response (200):
-#   {
-#     "stats": {
-#       "totalCategories": 5,
-#       "totalProducts": 12,
-#       "totalEnquiries": 3,
-#       "inStockProducts": 10,
-#       "outOfStockProducts": 2,
-#       "contactEnquiries": 1
-#     },
-#     "recentEnquiries": [
-#       { "id": 1, "name": "John", "email": "john@example.com", ... },
-#       ...
-#     ]
-#   }
-
-
-# ============================================================
-# 8. HEALTH CHECK
-# ============================================================
-
-# ---- GET /api/health ----
-# Simple health check endpoint. PUBLIC.
-#
-# Response (200):
-#   { "status": "ok", "timestamp": "2026-08-21T12:00:00.000Z" }
-
-
-# ============================================================
-# QUICK START GUIDE
-# ============================================================
-#
-# 1. Install MySQL and create the database:
-#    mysql -u root -e "CREATE DATABASE af_furniture"
-#
-# 2. Install backend dependencies:
-#    cd backend && npm install
-#
-# 3. Run database migrations:
-#    npm run migrate
-#
-# 4. Seed the database with default data:
-#    npm run seed
-#
-# 5. Start the backend server:
-#    npm run dev
-#    (Server runs on http://localhost:5005)
-#
-# 6. In a new terminal, start the admin panel:
-#    cd ../admin-panel && npm install && npm run dev
-#    (Admin panel runs on http://localhost:5173)
-#
-# 7. In another terminal, start the website:
-#    cd ../website && npm install && npm run dev
-#    (Website runs on http://localhost:5174)
-#
-# 8. Login to admin panel:
-#    Email: admin@gmail.com
-#    Password: admin123
-#
-# The Vite dev server proxies /api requests to the backend,
-# so the frontend can call /api/* directly without CORS issues.
+# =====================================================================
+# METHOD | ROUTE | AUTH | PARAMETERS
+# =====================================================================
+# AUTH
+# =====================================================================
+POST,/api/auth/login,No,email (string),password (string)
+POST,/api/auth/forgot-password,No,email (string)
+POST,/api/auth/verify-otp,No,email (string),otp (string)
+POST,/api/auth/reset-password,No,email (string),newPassword (string),resetToken (string)
+GET,/api/auth/profile,Yes,
+PUT,/api/auth/profile,Yes,name (string),email (string),profile_image (string)
+PUT,/api/auth/change-password,Yes,currentPassword (string),newPassword (string)
+# =====================================================================
+# PRODUCTS
+# =====================================================================
+GET,/api/products,No,category (int),search (string),featured (0|1),new_arrival (0|1),on_sale (0|1),subcategory (int),limit (int),page (int),per_page (int)
+GET,/api/products/:id,No,:id (path)
+POST,/api/products,Yes,name (string),category_id (int),mrp (number),selling_price (number),discounted_price (number),description (string),stock (int),material (string),color (string),size (string),dimensions (string),weight (number),warranty (string),delivery_info (string),featured (0|1),new_arrival (0|1),images[] (file - multipart)
+PUT,/api/products/:id,Yes,:id (path),name (string),category_id (int),mrp (number),selling_price (number),discounted_price (number),description (string),stock (int),material (string),color (string),size (string),dimensions (string),weight (number),warranty (string),delivery_info (string),featured (0|1),new_arrival (0|1),existing_images (string),images[] (file - multipart)
+DELETE,/api/products/:id,Yes,:id (path)
+# =====================================================================
+# CATEGORIES
+# =====================================================================
+GET,/api/categories,No,
+POST,/api/categories,Yes,name (string)
+DELETE,/api/categories/:id,Yes,:id (path)
+# =====================================================================
+# ABOUT (Company Info)
+# =====================================================================
+GET,/api/about,No,
+PUT,/api/about,Yes,company_name (string),tagline (string),description (string),address (string),phone (string),email (string)
+# =====================================================================
+# ABOUT SECTIONS (Page Sections)
+# =====================================================================
+GET,/api/about-sections,No,
+GET,/api/about-sections/:type,No,:type (path) - main_banner | primary_section | features | conclusion
+POST,/api/about-sections,Yes,type (string),title (string),description (string),image (string)
+PUT,/api/about-sections/:type,Yes,:type (path),title (string),description (string),image (string)
+# =====================================================================
+# TERMS & CONDITIONS
+# =====================================================================
+GET,/api/terms,No,
+PUT,/api/terms,Yes,content (string)
+# =====================================================================
+# ENQUIRIES
+# =====================================================================
+GET,/api/enquiries/notifications,Yes,
+PUT,/api/enquiries/mark-read,Yes,
+GET,/api/enquiries,Yes,type (string),status (string)
+GET,/api/enquiries/:id,Yes,:id (path)
+POST,/api/enquiries,No,name (string),email (string),phone (string),product_id (int),product_name (string),message (string),type (string)
+PUT,/api/enquiries/:id/status,Yes,:id (path),status (string)
+PUT,/api/enquiries/:id/reply,Yes,:id (path),reply (string)
+DELETE,/api/enquiries/:id,Yes,:id (path)
+# =====================================================================
+# DASHBOARD
+# =====================================================================
+GET,/api/dashboard,Yes,
+# =====================================================================
+# SOCIAL LINKS
+# =====================================================================
+GET,/api/social,No,
+GET,/api/social/all,Yes,
+POST,/api/social,Yes,platform (string),url (string),icon (string),sort_order (int),enabled (0|1)
+PUT,/api/social/:id,Yes,:id (path),platform (string),url (string),icon (string),sort_order (int),enabled (0|1)
+DELETE,/api/social/:id,Yes,:id (path)
+# =====================================================================
+# SITE SETTINGS
+# =====================================================================
+GET,/api/settings,No,
+GET,/api/settings/all,Yes,
+PUT,/api/settings,Yes,key-value pairs (e.g. primary_color=#28241f)
+# =====================================================================
+# WINZ QUOTES
+# =====================================================================
+POST,/api/winz-quotes,No,name (string),email (string),phone (string),product_name (string),message (string)
+GET,/api/winz-quotes,Yes,
+DELETE,/api/winz-quotes/:id,Yes,:id (path)
+# =====================================================================
+# PRIVACY POLICY
+# =====================================================================
+GET,/api/privacy,No,
+PUT,/api/privacy,Yes,content (string)
+# =====================================================================
+# SHOWROOMS
+# =====================================================================
+GET,/api/showrooms,No,
+PUT,/api/showrooms,Yes,content (string)
+# =====================================================================
+# DELIVERY INFO
+# =====================================================================
+GET,/api/delivery-info,No,
+PUT,/api/delivery-info,Yes,content (string)
+# =====================================================================
+# SHOP FURNITURE
+# =====================================================================
+GET,/api/shop-furniture,No,
+PUT,/api/shop-furniture,Yes,content (string)
+# =====================================================================
+# RETURNS
+# =====================================================================
+GET,/api/returns,No,
+PUT,/api/returns,Yes,content (string)
+# =====================================================================
+# FINANCE APPLICATIONS
+# =====================================================================
+POST,/api/finance-applications,No,first_name (string),last_name (string),email (string),phone (string),address (string),city (string),state (string),income_source (string),products (string),documents[] (file - multipart)
+GET,/api/finance-applications,Yes,
+GET,/api/finance-applications/:id,Yes,:id (path)
+PUT,/api/finance-applications/:id/status,Yes,:id (path),status (string)
+DELETE,/api/finance-applications/:id,Yes,:id (path)
+# =====================================================================
+# STORE LOCATIONS
+# =====================================================================
+GET,/api/store-locations,No,
+GET,/api/store-locations/all,Yes,
+POST,/api/store-locations,Yes,name (string),address (string),city (string),phone (string),email (string),google_map_url (string),latitude (string),longitude (string),description (string),sort_order (int)
+PUT,/api/store-locations/:id,Yes,:id (path),name (string),address (string),city (string),phone (string),email (string),google_map_url (string),latitude (string),longitude (string),description (string),sort_order (int),active (0|1)
+DELETE,/api/store-locations/:id,Yes,:id (path)
+# =====================================================================
+# HERO SLIDERS
+# =====================================================================
+GET,/api/hero-sliders,No,
+GET,/api/hero-sliders/active,No,
+POST,/api/hero-sliders,Yes,image (string),alt (string),tagline (string),title (string),description (string),sort_order (int),active (0|1)
+PUT,/api/hero-sliders/:id,Yes,:id (path),image (string),alt (string),tagline (string),title (string),description (string),sort_order (int),active (0|1)
+DELETE,/api/hero-sliders/:id,Yes,:id (path)
+# =====================================================================
+# DISCOUNT CODES
+# =====================================================================
+GET,/api/discount-codes,No,
+POST,/api/discount-codes,Yes,code (string),value (string),type (string - percentage|fixed),min_order (number),max_uses (int),expires_at (string - date)
+PUT,/api/discount-codes/:id,Yes,:id (path),code (string),value (string),type (string),min_order (number),max_uses (int),expires_at (string),active (0|1)
+DELETE,/api/discount-codes/:id,Yes,:id (path)
+# =====================================================================
+# PAGE BANNERS
+# =====================================================================
+GET,/api/page-banners,No,
+POST,/api/page-banners,Yes,page_key (string),label (string),image (string)
+PUT,/api/page-banners/:id,Yes,:id (path),page_key (string),label (string),image (string)
+DELETE,/api/page-banners/:id,Yes,:id (path)
+# =====================================================================
+# FILE UPLOAD
+# =====================================================================
+POST,/api/upload,Yes,image (file - multipart/form-data, single file)
+POST,/api/upload/multiple,Yes,images[] (file - multipart/form-data, up to 10 files)
+# =====================================================================
+# HEALTH CHECK
+# =====================================================================
+GET,/api/health,No,
+GET,/api/cors-test,No,
+# =====================================================================
+# TOTAL: 73 ENDPOINTS (28 Public, 45 Protected)
+# =====================================================================
