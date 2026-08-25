@@ -328,16 +328,21 @@ footer a:hover{color:#e2b76f}
 .enquiry-success-btn{margin-top:20px;padding:12px 40px;border:0;border-radius:999px;background:var(--gold);color:white;font:600 13px "DM Sans";cursor:pointer;transition:background 0.3s}
 .enquiry-success-btn:hover{background:#8c6530}
 
-.product-detail-page{padding-top:146px;padding-bottom:40px}
+.product-detail-page{padding-top:146px;padding-bottom:0}
 .pd-breadcrumb{padding:20px 7vw;font-size:13px;color:#999}
 .pd-breadcrumb a{color:var(--gold);text-decoration:none}
 .pd-breadcrumb a:hover{text-decoration:underline}
+.pd-section-label{display:block;color:var(--gold);font:700 11px "DM Sans";text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
 .pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;max-width:1200px;margin:0 auto;padding:0 7vw 60px;align-items:start}
-.pd-image{position:relative;border-radius:20px;overflow:hidden}
-.pd-image img{width:100%;height:auto;display:block;aspect-ratio:4/3;object-fit:cover}
+.pd-gallery{position:relative}
+.pd-main-image{position:relative;border-radius:20px;overflow:hidden}
+.pd-main-image img{width:100%;height:auto;display:block;aspect-ratio:4/3;object-fit:cover}
 .pd-zoom-btn{position:absolute;bottom:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:white;cursor:pointer;display:grid;place-items:center;transition:background 0.3s ease,transform 0.2s ease;z-index:2}
 .pd-zoom-btn:hover{background:var(--gold);transform:scale(1.1)}
-
+.pd-thumbnails{display:flex;gap:10px;margin-top:12px}
+.pd-thumb{width:80px;height:80px;border-radius:10px;overflow:hidden;border:2px solid transparent;cursor:pointer;transition:border-color 0.2s;padding:0;background:none}
+.pd-thumb.active{border-color:var(--gold)}
+.pd-thumb img{width:100%;height:100%;object-fit:cover}
 .pd-zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn 0.2s ease}
 .pd-zoom-controls{display:flex;align-items:center;gap:14px;padding:12px 20px;background:rgba(255,255,255,0.1);border-radius:999px;margin-bottom:16px}
 .pd-zoom-controls button{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:transparent;color:white;font-size:20px;cursor:pointer;display:grid;place-items:center;transition:background 0.2s}
@@ -361,13 +366,54 @@ footer a:hover{color:#e2b76f}
 .pd-enquiry-btn{width:100%;border:0;border-radius:999px;background:var(--gold);color:white;padding:16px;font:700 13px "DM Sans";cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:background 0.3s ease,transform 0.2s ease}
 .pd-enquiry-btn:hover{background:#8c6530;transform:scale(1.02)}
 
-.pd-related{padding:60px 7vw;background:var(--beige)}
-.pd-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1200px;margin:35px auto 0}
-.pd-related-card{display:block;background:var(--paper);border-radius:16px;overflow:hidden;text-decoration:none;color:var(--ink);transition:transform 0.3s ease,box-shadow 0.3s ease}
+/* Order Details */
+.pd-order-details{background:var(--beige);padding:70px 7vw}
+.pd-order-inner{display:grid;grid-template-columns:1.2fr 1fr;gap:50px;max-width:1200px;margin:0 auto;align-items:start}
+.pd-order-content h2{font:400 clamp(32px,4vw,50px) "Cormorant Garamond",serif;color:var(--ink);margin:0 0 16px;line-height:1.15}
+.pd-order-content>p{color:#72695d;line-height:1.7;font-size:15px;margin:0 0 32px;max-width:540px}
+.pd-specs-table{display:flex;flex-direction:column;gap:0}
+.pd-spec-row{display:grid;grid-template-columns:160px 1fr;gap:20px;padding:18px 0;border-bottom:1px solid rgba(0,0,0,0.08)}
+.pd-spec-row:last-child{border-bottom:none}
+.pd-spec-row strong{font:600 14px "DM Sans";color:var(--ink)}
+.pd-spec-row span{font:400 14px "DM Sans";color:#72695d;line-height:1.6}
+.pd-help-card{background:var(--ink);border-radius:20px;padding:36px 32px;color:white}
+.pd-help-card h3{font:400 26px "Cormorant Garamond",serif;margin:0 0 14px;color:white}
+.pd-help-card p{font:400 14px "DM Sans";color:rgba(255,255,255,0.7);line-height:1.6;margin:0 0 24px}
+.pd-help-link{display:block;color:var(--gold);font:600 14px "DM Sans";text-decoration:underline;margin-bottom:16px;transition:opacity 0.2s}
+.pd-help-link:hover{opacity:0.8}
+.pd-help-call{display:block;text-align:center;padding:14px 24px;border:1px solid rgba(255,255,255,0.3);border-radius:999px;color:white;font:600 14px "DM Sans";text-decoration:none;transition:all 0.3s}
+.pd-help-call:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.5)}
+
+/* Customer Reviews */
+.pd-reviews{padding:70px 7vw;text-align:center}
+.pd-reviews h2{font:400 clamp(32px,4vw,50px) "Cormorant Garamond",serif;color:var(--ink);margin:0 0 20px}
+.pd-reviews-rating{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:40px}
+.pd-rating-num{font:700 36px "Cormorant Garamond",serif;color:var(--ink)}
+.pd-rating-stars{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.pd-rating-stars span:first-child{color:var(--gold);font-size:18px;letter-spacing:2px}
+.pd-rating-count{font:400 13px "DM Sans";color:#999}
+.pd-reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1200px;margin:0 auto 40px}
+.pd-review-card{background:var(--beige);border-radius:16px;padding:32px 28px;text-align:left}
+.pd-review-text{font:400 18px "Cormorant Garamond",serif;color:var(--ink);line-height:1.5;margin:0 0 20px;min-height:80px}
+.pd-review-author{font:400 13px "DM Sans";color:#72695d}
+.pd-review-stars{color:var(--gold);letter-spacing:1px}
+.pd-review-btn{display:inline-block;padding:14px 40px;border:2px solid var(--ink);border-radius:999px;background:transparent;color:var(--ink);font:700 12px "DM Sans";cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:all 0.3s}
+.pd-review-btn:hover{background:var(--ink);color:white}
+
+/* Related Products */
+.pd-related{padding:70px 7vw;text-align:center}
+.pd-related h2{font:400 clamp(32px,4vw,50px) "Cormorant Garamond",serif;color:var(--ink);margin:0 0 35px}
+.pd-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1200px;margin:0 auto}
+.pd-related-card{display:block;border-radius:16px;overflow:hidden;text-decoration:none;color:var(--ink);background:var(--paper);transition:transform 0.3s ease,box-shadow 0.3s ease}
 .pd-related-card:hover{transform:translateY(-5px);box-shadow:0 12px 32px rgba(0,0,0,0.1)}
-.pd-related-card img{width:100%;height:220px;object-fit:cover}
-.pd-related-card h3{margin:14px 18px 4px;font:600 18px "Cormorant Garamond",serif}
-.pd-related-card span{display:block;margin:0 18px 16px;color:var(--gold);font-weight:700;font-size:16px}
+.pd-related-img{overflow:hidden}
+.pd-related-img img{width:100%;height:240px;object-fit:cover;transition:transform 0.4s}
+.pd-related-card:hover .pd-related-img img{transform:scale(1.05)}
+.pd-related-info{padding:20px 24px;text-align:left}
+.pd-related-info h3{margin:0 0 6px;font:600 20px "Cormorant Garamond",serif;color:var(--ink)}
+.pd-related-desc{display:block;font:400 13px "DM Sans";color:#72695d;margin-bottom:12px}
+.pd-related-link{display:inline-block;color:var(--gold);font:600 13px "DM Sans";text-decoration:none;transition:opacity 0.2s}
+.pd-related-link:hover{opacity:0.7}
 
 .pd-product-nav{padding:30px 7vw;background:var(--paper);border-top:1px solid var(--line)}
 .pd-nav-inner{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto}
@@ -451,6 +497,12 @@ footer a:hover{color:#e2b76f}
   .pd-grid{grid-template-columns:1fr;gap:30px;padding:0 24px 40px}
   .pd-meta-grid{grid-template-columns:1fr}
   .pd-related-grid{grid-template-columns:1fr;max-width:400px}
+  .pd-order-inner{grid-template-columns:1fr;gap:30px}
+  .pd-spec-row{grid-template-columns:1fr;gap:6px}
+  .pd-reviews-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto 40px}
+  .pd-help-card{padding:28px 24px}
+  .pd-thumbnails{overflow-x:auto;gap:8px}
+  .pd-thumb{width:60px;height:60px;flex-shrink:0}
   .modal-content{padding:24px;margin:10px}
 
   .about-section{padding:60px 20px}
