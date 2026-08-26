@@ -110,7 +110,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // Generate random 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // Expires in 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // Expires in 10 minutes
 
     // Store OTP in database
     await pool.execute('UPDATE users SET otp = ?, otp_expires_at = ? WHERE email = ?', [otp, expiresAt, email]);
