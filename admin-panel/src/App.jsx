@@ -21,6 +21,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import OTP from './pages/OTP'
+import NewPassword from './pages/NewPassword'
 import Dashboard from './pages/Dashboard'
 import './App.css'
 
@@ -72,6 +73,14 @@ function App() {
             ) : (
               <OTP onResetComplete={handleLogout} />
             )
+          }
+        />
+
+        {/* New Password - set new password after OTP verification */}
+        <Route
+          path="/new-password"
+          element={
+            token ? <Navigate to="/dashboard" replace /> : <NewPassword />
           }
         />
 

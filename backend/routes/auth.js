@@ -21,6 +21,7 @@ import bcrypt from 'bcryptjs';     // For hashing/comparing passwords
 import jwt from 'jsonwebtoken';    // For creating/verifying JWT tokens
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { sendOTPEmail } from '../utils/email.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -114,8 +115,13 @@ router.post('/forgot-password', async (req, res) => {
     // Store OTP in database
     await pool.execute('UPDATE users SET otp = ?, otp_expires_at = ? WHERE email = ?', [otp, expiresAt, email]);
 
-    // In production, send OTP via email service here
-    console.log(`OTP for ${email}: ${otp}`);
+    // Send OTP via email
+    try {
+      await sendOTPEmail(email, otp);
+      console.log(`OTP sent to ${email}`);
+    } catch (emailErr) {
+      console.error('Email send failed (OTP still generated):', emailErr.message);
+    }
     res.json({ message: 'OTP sent to your email' });
   } catch (error) {
     console.error('Forgot password error:', error);

@@ -1,86 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../config'
 
-function About({ token }) {
-  const [sections, setSections] = useState({
-    main_banner: { title: '', description: '', image: '' },
-    primary_section: { title: '', description: '', image: '' },
-    features: { title: '', description: '', image: '' },
-    conclusion: { title: '', description: '', image: '' },
-  })
-  const [loading, setLoading] = useState(true)
-  const [uploading, setUploading] = useState(null)
-  const [toast, setToast] = useState(null)
-  const fileInputs = useRef({})
-
-  const showToast = (msg, type) => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/about-sections`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const map = {}
-          data.forEach(s => {
-            map[s.type] = { title: s.title || '', description: s.description || '', image: s.image || '' }
-          })
-          setSections(prev => ({ ...prev, ...map }))
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  const handleChange = (type, field, value) => {
-    setSections(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }))
-  }
-
-  const handleFileUpload = async (type, file) => {
-    if (!file) return
-    setUploading(type)
-    try {
-      const formData = new FormData()
-      formData.append('image', file)
-      const res = await fetch(`${API_BASE}/api/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      if (res.ok) {
-        const data = await res.json()
-        handleChange(type, 'image', `${API_BASE}${data.url}`)
-        showToast('Image uploaded', 'success')
-      } else {
-        showToast('Upload failed', 'error')
-      }
-    } catch {
-      showToast('Upload error', 'error')
-    } finally {
-      setUploading(null)
-    }
-  }
-
-  const handleSave = async (type) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/about-sections/${type}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(sections[type]),
-      })
-      if (res.ok) {
-        showToast(`${type.replace(/_/g, ' ')} saved`, 'success')
-      } else {
-        showToast('Failed to save', 'error')
-      }
-    } catch {
-      showToast('Server error', 'error')
-    }
-  }
-
-  const SectionCard = ({ type, label, showImage = true, number }) => (
+function SectionCard({ type, label, showImage = true, number, sections, handleChange, handleSave, handleFileUpload, loading, uploading, fileInputs }) {
+  return (
     <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2d7c5', padding: '24px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         {number && (
@@ -176,6 +98,88 @@ function About({ token }) {
       )}
     </div>
   )
+}
+
+function About({ token }) {
+  const [sections, setSections] = useState({
+    main_banner: { title: '', description: '', image: '' },
+    primary_section: { title: '', description: '', image: '' },
+    features: { title: '', description: '', image: '' },
+    conclusion: { title: '', description: '', image: '' },
+  })
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(null)
+  const [toast, setToast] = useState(null)
+  const fileInputs = useRef({})
+
+  const showToast = (msg, type) => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/about-sections`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const map = {}
+          data.forEach(s => {
+            map[s.type] = { title: s.title || '', description: s.description || '', image: s.image || '' }
+          })
+          setSections(prev => ({ ...prev, ...map }))
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const handleChange = (type, field, value) => {
+    setSections(prev => ({ ...prev, [type]: { ...prev[type], [field]: value } }))
+  }
+
+  const handleFileUpload = async (type, file) => {
+    if (!file) return
+    setUploading(type)
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        handleChange(type, 'image', `${API_BASE}${data.url}`)
+        showToast('Image uploaded', 'success')
+      } else {
+        showToast('Upload failed', 'error')
+      }
+    } catch {
+      showToast('Upload error', 'error')
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const handleSave = async (type) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/about-sections/${type}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(sections[type]),
+      })
+      if (res.ok) {
+        showToast('Section saved!', 'success')
+      } else {
+        showToast('Failed to save', 'error')
+      }
+    } catch {
+      showToast('Server error', 'error')
+    }
+  }
+
+  const sharedProps = { sections, handleChange, handleSave, handleFileUpload, loading, uploading, fileInputs }
 
   return (
     <div className="about-page">
@@ -186,10 +190,10 @@ function About({ token }) {
         <p>Edit the About Us page sections visible to customers</p>
       </div>
 
-      <SectionCard type="main_banner" label="Main Banner" number="1" />
-      <SectionCard type="primary_section" label="Primary Section" number="2" />
-      <SectionCard type="features" label="Features Grid" number="3" showImage={false} />
-      <SectionCard type="conclusion" label="Conclusion Block" number="4" />
+      <SectionCard type="main_banner" label="Main Banner" number="1" {...sharedProps} />
+      <SectionCard type="primary_section" label="Primary Section" number="2" {...sharedProps} />
+      <SectionCard type="features" label="Features Grid" number="3" showImage={false} {...sharedProps} />
+      <SectionCard type="conclusion" label="Conclusion Block" number="4" {...sharedProps} />
     </div>
   )
 }
