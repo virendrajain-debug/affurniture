@@ -224,7 +224,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
   try {
     const [users] = await pool.execute('SELECT id, name, email, profile_image, role FROM users WHERE id = ?', [req.user.id]);
     if (users.length === 0) return res.status(404).json({ message: 'User not found' });
-    const socials = await pool.execute('SELECT platform, url FROM social_links WHERE enabled = 1');
+    const [socials] = await pool.execute('SELECT platform, url FROM social_links WHERE enabled = 1');
     const user = users[0];
     socials.forEach(s => { user[s.platform.toLowerCase()] = s.url; });
     res.json(user);
@@ -243,34 +243,34 @@ router.get('/profile', authenticateToken, async (req, res) => {
 // -----------------------------------------------------------
 router.put('/profile', authenticateToken, async (req, res) => {
   try {
-    const { name, email, profile_image, instagram, facebook } = req.body;
+    const { name, email, profile_image, instagram, facebook, linkedin } = req.body;
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required' });
     }
-    await pool.execute('UPDATE users SET name = ?, email = ?, profile_image = ? WHERE id = ?', [name, email, profile_image || null, req.user.id]);
-    if (instagram !== undefined) {
-      const [existing] = await pool.execute("SELECT id FROM social_links WHERE platform = 'Instagram' LIMIT 1");
-      if (existing.length > 0) {
-        await pool.execute("UPDATE social_links SET url = ? WHERE id = ?", [instagram || '', existing[0].id]);
+
+    await pool.execute(
+      'UPDATE users SET name = ?, email = ?, profile_image = ? WHERE id = ?',
+      [name, email, profile_image || null, req.user.id]
+    );
+
+    const updateSocial = async (platform, url) => {
+      if (url === undefined) return;
+      const [rows] = await pool.execute('SELECT id FROM social_links WHERE platform = ?', [platform]);
+      if (rows.length > 0) {
+        await pool.execute('UPDATE social_links SET url = ? WHERE id = ?', [url || '', rows[0].id]);
       } else {
-        await pool.execute("INSERT INTO social_links (platform, url, icon, sort_order, enabled) VALUES (?, ?, ?, ?, ?)", ['Instagram', instagram || '', 'instagram', 3, 1]);
+        await pool.execute('INSERT INTO social_links (platform, url, icon, sort_order, enabled) VALUES (?, ?, ?, ?, ?)', [platform, url || '', platform.toLowerCase(), 10, 1]);
       }
-    }
-    if (facebook !== undefined) {
-      const [existing] = await pool.execute("SELECT id FROM social_links WHERE platform = 'Facebook' LIMIT 1");
-      if (existing.length > 0) {
-        await pool.execute("UPDATE social_links SET url = ? WHERE id = ?", [facebook || '', existing[0].id]);
-      } else {
-        await pool.execute("INSERT INTO social_links (platform, url, icon, sort_order, enabled) VALUES (?, ?, ?, ?, ?)", ['Facebook', facebook || '', 'facebook', 4, 1]);
-      }
-    }
+    };
+
+    await updateSocial('Instagram', instagram);
+    await updateSocial('Facebook', facebook);
+    await updateSocial('LinkedIn', linkedin);
+
     res.json({ message: 'Profile updated successfully' });
   } catch (error) {
-    console.error('Profile update error:', error);
-    if (error.message && error.message.includes('UNIQUE')) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
-    res.status(500).json({ message: 'Server error' });
+    console.error('Profile update error:', error.message);
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 });
 
