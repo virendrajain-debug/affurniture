@@ -28,6 +28,9 @@ import discountCodeRoutes from './routes/discount-codes.js';
 import aboutSectionsRoutes from './routes/about-sections.js';
 import uploadRoutes from './routes/upload.js';
 import pageBannerRoutes from './routes/page-banners.js';
+import subcategoryRoutes from './routes/subcategories.js';
+import adCampaignRoutes from './routes/ad-campaigns.js';
+import dynamicPageRoutes from './routes/dynamic-pages.js';
 
 dotenv.config();
 
@@ -74,6 +77,9 @@ app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/about-sections', aboutSectionsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/page-banners', pageBannerRoutes);
+app.use('/api/subcategories', subcategoryRoutes);
+app.use('/api/ad-campaigns', adCampaignRoutes);
+app.use('/api/dynamic-pages', dynamicPageRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -83,7 +89,7 @@ app.get('/api/cors-test', (req, res) => {
   res.json({ status: 'cors ok', origin: req.headers.origin });
 });
 
-function autoSetup() {
+async function autoSetup() {
   console.log('Setting up SQLite database...');
 
   pool.execute(`
@@ -105,6 +111,8 @@ function autoSetup() {
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
+      image TEXT DEFAULT '',
+      sort_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
@@ -337,6 +345,58 @@ function autoSetup() {
     )
   `);
 
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS subcategories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category_id INTEGER,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS ad_campaigns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      image TEXT DEFAULT '',
+      link TEXT DEFAULT '',
+      position TEXT DEFAULT 'homepage',
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS dynamic_pages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      category TEXT DEFAULT 'General',
+      content TEXT DEFAULT '',
+      banner_image TEXT DEFAULT '',
+      meta_description TEXT DEFAULT '',
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Migrate: add subcategory_id to products if missing
+  try { pool.execute("ALTER TABLE products ADD COLUMN subcategory_id INTEGER"); } catch {}
+  try { pool.execute("ALTER TABLE products ADD COLUMN slug TEXT"); } catch {}
+  try { pool.execute("ALTER TABLE products ADD COLUMN brand TEXT"); } catch {}
+
+  // Migrate: add category_image and sort_order to categories
+  try { pool.execute("ALTER TABLE categories ADD COLUMN image TEXT DEFAULT ''"); } catch {}
+  try { pool.execute("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch {}
+
+  // Migrate: add sort_order to subcategories
+  try { pool.execute("ALTER TABLE subcategories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch {}
+
   // Migrate: add new columns if missing
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL"); } catch {}
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL"); } catch {}
@@ -358,11 +418,39 @@ function autoSetup() {
     pool.execute("INSERT INTO site_settings (key, value) VALUES ('header_bg', '#29251f')");
   }
 
+  // Auto-generate slugs for products that don't have one
+  try {
+    const [productsNeedingSlugs] = await pool.execute(
+      `SELECT p.id, p.name, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.slug IS NULL OR p.slug = ''`
+    );
+    for (const p of productsNeedingSlugs) {
+      const baseSlug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const catPrefix = p.category_name ? p.category_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
+      let slug = catPrefix ? `${catPrefix}-${baseSlug}` : baseSlug;
+      // Check for duplicates and append numeric suffix
+      const [existing] = await pool.execute('SELECT id FROM products WHERE slug = ? AND id != ?', [slug, p.id]);
+      if (existing.length > 0) {
+        let suffix = 2;
+        while (true) {
+          const testSlug = `${catPrefix ? catPrefix + '-' : ''}${baseSlug}-${suffix}`;
+          const [dup] = await pool.execute('SELECT id FROM products WHERE slug = ?', [testSlug]);
+          if (dup.length === 0) { slug = testSlug; break; }
+          suffix++;
+        }
+      }
+      await pool.execute('UPDATE products SET slug = ? WHERE id = ?', [slug, p.id]);
+    }
+    if (productsNeedingSlugs.length > 0) console.log(`Generated slugs for ${productsNeedingSlugs.length} products`);
+  } catch (err) { console.error('Slug generation error:', err.message); }
+
   const hashedPassword = bcrypt.hashSync('admin123', 10);
   const [existing] = pool.execute('SELECT id FROM users WHERE email = ?', ['admin@gmail.com']);
   if (existing.length === 0) {
     pool.execute('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)', ['Admin', 'admin@gmail.com', hashedPassword, 'admin']);
     console.log('Admin created: admin@gmail.com / admin123');
+  } else {
+    pool.execute('UPDATE users SET password = ?, email = ? WHERE email = ?', [hashedPassword, 'admin@gmail.com', 'admin@gmail.com']);
+    console.log('Admin password reset to admin123');
   }
 
   const categories = ['Living Room', 'Bedroom', 'Dining', 'Office', 'Outdoor'];
@@ -398,6 +486,18 @@ function autoSetup() {
   if (termsExists.length === 0) {
     pool.execute('INSERT INTO terms (content) VALUES (?)',
       ['Terms & Conditions\n\n1. General\nThese terms govern your use of AF Furnishings products and services.\n\n2. Products\nAll product images are for illustration purposes only.\n\n3. Pricing\nAll prices are in NZD and include GST unless otherwise stated.\n\n4. Delivery\nDelivery times are estimates only.\n\n5. Returns\nProducts may be returned within 14 days of purchase in original condition.\n\n6. Warranty\nAll products come with a manufacturer warranty.\n\n7. Payment\nWe accept credit card, debit card, and weekly payment plans.\n\n8. Privacy\nYour personal information is handled in accordance with our Privacy Policy and NZ law.']
+    );
+  }
+
+  const [dynamicPagesExist] = pool.execute('SELECT id FROM dynamic_pages LIMIT 1');
+  if (dynamicPagesExist.length === 0) {
+    pool.execute(
+      "INSERT INTO dynamic_pages (slug, title, category, content, banner_image, meta_description, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      ['about-us', 'About Us', 'Company', '<h2>Welcome to AF Furnishings</h2><p>AF Furnishings is a family-owned New Zealand furniture retailer with over 15 years of experience. We provide quality furniture, beds and appliances to make your home feel complete.</p><p>Our mission is to help every Kiwi create a comfortable, beautiful home without breaking the bank.</p>', '', 'About AF Furnishings - Quality furniture for every NZ home', 1, 1]
+    );
+    pool.execute(
+      "INSERT INTO dynamic_pages (slug, title, category, content, banner_image, meta_description, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      ['warranty-policy', 'Warranty Policy', 'Policies', '<h2>Our Warranty Promise</h2><p>All AF Furnishings products come with a manufacturer warranty. If you experience any issues with your purchase, contact us and we will work with you to resolve it.</p>', '', 'AF Furnishings warranty policy', 2, 1]
     );
   }
 

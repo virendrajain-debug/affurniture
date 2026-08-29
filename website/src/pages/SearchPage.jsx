@@ -77,12 +77,12 @@ function SearchPage() {
                 const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
                 return (
                   <article key={p.id} className="category-product-card">
-                    <Link to={`/product/${p.id}`} className="category-product-img">
+                    <Link to={`/product/${p.slug || p.id}`} className="category-product-img">
                       <img src={imgSrc} alt={p.name} loading="lazy" />
                       {hasDiscount && <span className="product-badge">SALE</span>}
                     </Link>
                     <div className="category-product-body">
-                      <Link to={`/product/${p.id}`}><h3>{p.name}</h3></Link>
+                      <Link to={`/product/${p.slug || p.id}`}><h3>{p.name}</h3></Link>
                       <div className="product-pricing">
                         {p.selling_price && <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>}
                         {p.mrp && p.selling_price && Number(p.mrp) !== Number(p.selling_price) && <span className="product-mrp">${Number(p.mrp).toLocaleString()}</span>}
@@ -90,7 +90,7 @@ function SearchPage() {
                       </div>
                       {weekly && <p className="product-weekly">Or just <strong>${weekly}/week</strong> on finance</p>}
                       {p.category_name && <p className="product-meta">{p.category_name}</p>}
-                      <Link to={`/product/${p.id}`} className="btn-shop-now">Shop Now</Link>
+                      <Link to={`/product/${p.slug || p.id}`} className="btn-shop-now">Shop Now</Link>
                     </div>
                   </article>
                 )

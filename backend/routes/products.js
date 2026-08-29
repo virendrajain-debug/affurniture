@@ -50,7 +50,7 @@ const router = Router();
 // -----------------------------------------------------------
 router.get('/', async (req, res) => {
   try {
-    const { category, search, featured, new_arrival, limit, on_sale, subcategory } = req.query;
+    const { category, search, featured, new_arrival, limit, on_sale, subcategory, subcategory_id } = req.query;
     
     // Build query dynamically based on filters
     let query = `
@@ -65,6 +65,12 @@ router.get('/', async (req, res) => {
     if (category) {
       query += ' AND c.name = ?';
       params.push(category);
+    }
+
+    // Filter by subcategory_id (from database)
+    if (subcategory_id) {
+      query += ' AND p.subcategory_id = ?';
+      params.push(subcategory_id);
     }
 
     // Filter by subcategory (match product name using keyword mapping)
@@ -177,6 +183,27 @@ router.get('/', async (req, res) => {
 });
 
 // -----------------------------------------------------------
+// GET /api/products/by-slug/:slug
+// -----------------------------------------------------------
+router.get('/by-slug/:slug', async (req, res) => {
+  try {
+    const [products] = await pool.execute(
+      `SELECT p.*, c.name as category_name 
+       FROM products p 
+       LEFT JOIN categories c ON p.category_id = c.id 
+       WHERE p.slug = ?`,
+      [req.params.slug]
+    );
+    if (products.length === 0) return res.status(404).json({ message: 'Product not found' });
+    const product = products[0];
+    product.images = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// -----------------------------------------------------------
 // GET /api/products/:id
 // -----------------------------------------------------------
 // Get a single product by its ID.
@@ -217,9 +244,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateToken, upload.array('images', 10), async (req, res) => {
   try {
     const {
-      name, category_id, mrp, selling_price, discounted_price, description,
+      name, category_id, subcategory_id, mrp, selling_price, discounted_price, description,
       stock, material, color, size, dimensions, weight, warranty, delivery_info,
-      featured, new_arrival
+      featured, new_arrival, brand
     } = req.body;
 
     // Validate required fields
@@ -227,17 +254,39 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
       return res.status(400).json({ message: 'Name and MRP are required' });
     }
 
+    // Generate slug from name + category prefix
+    const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let slug = baseSlug;
+    if (category_id) {
+      const [catRows] = await pool.execute('SELECT name FROM categories WHERE id = ?', [category_id]);
+      if (catRows.length > 0) {
+        const catPrefix = catRows[0].name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        slug = `${catPrefix}-${baseSlug}`;
+      }
+    }
+    // Check for slug duplicates
+    const [slugCheck] = await pool.execute('SELECT id FROM products WHERE slug = ?', [slug]);
+    if (slugCheck.length > 0) {
+      let suffix = 2;
+      while (true) {
+        const testSlug = `${slug}-${suffix}`;
+        const [dup] = await pool.execute('SELECT id FROM products WHERE slug = ?', [testSlug]);
+        if (dup.length === 0) { slug = testSlug; break; }
+        suffix++;
+      }
+    }
+
     // Convert uploaded files to URL paths
     const images = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
 
     // Insert product into database
     const [result] = await pool.execute(
-      `INSERT INTO products (name, category_id, mrp, selling_price, discounted_price, description, stock, material, color, size, dimensions, weight, warranty, delivery_info, featured, new_arrival, images) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, category_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images)]
+      `INSERT INTO products (name, category_id, subcategory_id, mrp, selling_price, discounted_price, description, stock, material, color, size, dimensions, weight, warranty, delivery_info, featured, new_arrival, images, slug, brand) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null]
     );
 
-    res.status(201).json({ message: 'Product created successfully', id: result.insertId });
+    res.status(201).json({ message: 'Product created successfully', id: result.insertId, slug });
   } catch (error) {
     console.error('Create product error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -252,9 +301,9 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
 router.put('/:id', authenticateToken, upload.array('images', 10), async (req, res) => {
   try {
     const {
-      name, category_id, mrp, selling_price, discounted_price, description,
+      name, category_id, subcategory_id, mrp, selling_price, discounted_price, description,
       stock, material, color, size, dimensions, weight, warranty, delivery_info,
-      featured, new_arrival, existing_images
+      featured, new_arrival, existing_images, brand
     } = req.body;
 
     // Combine existing images with newly uploaded ones
@@ -263,12 +312,33 @@ router.put('/:id', authenticateToken, upload.array('images', 10), async (req, re
       images = [...images, ...req.files.map(f => `/uploads/${f.filename}`)];
     }
 
+    // Generate slug if name or category changed
+    const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let slug = baseSlug;
+    if (category_id) {
+      const [catRows] = await pool.execute('SELECT name FROM categories WHERE id = ?', [category_id]);
+      if (catRows.length > 0) {
+        const catPrefix = catRows[0].name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        slug = `${catPrefix}-${baseSlug}`;
+      }
+    }
+    const [slugCheck] = await pool.execute('SELECT id FROM products WHERE slug = ? AND id != ?', [slug, req.params.id]);
+    if (slugCheck.length > 0) {
+      let suffix = 2;
+      while (true) {
+        const testSlug = `${slug}-${suffix}`;
+        const [dup] = await pool.execute('SELECT id FROM products WHERE slug = ? AND id != ?', [testSlug, req.params.id]);
+        if (dup.length === 0) { slug = testSlug; break; }
+        suffix++;
+      }
+    }
+
     await pool.execute(
-      `UPDATE products SET name=?, category_id=?, mrp=?, selling_price=?, discounted_price=?, description=?, stock=?, material=?, color=?, size=?, dimensions=?, weight=?, warranty=?, delivery_info=?, featured=?, new_arrival=?, images=? WHERE id=?`,
-      [name, category_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), req.params.id]
+      `UPDATE products SET name=?, category_id=?, subcategory_id=?, mrp=?, selling_price=?, discounted_price=?, description=?, stock=?, material=?, color=?, size=?, dimensions=?, weight=?, warranty=?, delivery_info=?, featured=?, new_arrival=?, images=?, slug=?, brand=? WHERE id=?`,
+      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null, req.params.id]
     );
 
-    res.json({ message: 'Product updated successfully' });
+    res.json({ message: 'Product updated successfully', slug });
   } catch (error) {
     console.error('Update product error:', error);
     res.status(500).json({ message: 'Server error' });

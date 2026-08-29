@@ -74,12 +74,12 @@ function OnSalePage() {
                 const discount = getDiscount(p.mrp, price)
                 return (
                   <article key={p.id} className="category-product-card">
-                    <Link to={`/product/${p.id}`} className="category-product-img">
+                    <Link to={`/product/${p.slug || p.id}`} className="category-product-img">
                       <img src={imgSrc} alt={p.name} loading="lazy" />
                       {discount > 0 && <span className="product-badge">{discount}% OFF</span>}
                     </Link>
                     <div className="category-product-body">
-                      <Link to={`/product/${p.id}`}>
+                      <Link to={`/product/${p.slug || p.id}`}>
                         <h3>{p.name}</h3>
                       </Link>
                       <div className="product-pricing">
@@ -88,7 +88,7 @@ function OnSalePage() {
                       </div>
                       {weekly && <p className="product-weekly">Or just <strong>${weekly}/week</strong> on finance</p>}
                       {p.material && <p className="product-meta">{p.material}{p.color ? ` - ${p.color}` : ''}</p>}
-                      <Link to={`/product/${p.id}`} className="btn-shop-now">Shop Now</Link>
+                      <Link to={`/product/${p.slug || p.id}`} className="btn-shop-now">Shop Now</Link>
                     </div>
                   </article>
                 )

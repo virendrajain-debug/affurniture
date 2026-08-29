@@ -1,29 +1,20 @@
 // ============================================================
-// Admin Panel - Root App Component
+// Admin Panel - Root App Component (Lazy Loaded & Code-Split)
 // ============================================================
-// This is the main entry point for the admin panel.
-// It manages authentication state and defines all routes.
-//
-// ROUTES:
-//   /               -> Login page (redirects to /dashboard if logged in)
-//   /forgot-password -> Password reset request
-//   /otp             -> OTP verification
-//   /dashboard/*     -> Admin dashboard (all sub-pages)
-//
-// AUTHENTICATION:
-//   Uses JWT token stored in localStorage as 'af_admin_token'.
-//   Token is passed to Dashboard which passes it to all child pages.
-//   On logout, token is removed and user is redirected to login.
+// Manages authentication state and defines all routes using
+// React.lazy and Suspense for optimized production performance.
 // ============================================================
 
-import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login'
-import ForgotPassword from './pages/ForgotPassword'
-import OTP from './pages/OTP'
-import NewPassword from './pages/NewPassword'
-import Dashboard from './pages/Dashboard'
+import { useState, lazy, Suspense } from 'react'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+
+// Lazy Load Root Pages
+const Login = lazy(() => import('./pages/Login'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const OTP = lazy(() => import('./pages/OTP'))
+const NewPassword = lazy(() => import('./pages/NewPassword'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 
 function App() {
   // Initialize token from localStorage (persists across refreshes)
@@ -38,68 +29,87 @@ function App() {
   // Called on logout - removes token from storage
   const handleLogout = () => {
     localStorage.removeItem('af_admin_token')
+    localStorage.removeItem('af_reset_email')
+    localStorage.removeItem('af_reset_token')
     setToken(null)
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Login - redirects to dashboard if already logged in */}
-        <Route
-          path="/"
-          element={
-            token ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Login onLogin={handleLogin} />
-            )
-          }
-        />
+    <HashRouter>
+      <style>{`
+        .app-suspense-loader {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          background-color: var(--page-bg, #1a1e29);
+          color: var(--text-secondary, #a6b0cf);
+          font-weight: 500;
+          font-size: 1rem;
+          gap: 12px;
+        }
+      `}</style>
 
-        {/* Forgot Password - redirects to dashboard if already logged in */}
-        <Route
-          path="/forgot-password"
-          element={
-            token ? <Navigate to="/dashboard" replace /> : <ForgotPassword />
-          }
-        />
+      <Suspense
+        fallback={
+          <div className="app-suspense-loader">
+            <div
+              style={{
+                width: '24px',
+                height: '24px',
+                border: '3px solid rgba(255,255,255,0.1)',
+                borderTopColor: 'var(--accent-color, #ff7eb3)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            ></div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            Loading application...
+          </div>
+        }
+      >
+        <Routes>
+          {/* Login - redirects to dashboard if already logged in */}
+          <Route
+            path="/"
+            element={token ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
+          />
 
-        {/* OTP Verification - redirects to dashboard if already logged in */}
-        <Route
-          path="/otp"
-          element={
-            token ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <OTP onResetComplete={handleLogout} />
-            )
-          }
-        />
+          {/* Forgot Password - redirects to dashboard if already logged in */}
+          <Route
+            path="/forgot-password"
+            element={token ? <Navigate to="/dashboard" replace /> : <ForgotPassword />}
+          />
 
-        {/* New Password - set new password after OTP verification */}
-        <Route
-          path="/new-password"
-          element={
-            token ? <Navigate to="/dashboard" replace /> : <NewPassword />
-          }
-        />
+          {/* OTP Verification */}
+          <Route
+            path="/otp"
+            element={token ? <Navigate to="/dashboard" replace /> : <OTP />}
+          />
 
-        {/* Dashboard - requires authentication, handles all sub-routes */}
-        <Route
-          path="/dashboard/*"
-          element={
-            token ? (
-              <Dashboard onLogout={handleLogout} token={token} />
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
-        />
+          {/* New Password */}
+          <Route
+            path="/new-password"
+            element={token ? <Navigate to="/dashboard" replace /> : <NewPassword />}
+          />
 
-        {/* Catch-all route - redirect to login */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Dashboard - requires authentication, handles all sub-routes */}
+          <Route
+            path="/dashboard/*"
+            element={
+              token ? (
+                <Dashboard onLogout={handleLogout} token={token} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          {/* Catch-all route - redirect to login */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    </HashRouter>
   )
 }
 

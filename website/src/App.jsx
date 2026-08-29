@@ -1,12 +1,12 @@
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { API_BASE } from './config'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Deals from './components/Deals'
 import Category from './components/Category'
 import ProductGrid from './components/ProductGrid'
 import PromoPoster from './components/PromoPoster'
-import Testimonials from './components/Testimonials'
 import Stores from './components/Stores'
 import AboutSection from './components/AboutSection'
 import Footer from './components/Footer'
@@ -26,6 +26,7 @@ import CategoryPage from './pages/CategoryPage'
 import OnSalePage from './pages/OnSalePage'
 import StoreLocationPage from './pages/StoreLocationPage'
 import SearchPage from './pages/SearchPage'
+import DynamicPage from './pages/DynamicPage'
 import './App.css'
 
 function ScrollToTop() {
@@ -34,64 +35,76 @@ function ScrollToTop() {
   return null
 }
 
+function AdBanner({ ad }) {
+  if (!ad?.image) return null
+  return (
+    <a href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="home-ad-banner">
+      <img src={ad.image} alt={ad.name} loading="lazy" />
+    </a>
+  )
+}
+
+function DynamicCategories() {
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/categories`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setCategories(data)
+      })
+      .catch(() => {})
+  }, [])
+
+  return (
+    <>
+      {categories.filter(cat => !['Office', 'Outdoor'].includes(cat.name)).map((cat, idx) => (
+        <div key={cat.id}>
+          <Category
+            id={`cat-${cat.id}`}
+            title={cat.name}
+            apiCategory={cat.name}
+            image={cat.image || undefined}
+            link={`/category/${cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
+            reverse={idx % 2 !== 0}
+          />
+          <ProductGrid
+            sectionId={`products-${cat.id}`}
+            label={`${cat.name.toUpperCase()} COLLECTION`}
+            title={`${cat.name} for your home.`}
+            category={cat.name}
+            compact={idx > 1}
+          />
+        </div>
+      ))}
+    </>
+  )
+}
+
 function HomePage() {
+  const [homeAds, setHomeAds] = useState([])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/ad-campaigns/active?position=homepage`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setHomeAds(data) })
+      .catch(() => {})
+  }, [])
+
+  const getAd = (index) => homeAds[index] || null
+
   return (
     <>
       <Header />
       <main id="home">
         <Hero />
         <Deals />
-
-        <Category
-          id="lounge"
-          title="Lounge Suite"
-          subtitle="Comfort for every day"
-          image="https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=85"
-          link="/category/lounge-suite"
-        />
-
-        <ProductGrid
-          sectionId="sofas"
-          label="SOFAS & LOUNGE"
-          title="Relax in style."
-          category="Living Room"
-        />
-
-        <Category
-          id="bedroom"
-          title="Bedroom"
-          subtitle="Rest beautifully"
-          image="https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1800&q=85"
-          link="/category/bedroom"
-          reverse
-        />
-
-        <ProductGrid
-          sectionId="bedroom-products"
-          label="BEDROOM COLLECTION"
-          title="Beautiful rest begins here."
-          category="Bedroom"
-          compact
-        />
-
-        <Category
-          id="dining"
-          title="Dining"
-          subtitle="Gather around good moments"
-          image="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=1800&q=85"
-          link="/category/dining"
-        />
-
-        <ProductGrid
-          sectionId="dining-products"
-          label="DINING COLLECTION"
-          title="Made for gathering."
-          category="Dining"
-        />
-
+        <DynamicCategories />
+        {getAd(0) && <AdBanner ad={getAd(0)} />}
         <PromoPoster />
-        <Testimonials />
+        {getAd(1) && <AdBanner ad={getAd(1)} />}
         <Stores />
+        {getAd(2) && <AdBanner ad={getAd(2)} />}
         <AboutSection />
       </main>
       <Footer />
@@ -105,7 +118,7 @@ function App() {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/product/:slug" element={<ProductDetail />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/on-sale" element={<OnSalePage />} />
         <Route path="/store-locations" element={<StoreLocationPage />} />
@@ -121,6 +134,7 @@ function App() {
         <Route path="/delivery-info" element={<DeliveryInfoPage />} />
         <Route path="/shop-furniture" element={<ShopFurniturePage />} />
         <Route path="/returns" element={<ReturnsPage />} />
+        <Route path="/page/:slug" element={<DynamicPage />} />
       </Routes>
     </HashRouter>
   )

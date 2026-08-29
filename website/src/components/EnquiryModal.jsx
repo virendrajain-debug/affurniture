@@ -1,11 +1,21 @@
 import { useState } from 'react'
 import { API_BASE } from '../config'
 
+const colorMap = {
+  'White': '#FFFFFF', 'Black': '#1a1a1a', 'Grey': '#808080', 'Charcoal': '#36454F',
+  'Beige': '#F5F5DC', 'Cream': '#FFFDD0', 'Brown': '#6B4226', 'Walnut': '#5B4332',
+  'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
+  'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
+}
+function getColorHex(name) { return colorMap[name] || '#ccc' }
+
 export default function EnquiryModal({ product, onClose }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '', color: '' })
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+
+  const colours = product.color ? product.color.split(',').map(c => c.trim()).filter(Boolean) : []
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -24,7 +34,7 @@ export default function EnquiryModal({ product, onClose }) {
           name: form.name,
           email: form.email,
           phone: form.phone,
-          message: form.message || `Enquiry about ${product.name}`,
+          message: (form.color ? `Colour: ${form.color}. ` : '') + (form.message || `Enquiry about ${product.name}`),
           product_id: product.id,
           product_name: product.name,
           type: 'product',
@@ -69,6 +79,25 @@ export default function EnquiryModal({ product, onClose }) {
             )}
             <form onSubmit={handleSubmit}>
               {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+              {colours.length > 0 && (
+                <div className="input-group">
+                  <label>Preferred Colour</label>
+                  <div className="enquiry-colours">
+                    {colours.map((c, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`enquiry-swatch ${form.color === c ? 'active' : ''}`}
+                        onClick={() => setForm(prev => ({ ...prev, color: c }))}
+                        title={c}
+                      >
+                        <span className="enquiry-swatch-dot" style={{ background: getColorHex(c) }} />
+                        <span className="enquiry-swatch-name">{c}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="input-group">
                 <label>Your Name *</label>
                 <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Enter your name" required />

@@ -7,14 +7,26 @@ import EnquiryModal from '../components/EnquiryModal'
 
 const fallbackImg = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80'
 
-const sampleReviews = [
-  { name: 'Talia M.', stars: 5, text: 'This lounge is incredibly comfortable. We love the recliners and it fits our family space perfectly.' },
-  { name: 'Sina F.', stars: 5, text: 'The AF team made choosing the right layout very easy. It looks beautiful in our home.' },
-  { name: 'Jordan K.', stars: 5, text: 'Soft, supportive and easy to keep clean. Exactly what we needed.' },
-]
+function getRecentlyViewed() {
+  try { return JSON.parse(localStorage.getItem('af_recently_viewed') || '[]') } catch { return [] }
+}
+
+function addToRecentlyViewed(product) {
+  const list = getRecentlyViewed().filter(p => p.id !== product.id)
+  list.unshift({ id: product.id, slug: product.slug, name: product.name, mrp: product.mrp, selling_price: product.selling_price, images: product.images, category_name: product.category_name })
+  localStorage.setItem('af_recently_viewed', JSON.stringify(list.slice(0, 8)))
+}
+
+const colorMap = {
+  'White': '#FFFFFF', 'Black': '#1a1a1a', 'Grey': '#808080', 'Charcoal': '#36454F',
+  'Beige': '#F5F5DC', 'Cream': '#FFFDD0', 'Brown': '#6B4226', 'Walnut': '#5B4332',
+  'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
+  'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
+}
+function getColorHex(name) { return colorMap[name] || '#ccc' }
 
 function ProductDetail() {
-  const { id } = useParams()
+  const { slug } = useParams()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -26,12 +38,14 @@ function ProductDetail() {
   const [selectedImg, setSelectedImg] = useState(0)
   const [selectedConfig, setSelectedConfig] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
+  const [adCampaigns, setAdCampaigns] = useState([])
+  const [recentlyViewed, setRecentlyViewed] = useState(getRecentlyViewed())
 
   useEffect(() => {
     setLoading(true)
     setError(null)
     setSelectedImg(0)
-    fetch(`${API_BASE}/api/products/${id}`)
+    fetch(`${API_BASE}/api/products/by-slug/${slug}`)
       .then(r => {
         if (!r.ok) throw new Error('Product not found')
         return r.json()
@@ -39,6 +53,8 @@ function ProductDetail() {
       .then(data => {
         setProduct(data)
         setLoading(false)
+        addToRecentlyViewed(data)
+        setRecentlyViewed(getRecentlyViewed())
         if (data.category_name) {
           fetch(`${API_BASE}/api/products?category=${encodeURIComponent(data.category_name)}&limit=50`)
             .then(r => r.json())
@@ -54,7 +70,11 @@ function ProductDetail() {
         setError(err.message)
         setLoading(false)
       })
-  }, [id])
+    fetch(`${API_BASE}/api/ad-campaigns/active?position=product_detail`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
+      .catch(() => {})
+  }, [slug])
 
   const getImages = (p) => {
     if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images
@@ -65,8 +85,11 @@ function ProductDetail() {
   if (error || !product) return <><Header /><main className="product-detail-page" style={{ textAlign: 'center', padding: '200px 20px' }}><h2>Product not found</h2><Link to="/" className="primary" style={{ marginTop: 20, display: 'inline-block' }}>Back to Home</Link></main><Footer /></>
 
   const images = getImages(product)
-  const weekly = product.selling_price ? Math.ceil(Number(product.selling_price) / 52) : null
   const hasDiscount = product.selling_price && product.mrp && Number(product.selling_price) < Number(product.mrp)
+  const discountPct = hasDiscount ? Math.round(((Number(product.mrp) - Number(product.selling_price)) / Number(product.mrp)) * 100) : 0
+  const savings = hasDiscount ? Number(product.mrp) - Number(product.selling_price) : 0
+  const activePrice = product.selling_price || product.mrp
+  const weeklyPrice = activePrice ? Math.ceil(Number(activePrice) / 52) : null
 
   return (
     <>
@@ -75,7 +98,7 @@ function ProductDetail() {
 
         {/* Breadcrumb */}
         <div className="pd-breadcrumb">
-          <Link to="/">Home</Link> / <Link to={product.category_name === 'Bedroom' ? '/#bedroom' : product.category_name === 'Dining' ? '/#dining' : '/#sofas'}>{product.category_name || 'Products'}</Link> / <span>{product.name}</span>
+          <Link to="/">Home</Link> / <Link to={`/category/${product.category_name?.toLowerCase()?.replace(/\s+/g, '-')}`}>{product.category_name || 'Products'}</Link> / <span>{product.name}</span>
         </div>
 
         {/* Product Grid */}
@@ -108,55 +131,64 @@ function ProductDetail() {
             <span className="pd-category">{product.category_name}</span>
             <h1>{product.name}</h1>
 
-            <div className="pd-rating-row">
-              <span className="pd-rating-stars-inline">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-              <span className="pd-rating-link">4.8 &middot; 24 customer reviews</span>
+            {product.brand && <p className="pd-brand">Brand: {product.brand}</p>}
+
+            {/* Pay Weekly */}
+            {weeklyPrice && (
+              <p className="pd-pay-weekly">PAY WEEKLY FROM <strong>${weeklyPrice}*</strong></p>
+            )}
+
+            {/* Pricing */}
+            <div className="pd-pricing-block">
+              {hasDiscount ? (
+                <>
+                  <div className="pd-price-row">
+                    <span className="pd-selling-price">${Number(product.selling_price).toLocaleString()}</span>
+                    <span className="pd-mrp">${Number(product.mrp).toLocaleString()}</span>
+                    <span className="pd-discount-badge">-{discountPct}%</span>
+                  </div>
+                  <p className="pd-savings">You save ${savings.toLocaleString()}</p>
+                </>
+              ) : (
+                <div className="pd-price-row">
+                  <span className="pd-selling-price">${Number(product.mrp || product.selling_price).toLocaleString()}</span>
+                </div>
+              )}
             </div>
 
-            <p className="pd-desc">{product.description || 'A comfortable piece designed for long evenings, slow Sundays and everyday family living.'}</p>
-
-            {/* Configuration Selector */}
-            <div className="pd-option-group">
-              <label>Choose a configuration</label>
-              <div className="pd-option-pills">
-                {['3 + 2 + 1', '3 + 2', 'Single recliner'].map(cfg => (
-                  <button key={cfg} className={`pd-pill ${selectedConfig === cfg ? 'active' : ''}`} onClick={() => setSelectedConfig(cfg)}>{cfg}</button>
-                ))}
-              </div>
-            </div>
-
-            {/* Colour Selector */}
-            <div className="pd-option-group">
-              <label>Choose a colour</label>
-              <div className="pd-colour-swatches">
-                {[
-                  { name: 'Beige', color: '#c9b99a' },
-                  { name: 'Grey', color: '#a0a0a0' },
-                  { name: 'Black', color: '#2d2d2d' },
-                ].map(c => (
-                  <button key={c.name} className={`pd-swatch ${selectedColor === c.name ? 'active' : ''}`} style={{ background: c.color }} onClick={() => setSelectedColor(c.name)} title={c.name}>
-                    {selectedColor === c.name && <span className="pd-swatch-check">&#10003;</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Weekly Payment Guide */}
-            <div className="pd-payment-guide">
-              <div className="pd-payment-left">
-                <span className="pd-payment-label">Weekly payment guide</span>
-                <div className="pd-payment-price">
-                  <span className="pd-payment-dollar">${weekly || '00'}</span>
-                  <span className="pd-payment-period">per week</span>
+            {/* Colour */}
+            {product.color && (
+              <div className="pd-option-group">
+                <label>Colour</label>
+                <div className="pd-colour-options">
+                  {product.color.split(',').map(c => c.trim()).filter(Boolean).map((c, i) => (
+                    <div key={i} className="pd-colour-item">
+                      <span className="pd-colour-dot" style={{ background: getColorHex(c) }} />
+                      <span className="pd-colour-name">{c}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <a href="#order-details" className="pd-order-details-link">Order details</a>
-            </div>
+            )}
+
+            {/* Materials & Details */}
+            {(product.material || product.color || product.warranty) && (
+              <div className="pd-details-list">
+                {product.material && <div className="pd-detail-item"><strong>Material:</strong> {product.material}</div>}
+                {product.color && <div className="pd-detail-item"><strong>Colour:</strong> {product.color}</div>}
+                {product.warranty && <div className="pd-detail-item"><strong>Warranty:</strong> {product.warranty}</div>}
+                {product.delivery_info && <div className="pd-detail-item"><strong>Delivery:</strong> {product.delivery_info}</div>}
+              </div>
+            )}
 
             {/* Enquiry Button */}
             <button className="pd-enquiry-btn" onClick={() => setShowModal(true)}>
-              ADD TO ENQUIRY
+              ENQUIRE NOW
             </button>
+
+            <p className="pd-or-call">or call us at <strong>0800 222 548</strong></p>
+
+            <Link to="/apply-for-finance" className="pd-finance-btn">APPLY FOR FINANCE</Link>
 
             {/* Trust Checkmarks */}
             <div className="pd-trust-row">
@@ -167,84 +199,50 @@ function ProductDetail() {
           </div>
         </div>
 
-        {/* Order Details Section */}
-        <section className="pd-order-details" id="order-details">
-          <div className="pd-order-inner">
-            <div className="pd-order-content">
-              <span className="pd-section-label">ORDER DETAILS</span>
-              <h2>Comfort that works<br/>for your home.</h2>
-              <p>{product.description || 'The ' + product.name + ' combines generous cushioning, supportive design and smooth finishing. The flexible configuration lets you choose a setup that makes sense for your room.'}</p>
-
-              <div className="pd-specs-table">
-                <div className="pd-spec-row">
-                  <strong>What's included</strong>
-                  <span>Selected configuration, seat cushions and care guide.</span>
-                </div>
-                <div className="pd-spec-row">
-                  <strong>Materials</strong>
-                  <span>{product.material || 'Easy-care upholstery'}{product.color ? ` - ${product.color}` : ''}. {product.warranty || 'Supportive foam and solid internal frame.'}</span>
-                </div>
-                <div className="pd-spec-row">
-                  <strong>Delivery</strong>
-                  <span>{product.delivery_info || 'Our team will confirm delivery options after your enquiry.'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pd-help-card">
-              <h3>Need help choosing?</h3>
-              <p>Share your room measurements with us and we'll help you decide on the right configuration.</p>
-              <a href="mailto:affurnishings@gmail.com" className="pd-help-link">Email the AF team</a>
-              <a href="tel:12345667890" className="pd-help-call">Call 12345667890</a>
-            </div>
-          </div>
-        </section>
-
-        {/* Customer Reviews Section */}
-        <section className="pd-reviews">
-          <span className="pd-section-label">CUSTOMER REVIEWS</span>
-          <h2>Loved in real homes.</h2>
-          <div className="pd-reviews-rating">
-            <span className="pd-rating-num">4.8</span>
-            <div className="pd-rating-stars">
-              <span>&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-              <span className="pd-rating-count">Based on 24 reviews</span>
-            </div>
-          </div>
-
-          <div className="pd-reviews-grid">
-            {sampleReviews.map((review, i) => (
-              <div key={i} className="pd-review-card">
-                <p className="pd-review-text">"{review.text}"</p>
-                <div className="pd-review-author">
-                  <span>— {review.name}. </span>
-                  <span className="pd-review-stars">{'★'.repeat(review.stars)}</span>
-                </div>
-              </div>
+        {/* Full Width Description */}
+        {product.description && (
+          <div className="pd-desc-full">
+            {product.description.split('\n').filter(Boolean).map((para, i) => (
+              <p key={i}>{para}</p>
             ))}
           </div>
+        )}
 
-          <button className="pd-review-btn" onClick={() => setShowModal(true)}>WRITE A REVIEW</button>
-        </section>
+        {/* Ad Campaign Banners */}
+        {adCampaigns.length > 0 && adCampaigns.map(ad => (
+          <a key={ad.id} href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="pd-ad-banner">
+            <img src={ad.image} alt={ad.name} />
+          </a>
+        ))}
 
         {/* Related Products */}
         {related.length > 0 && (
           <section className="pd-related">
-            <span className="pd-section-label">YOU MAY ALSO LIKE</span>
-            <h2>Complete your {product.category_name?.toLowerCase() || 'space'}.</h2>
+            <span className="pd-section-label">RELATED PRODUCTS</span>
+            <h2>You may also like.</h2>
             <div className="pd-related-grid">
-              {related.map(p => (
-                <Link key={p.id} to={`/product/${p.id}`} className="pd-related-card">
-                  <div className="pd-related-img">
-                    <img src={getImages(p)[0]} alt={p.name} />
-                  </div>
-                  <div className="pd-related-info">
-                    <h3>{p.name}</h3>
-                    <span className="pd-related-desc">{p.description ? p.description.substring(0, 60) + '...' : 'Quality furniture piece.'}</span>
-                    <span className="pd-related-link">View product &rarr;</span>
-                  </div>
-                </Link>
-              ))}
+              {related.map(p => {
+                const pImg = getImages(p)[0]
+                const pHasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
+                const pDiscount = pHasDiscount ? Math.round(((Number(p.mrp) - Number(p.selling_price)) / Number(p.mrp)) * 100) : 0
+                return (
+                  <Link key={p.id} to={`/product/${p.slug || p.id}`} className="pd-related-card">
+                    <div className="pd-related-img">
+                      <img src={pImg} alt={p.name} />
+                      {pHasDiscount && <span className="product-badge">-{pDiscount}%</span>}
+                    </div>
+                    <div className="pd-related-info">
+                      <h3>{p.name}</h3>
+                      <div className="product-pricing">
+                        {p.selling_price && <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>}
+                        {p.mrp && p.selling_price && Number(p.mrp) !== Number(p.selling_price) && <span className="product-mrp">${Number(p.mrp).toLocaleString()}</span>}
+                        {!p.selling_price && p.mrp && <span className="product-price">${Number(p.mrp).toLocaleString()}</span>}
+                      </div>
+                      <span className="pd-related-link">View product &rarr;</span>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </section>
         )}
@@ -260,14 +258,14 @@ function ProductDetail() {
                 const totalPages = allCategoryProducts.length
                 return (
                   <>
-                    <Link to={prev ? `/product/${prev.id}` : '#'} className={`pd-nav-btn pd-nav-prev${!prev ? ' disabled' : ''}`}>
+                    <Link to={prev ? `/product/${prev.slug || prev.id}` : '#'} className={`pd-nav-btn pd-nav-prev${!prev ? ' disabled' : ''}`}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
                       <span>Previous</span>
                     </Link>
                     <div className="pd-nav-pages">
                       <span className="pd-nav-current">Product {idx + 1} of {totalPages}</span>
                     </div>
-                    <Link to={next ? `/product/${next.id}` : '#'} className={`pd-nav-btn pd-nav-next${!next ? ' disabled' : ''}`}>
+                    <Link to={next ? `/product/${next.slug || next.id}` : '#'} className={`pd-nav-btn pd-nav-next${!next ? ' disabled' : ''}`}>
                       <span>Next</span>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                     </Link>
@@ -278,6 +276,36 @@ function ProductDetail() {
           </section>
         )}
       </main>
+
+      {/* Recently Viewed */}
+      {recentlyViewed.length > 1 && (
+        <section className="pd-recently-viewed">
+          <div className="pd-rv-inner">
+            <span className="pd-section-label">RECENTLY VIEWED</span>
+            <h2>You might also like.</h2>
+            <div className="pd-rv-grid">
+              {recentlyViewed.filter(p => p.id !== product.id).slice(0, 4).map(p => {
+                const img = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? p.images[0] : fallbackImg
+                const pHasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
+                return (
+                  <Link key={p.id} to={`/product/${p.slug || p.id}`} className="pd-rv-card">
+                    <div className="pd-rv-img"><img src={img} alt={p.name} loading="lazy" /></div>
+                    <div className="pd-rv-info">
+                      <h3>{p.name}</h3>
+                      <div className="product-pricing">
+                        {p.selling_price && <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>}
+                        {p.mrp && p.selling_price && Number(p.mrp) !== Number(p.selling_price) && <span className="product-mrp">${Number(p.mrp).toLocaleString()}</span>}
+                        {!p.selling_price && p.mrp && <span className="product-price">${Number(p.mrp).toLocaleString()}</span>}
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       <Footer />
       {showModal && <EnquiryModal product={product} onClose={() => setShowModal(false)} />}
 

@@ -2,49 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { API_BASE } from '../config'
 
-const navCategories = [
-  {
-    label: 'Lounge Suite',
-    href: '/category/lounge-suite',
-    subcategories: [
-      { label: 'All Lounge Suite', href: '/category/lounge-suite' },
-      { label: 'Sofas', href: '/category/lounge-suite?sub=sofas' },
-      { label: 'Armchairs', href: '/category/lounge-suite?sub=armchairs' },
-      { label: 'Coffee Tables', href: '/category/lounge-suite?sub=coffee-tables' },
-    ],
-  },
-  {
-    label: 'Bedroom',
-    href: '/category/bedroom',
-    subcategories: [
-      { label: 'All Bedroom', href: '/category/bedroom' },
-      { label: 'Bed Frames', href: '/category/bedroom?sub=bed-frames' },
-      { label: 'Mattresses', href: '/category/bedroom?sub=mattresses' },
-      { label: 'Bedroom Sets', href: '/category/bedroom?sub=bedroom-sets' },
-    ],
-  },
-  {
-    label: 'Dining',
-    href: '/category/dining',
-    subcategories: [
-      { label: 'All Dining', href: '/category/dining' },
-      { label: 'Dining Suites', href: '/category/dining?sub=dining-suites' },
-      { label: 'Dining Tables', href: '/category/dining?sub=dining-tables' },
-      { label: 'Dining Chairs', href: '/category/dining?sub=dining-chairs' },
-    ],
-  },
-  {
-    label: 'Living',
-    href: '/category/living',
-    subcategories: [
-      { label: 'All Living', href: '/category/living' },
-      { label: 'Coffee Tables', href: '/category/living?sub=coffee-tables' },
-      { label: 'Console Tables', href: '/category/living?sub=console-tables' },
-      { label: 'Bar Stools', href: '/category/living?sub=bar-stools' },
-    ],
-  },
-]
-
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [expandedCat, setExpandedCat] = useState(null)
@@ -53,6 +10,9 @@ function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [panelTop, setPanelTop] = useState(98)
+  const [navCategories, setNavCategories] = useState([])
+  const [logoUrl, setLogoUrl] = useState('/logo.png')
+  const [socialLinks, setSocialLinks] = useState([])
   const headerRef = useRef(null)
   const navigate = useNavigate()
   const location = useLocation()
@@ -76,6 +36,64 @@ function Header() {
     }
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
+
+  useEffect(() => {
+    const loadAll = () => {
+      Promise.all([
+        fetch(`${API_BASE}/api/categories`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/subcategories`).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/settings`).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/social`).then(r => r.json()).catch(() => []),
+      ]).then(([cats, subs, settings, socials]) => {
+        if (Array.isArray(cats)) {
+          const slugify = (str) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+          const allSubs = Array.isArray(subs) ? subs : []
+          const categories = cats.map(cat => {
+            const catSlug = slugify(cat.name)
+            const catSubs = allSubs.filter(s => String(s.category_id) === String(cat.id))
+            return {
+              label: cat.name,
+              href: `/category/${catSlug}`,
+              subcategories: [
+                { label: `All ${cat.name}`, href: `/category/${catSlug}` },
+                ...catSubs.map(sub => ({
+                  label: sub.name,
+                  href: `/category/${catSlug}?sub_id=${sub.id}`,
+                })),
+              ],
+            }
+          })
+          setNavCategories(categories)
+        }
+        if (settings?.site_logo) {
+          setLogoUrl(settings.site_logo)
+          localStorage.setItem('site_logo', settings.site_logo)
+        }
+        if (Array.isArray(socials)) setSocialLinks(socials)
+      })
+    }
+    loadAll()
+    const onLogoUpdate = () => {
+      const cached = localStorage.getItem('site_logo')
+      if (cached) setLogoUrl(cached)
+      loadAll()
+    }
+    const logoInterval = setInterval(() => {
+      fetch(`${API_BASE}/api/settings`).then(r => r.json()).then(d => {
+        if (d?.site_logo && d.site_logo !== localStorage.getItem('site_logo')) {
+          localStorage.setItem('site_logo', d.site_logo)
+          setLogoUrl(d.site_logo)
+        }
+      }).catch(() => {})
+    }, 15000)
+    window.addEventListener('logo-updated', onLogoUpdate)
+    window.addEventListener('storage', onLogoUpdate)
+    return () => {
+      clearInterval(logoInterval)
+      window.removeEventListener('logo-updated', onLogoUpdate)
+      window.removeEventListener('storage', onLogoUpdate)
+    }
+  }, [])
 
   const isHome = location.pathname === '/'
 
@@ -101,6 +119,15 @@ function Header() {
     }
   }
 
+  const getSocialIcon = (platform) => {
+    const icons = {
+      instagram: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>,
+      facebook: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>,
+      twitter: <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>,
+    }
+    return icons[platform?.toLowerCase()] || <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+  }
+
   return (
     <>
       <div className="announcement-bar">
@@ -111,12 +138,12 @@ function Header() {
           &#9776;
         </button>
         <Link className="logo" to="/">
-          <img src="/logo.png" alt="AF Furnishings" />
+          <img src={logoUrl} alt="AF Furnishings" />
         </Link>
 
         <nav className="desktop-nav">
           <Link to="/" onClick={() => { setHoveredMenu(null) }}>Home</Link>
-          {navCategories.map((cat) => (
+          {navCategories.filter(cat => !['Office', 'Outdoor'].includes(cat.label)).map((cat) => (
             <div
               key={cat.label}
               className="nav-dropdown"
@@ -137,6 +164,24 @@ function Header() {
               )}
             </div>
           ))}
+          <div
+            className="nav-dropdown"
+            onMouseEnter={() => setHoveredMenu('all-categories')}
+            onMouseLeave={() => setHoveredMenu(null)}
+          >
+            <span className="nav-dropdown-trigger">
+              All Categories <span className="dropdown-arrow">&#9662;</span>
+            </span>
+            {hoveredMenu === 'all-categories' && (
+              <div className="dropdown-menu">
+                {navCategories.map((cat) => (
+                  <a key={cat.label} href={cat.href} onClick={(e) => { e.preventDefault(); handleNavClick(cat.href) }}>
+                    {cat.label}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
           <Link to="/winz">WinZ</Link>
           <a className="sale-link" href="/on-sale" onClick={(e) => { e.preventDefault(); handleNavClick('/on-sale') }}>On Sale!</a>
         </nav>
@@ -160,16 +205,11 @@ function Header() {
               </button>
             </form>
             <div className="header-social-icons">
-              <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="header-social-icon" title="Instagram">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-                </svg>
-              </a>
-              <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" className="header-social-icon" title="Facebook">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
-                </svg>
-              </a>
+              {socialLinks.map(link => (
+                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="header-social-icon" title={link.platform}>
+                  {getSocialIcon(link.platform)}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -189,7 +229,7 @@ function Header() {
           <div className="mobile-nav-panel" style={{ top: panelTop + 'px', maxHeight: `calc(100vh - ${panelTop}px)` }}>
             <Link className="mobile-nav-finance" to="/apply-for-finance" onClick={() => setMenuOpen(false)}>APPLY FOR FINANCE</Link>
             <a className="mobile-nav-item" href="/" onClick={(e) => { e.preventDefault(); handleNavClick('/') }}>HOME</a>
-            {navCategories.map((cat) => (
+            {navCategories.filter(cat => !['Office', 'Outdoor'].includes(cat.label)).map((cat) => (
               <div key={cat.label} className="mobile-nav-item-group">
                 <div className="mobile-nav-item" onClick={() => setExpandedCat(expandedCat === cat.label ? null : cat.label)}>
                   <span>{cat.label.toUpperCase()}</span>
@@ -206,6 +246,21 @@ function Header() {
                 )}
               </div>
             ))}
+            <div className="mobile-nav-item-group">
+              <div className="mobile-nav-item" onClick={() => setExpandedCat(expandedCat === 'all-categories' ? null : 'all-categories')}>
+                <span>ALL CATEGORIES</span>
+                <span className={`mobile-nav-arrow ${expandedCat === 'all-categories' ? 'open' : ''}`}>&#9662;</span>
+              </div>
+              {expandedCat === 'all-categories' && (
+                <div className="mobile-nav-sub">
+                  {navCategories.map((cat) => (
+                    <a key={cat.label} href={cat.href} onClick={(e) => { e.preventDefault(); handleNavClick(cat.href) }}>
+                      {cat.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
             <a className="mobile-nav-item" href="/winz" onClick={(e) => { e.preventDefault(); handleNavClick('/winz') }}>WINZ</a>
             <a className="mobile-nav-sale" href="/on-sale" onClick={(e) => { e.preventDefault(); handleNavClick('/on-sale') }}>ON SALE!</a>
           </div>

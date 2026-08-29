@@ -1,19 +1,13 @@
 // ============================================================
-// Login Page Component
+// Login Page Component (Strict Authentication)
 // ============================================================
 // Admin login form with email/password fields.
 // Calls POST /api/auth/login to authenticate.
-// On success, receives JWT token and passes it to parent (App).
-//
-// FEATURES:
-//   - Show/hide password toggle
-//   - Form validation
-//   - Loading state during API call
-//   - Toast notifications for success/error
-//   - Link to Forgot Password page
+// STRICT: Validates that a non-empty token string exists 
+// before allowing any state changes or routing.
 // ============================================================
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE } from '../config'
 
@@ -23,6 +17,19 @@ function Login({ onLogin }) {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
+  const [siteLogo, setSiteLogo] = useState('/serthkuyghj.png')
+
+  useEffect(() => {
+    const loadLogo = () => {
+      const cached = localStorage.getItem('site_logo')
+      if (cached) setSiteLogo(cached)
+      fetch(`${API_BASE}/api/settings`).then(r => r.ok ? r.json() : null)
+        .then(d => { if (d?.site_logo) { setSiteLogo(d.site_logo); localStorage.setItem('site_logo', d.site_logo) } }).catch(() => {})
+    }
+    loadLogo()
+    window.addEventListener('logo-updated', loadLogo)
+    return () => window.removeEventListener('logo-updated', loadLogo)
+  }, [])
 
   // Show a toast notification (auto-dismiss after 3 seconds)
   const showToast = (msg, type) => {
@@ -30,10 +37,14 @@ function Login({ onLogin }) {
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Handle form submission - real API call active
+  // Handle form submission - strict API validation
   const handleLogin = async (e) => {
     e.preventDefault()
-    if (!email || !password) return showToast('Please fill all fields', 'warning')
+    
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail || !password) {
+      return showToast('Please fill all fields', 'warning')
+    }
 
     setLoading(true)
     
@@ -41,22 +52,24 @@ function Login({ onLogin }) {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: trimmedEmail, password }),
       })
       const data = await res.json()
 
-      if (res.ok) {
+      // STRICT CHECK: Response must be OK AND contain a valid token string
+      if (res.ok && data && typeof data.token === 'string' && data.token.trim().length > 0) {
         showToast('Login successful!', 'success')
-        // Pass token to parent after brief delay (show success toast first)
+        // Pass token to parent only after it is completely verified
         setTimeout(() => onLogin(data.token), 600)
       } else {
-        showToast(data.message || 'Invalid credentials', 'error')
+        // Catch 401s, 404s, or malformed 200s lacking a token
+        showToast(data.message || 'Invalid credentials or access denied.', 'error')
       }
-    } catch {
-      showToast('Server error. Is the backend running?', 'error')
+    } catch (err) {
+      showToast('Server connection failed. Please try again.', 'error')
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (
@@ -64,7 +77,7 @@ function Login({ onLogin }) {
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
       <div className="login-card">
-        <img src="/serthkuyghj.png" alt="AF Furniture" className="logo" />
+        <img src={siteLogo} alt="AF Furniture" className="logo" />
         <h2>Admin Panel</h2>
 
         <form onSubmit={handleLogin}>
@@ -108,7 +121,7 @@ function Login({ onLogin }) {
           <Link to="/forgot-password" className="forgot-pass">Forgot Password?</Link>
 
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Authenticating...' : 'Login'}
           </button>
         </form>
       </div>

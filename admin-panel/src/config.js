@@ -1,1 +1,1 @@
-export const API_BASE = 'https://backend.affurnishings.co.nz'
+export const API_BASE = window.location.hostname === 'localhost' ? '' : 'https://backend.affurnishings.co.nz'

@@ -40,18 +40,56 @@ function SocialIcon({ platform }) {
 
 function Footer() {
   const [socialLinks, setSocialLinks] = useState([])
+  const [about, setAbout] = useState({})
+  const [logoUrl, setLogoUrl] = useState('/logo.png')
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/social`)
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setSocialLinks(data) })
-      .catch(() => {})
+    const loadAll = () => {
+      fetch(`${API_BASE}/api/social`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setSocialLinks(data) })
+        .catch(() => {})
+      fetch(`${API_BASE}/api/about`)
+        .then(r => r.json())
+        .then(data => { if (data) setAbout(data) })
+        .catch(() => {})
+      fetch(`${API_BASE}/api/settings`)
+        .then(r => r.json())
+        .then(data => {
+          if (data?.site_logo) {
+            setLogoUrl(data.site_logo)
+            localStorage.setItem('site_logo', data.site_logo)
+          }
+        })
+        .catch(() => {})
+    }
+    loadAll()
+    const onLogoUpdate = () => {
+      const cached = localStorage.getItem('site_logo')
+      if (cached) setLogoUrl(cached)
+      loadAll()
+    }
+    const logoInterval = setInterval(() => {
+      fetch(`${API_BASE}/api/settings`).then(r => r.json()).then(d => {
+        if (d?.site_logo && d.site_logo !== localStorage.getItem('site_logo')) {
+          localStorage.setItem('site_logo', d.site_logo)
+          setLogoUrl(d.site_logo)
+        }
+      }).catch(() => {})
+    }, 15000)
+    window.addEventListener('logo-updated', onLogoUpdate)
+    window.addEventListener('storage', onLogoUpdate)
+    return () => {
+      clearInterval(logoInterval)
+      window.removeEventListener('logo-updated', onLogoUpdate)
+      window.removeEventListener('storage', onLogoUpdate)
+    }
   }, [])
 
   return (
     <footer>
       <div className="footer-logo">
-        <Link to="/"><img src="/logo.png" alt="AF Furnishings" /></Link>
+        <Link to="/"><img src={logoUrl} alt="AF Furnishings" /></Link>
       </div>
 
       <nav className="footer-nav">
@@ -80,8 +118,8 @@ function Footer() {
         </div>
         <div>
           <h3>Get in touch</h3>
-          <a href="tel:12345667890">12345667890</a>
-          <a href="mailto:affurniture@gmail.com">affurniture@gmail.com</a>
+          {about.phone && <a href={`tel:${about.phone}`}>{about.phone}</a>}
+          {about.email && <a href={`mailto:${about.email}`}>{about.email}</a>}
           {socialLinks.length > 0 && (
             <div className="footer-social">
               {socialLinks.map((link) => (

@@ -9,11 +9,22 @@ const defaultProducts = [
   { id: 4, name: 'Harbour Corner Sofa', mrp: 3299, selling_price: 2899, images: ['https://images.unsplash.com/photo-1540574163026-643ea20ade25?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Beige', category_name: 'Living Room' },
 ]
 
+function getWishlist() {
+  try { return JSON.parse(localStorage.getItem('af_wishlist') || '[]') } catch { return [] }
+}
+function toggleWishlist(id) {
+  const list = getWishlist()
+  const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id]
+  localStorage.setItem('af_wishlist', JSON.stringify(next))
+  return next
+}
+
 function ProductGrid({ sectionId, label, title, category, compact }) {
   const [products, setProducts] = useState([])
   const [currentSlide, setCurrentSlide] = useState(0)
   const sliderRef = useRef(null)
   const [slidesPerView, setSlidesPerView] = useState(4)
+  const [wishlist, setWishlist] = useState(getWishlist)
 
   useEffect(() => {
     const updateSPV = () => {
@@ -89,6 +100,13 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
     return map[name] || '#ccc'
   }
 
+  const handleWishlist = (e, id) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const next = toggleWishlist(id)
+    setWishlist(next)
+  }
+
   return (
     <section className={`products ${compact ? 'compact' : ''}`} id={sectionId}>
       {label && (
@@ -104,16 +122,23 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
             const imgSrc = getImg(p)
             const weekly = getWeeklyPrice(p.selling_price || p.mrp)
             const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
+            const isWished = wishlist.includes(p.id)
             return (
               <article key={p.id} className="product-card">
-                <Link to={`/product/${p.id}`} className="product-card-img">
+                <Link to={`/product/${p.slug || p.id}`} className="product-card-img">
                   <img src={imgSrc} alt={p.name} loading="lazy" />
                   {hasDiscount && <span className="product-badge">SALE</span>}
+                  <button className={`wishlist-btn ${isWished ? 'active' : ''}`} onClick={(e) => handleWishlist(e, p.id)} title={isWished ? 'Remove from wishlist' : 'Add to wishlist'}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill={isWished ? '#ef4444' : 'none'} stroke={isWished ? '#ef4444' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+                    </svg>
+                  </button>
                 </Link>
                 <div className="product-card-body">
-                  <Link to={`/product/${p.id}`} className="product-card-link">
+                  <Link to={`/product/${p.slug || p.id}`} className="product-card-link">
                     <h3>{p.name}</h3>
                   </Link>
+                  <p className="product-card-desc">{p.description ? p.description.substring(0, 80) + (p.description.length > 80 ? '...' : '') : ''}</p>
                   <div className="product-pricing">
                     {p.selling_price && (
                       <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>
@@ -124,18 +149,11 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
                     {!p.selling_price && p.mrp && (
                       <span className="product-price">${Number(p.mrp).toLocaleString()}</span>
                     )}
+                    {hasDiscount && (
+                      <span className="product-discount-tag">-{Math.round(((Number(p.mrp) - Number(p.selling_price)) / Number(p.mrp)) * 100)}%</span>
+                    )}
                   </div>
-                  {weekly && (
-                    <p className="product-weekly">Or just <strong>${weekly}/week</strong> on finance</p>
-                  )}
-                  {p.material && <p className="product-meta">{p.material}{p.color ? ` - ${p.color}` : ''}</p>}
-                  {p.color && (
-                    <div className="product-colors">
-                      <span className="product-color-dot" title={p.color} style={{ background: getColorHex(p.color) }} />
-                      <span className="product-color-name">{p.color}</span>
-                    </div>
-                  )}
-                  <Link to={`/product/${p.id}`} className="btn-shop-now" onClick={() => {}}>Shop Now</Link>
+                  <Link to={`/product/${p.slug || p.id}`} className="btn-shop-now">Enquire Now</Link>
                 </div>
               </article>
             )

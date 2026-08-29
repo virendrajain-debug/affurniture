@@ -1,17 +1,8 @@
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../config'
 
-const COLOR_FIELDS = [
-  { key: 'primary_color', label: 'Primary Color', desc: 'Main brand color (headings, borders)' },
-  { key: 'accent_color', label: 'Accent / Gold', desc: 'Highlight color (prices, links, badges)' },
-  { key: 'bg_color', label: 'Background Color', desc: 'Main page background' },
-  { key: 'text_color', label: 'Text Color', desc: 'Body text and paragraphs' },
-  { key: 'button_color', label: 'Button Color', desc: 'Shop Now and CTA buttons' },
-  { key: 'header_bg', label: 'Header Background', desc: 'Header bar background when scrolled' },
-]
-
 function Settings({ token }) {
-  const [colors, setColors] = useState({})
+  const [settings, setSettings] = useState({ site_logo: '', site_name: 'AF Furnishings' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
@@ -22,99 +13,152 @@ function Settings({ token }) {
   }
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/settings/all`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then(data => setColors(data))
-      .catch(() => showToast('Failed to load settings', 'error'))
-      .finally(() => setLoading(false))
-  }, [])
+    const fetchSettings = async () => {
+      setLoading(true)
+      try {
+        const res = await fetch(`${API_BASE}/api/settings/all`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data && typeof data === 'object') {
+            setSettings({
+              site_logo: data.site_logo || '',
+              site_name: data.site_name || 'AF Furnishings',
+            })
+          }
+        }
+      } catch {
+        showToast('Failed to load settings', 'error')
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (token) fetchSettings()
+  }, [token])
 
   const handleSave = async () => {
     setSaving(true)
     try {
       const res = await fetch(`${API_BASE}/api/settings`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(colors),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(settings),
       })
       if (res.ok) {
-        showToast('Colors saved successfully', 'success')
-      } else {
-        showToast('Failed to save', 'error')
+        showToast('Settings saved', 'success')
+        localStorage.setItem('site_logo', settings.site_logo || '')
+        window.dispatchEvent(new Event('logo-updated'))
       }
+      else showToast('Failed to save', 'error')
     } catch {
       showToast('Server error', 'error')
+    } finally {
+      setSaving(false)
     }
-    setSaving(false)
   }
 
-  const handleChange = (key, value) => {
-    setColors({ ...colors, [key]: value })
+  const handleLogoUpload = async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', body: formData })
+      const data = await res.json()
+      if (data.url) {
+        setSettings(prev => ({ ...prev, site_logo: data.url }))
+        showToast('Logo uploaded — click Save to apply', 'success')
+      }
+    } catch {
+      showToast('Upload failed', 'error')
+    }
   }
 
   return (
-    <div className="settings-page">
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+    <div style={{ padding: '24px', maxWidth: 700 }}>
+      <style>{`
+        .ss-card { background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 28px; margin-bottom: 20px; }
+        .ss-card h3 { font-size: 1.1rem; color: var(--text-primary); margin: 0 0 20px; font-weight: 600; }
+        .ss-field { margin-bottom: 20px; }
+        .ss-label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .ss-input { width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.9rem; color: var(--text-primary); background: var(--header-bg); box-sizing: border-box; transition: border-color 0.2s; }
+        .ss-input:focus { outline: none; border-color: var(--accent-color); }
+        .ss-logo-wrap { display: flex; align-items: center; gap: 20px; }
+        .ss-logo-preview { width: 120px; height: 80px; border-radius: 10px; border: 1px solid var(--border-color); object-fit: contain; background: var(--hover-bg); padding: 8px; }
+        .ss-logo-placeholder { width: 120px; height: 80px; border-radius: 10px; border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 0.8rem; cursor: pointer; background: var(--hover-bg); }
+        .ss-logo-placeholder:hover { border-color: var(--accent-color); color: var(--accent-color); }
+        .ss-btn { padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; border: none; background: var(--accent-color); color: #fff; }
+        .ss-btn:hover:not(:disabled) { box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .ss-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .ss-toast { position: fixed; top: 24px; right: 24px; z-index: 9999; background: var(--sidebar-bg); border-left: 4px solid var(--accent-color); color: var(--text-primary); padding: 16px 24px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-weight: 500; animation: fadeIn 0.3s ease-out; }
+        .ss-toast.error { border-left-color: #ef4444; }
+        .ss-toast.success { border-left-color: #22c55e; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
 
-      <div className="section-header">
-        <div>
-          <h2>Site Colors</h2>
-          <p>Pick colors for the website. Changes apply live on the frontend.</p>
-        </div>
-        <button className="btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Colors'}
-        </button>
+      {toast && <div className={`ss-toast ${toast.type}`}>{toast.msg}</div>}
+
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontSize: '1.5rem', color: 'var(--text-primary)', margin: '0 0 4px', fontWeight: 600 }}>Site Settings</h2>
+        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>Manage your site logo and name.</p>
       </div>
 
       {loading ? (
-        <p style={{ padding: '40px', textAlign: 'center' }}>Loading...</p>
+        <div className="ss-card">Loading settings...</div>
       ) : (
-        <div className="color-grid">
-          {COLOR_FIELDS.map(f => (
-            <div className="color-card" key={f.key}>
-              <div className="color-preview" style={{ background: colors[f.key] || '#ccc' }} />
-              <div className="color-info">
-                <label>{f.label}</label>
-                <p>{f.desc}</p>
-                <div className="color-input-row">
-                  <input
-                    type="color"
-                    value={colors[f.key] || '#000000'}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    value={colors[f.key] || ''}
-                    onChange={(e) => handleChange(f.key, e.target.value)}
-                    placeholder="#000000"
-                    className="color-hex"
-                  />
+        <>
+          <div className="ss-card">
+            <h3>Site Logo</h3>
+            <div className="ss-logo-wrap">
+              <label className="ss-logo-placeholder">
+                {settings.site_logo ? (
+                  <img src={settings.site_logo} alt="Logo" className="ss-logo-preview" />
+                ) : (
+                  <>
+                    + Upload Logo
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleLogoUpload(e.target.files[0]) }} />
+                  </>
+                )}
+              </label>
+              {settings.site_logo && (
+                <div>
+                  <label className="cm-btn cm-btn-ghost" style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: 8, cursor: 'pointer', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                    Change Logo
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files[0]) handleLogoUpload(e.target.files[0]) }} />
+                  </label>
+                  <button
+                    className="cm-btn cm-btn-ghost"
+                    style={{ padding: '8px 16px', fontSize: '0.8rem', borderRadius: 8, marginLeft: 8, color: '#ef4444', borderColor: '#ef4444' }}
+                    onClick={() => setSettings(prev => ({ ...prev, site_logo: '' }))}
+                  >
+                    Remove
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
-      <div className="color-preview-section">
-        <h3>Preview</h3>
-        <div className="color-preview-box" style={{
-          background: colors.bg_color || '#fffdf9',
-          color: colors.text_color || '#28241f',
-        }}>
-          <div className="color-preview-header" style={{ background: colors.header_bg || '#29251f', color: '#fff' }}>
-            Header Preview
+          <div className="ss-card">
+            <h3>Site Name</h3>
+            <div className="ss-field">
+              <label className="ss-label">Company Name</label>
+              <input
+                type="text"
+                className="ss-input"
+                value={settings.site_name}
+                onChange={(e) => setSettings(prev => ({ ...prev, site_name: e.target.value }))}
+                placeholder="AF Furnishings"
+              />
+            </div>
           </div>
-          <div className="color-preview-content">
-            <h4 style={{ color: colors.primary_color || '#28241f' }}>Heading Text</h4>
-            <p>This is how body text will look on your site.</p>
-            <span className="color-preview-price" style={{ color: colors.accent_color || '#aa7a3e' }}>$1,299</span>
-            <button style={{ background: colors.button_color || '#29251f', color: '#fff' }}>Shop Now</button>
-          </div>
-        </div>
-      </div>
+
+          <button className="ss-btn" onClick={handleSave} disabled={saving || loading}>
+            {saving ? 'Saving...' : 'Save Settings'}
+          </button>
+        </>
+      )}
     </div>
   )
 }

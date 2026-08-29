@@ -92,6 +92,7 @@ function CategoryPage() {
   const { slug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const subSlug = searchParams.get('sub') || ''
+  const subId = searchParams.get('sub_id') || ''
   const currentPage = parseInt(searchParams.get('page')) || 1
 
   const [products, setProducts] = useState([])
@@ -102,6 +103,9 @@ function CategoryPage() {
   const [priceRange, setPriceRange] = useState({ min: 0, max: 9999 })
   const [showFilters, setShowFilters] = useState({ categories: true, price: true, color: true, size: true })
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
+  const [adCampaigns, setAdCampaigns] = useState([])
+  const [apiSubcategories, setApiSubcategories] = useState([])
+  const [catImage, setCatImage] = useState('')
 
   const cat = categoryData[slug] || { ...defaultCategory, title: slug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), apiCategory: slug, heroLabel: '', heroTitle: '', heroDesc: '', colors: [], sizes: [], subcategories: [] }
 
@@ -112,7 +116,8 @@ function CategoryPage() {
       setLoading(true)
       try {
         let url = `${API_BASE}/api/products?category=${encodeURIComponent(cat.apiCategory)}&page=${currentPage}&per_page=${PER_PAGE}`
-        if (subSlug) url += `&subcategory=${subSlug}`
+        if (subId) url += `&subcategory_id=${subId}`
+        else if (subSlug) url += `&subcategory=${subSlug}`
         const res = await fetch(url)
         const data = await res.json()
         if (data.products) {
@@ -125,8 +130,27 @@ function CategoryPage() {
       setLoading(false)
     }
     fetchProducts()
+    fetch(`${API_BASE}/api/categories`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const match = data.find(c => {
+            const cSlug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            return cSlug === slug || c.name.toLowerCase().replace(/\s+/g, '-') === slug
+          })
+          if (match) {
+            if (match.image) setCatImage(match.image)
+            if (match.subcategories) setApiSubcategories(match.subcategories)
+          }
+        }
+      })
+      .catch(() => {})
+    fetch(`${API_BASE}/api/ad-campaigns/active?position=category_detail`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
+      .catch(() => {})
     window.scrollTo(0, 0)
-  }, [cat.apiCategory, subSlug, currentPage])
+  }, [cat.apiCategory, subSlug, subId, currentPage])
 
   let filtered = products
   if (selectedColors.length > 0) {
@@ -164,9 +188,17 @@ function CategoryPage() {
     setPriceRange({ min: 0, max: 9999 })
   }
 
-  const handleSubcatClick = (subSlug) => {
-    if (subSlug) {
-      setSearchParams({ sub: subSlug })
+  const handleSubcatClick = (subSlug, subCategoryId) => {
+    if (subCategoryId) {
+      const params = new URLSearchParams(searchParams)
+      params.set('sub_id', subCategoryId)
+      params.delete('sub')
+      setSearchParams(params)
+    } else if (subSlug) {
+      const params = new URLSearchParams(searchParams)
+      params.set('sub', subSlug)
+      params.delete('sub_id')
+      setSearchParams(params)
     } else {
       setSearchParams({})
     }
@@ -182,13 +214,15 @@ function CategoryPage() {
     setSearchParams(params)
   }
 
-  const subcategories = cat.subcategories || []
+  const subcategories = apiSubcategories.length > 0
+    ? [{ name: `All ${cat.title}`, id: null, slug: '' }, ...apiSubcategories.map(s => ({ name: s.name, id: s.id, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))]
+    : (cat.subcategories || [])
 
   return (
     <>
       <Header />
       <main className="about-page">
-        <section className="catalog-hero">
+        <section className="catalog-hero" style={catImage ? { backgroundImage: `url(${catImage})` } : undefined}>
           <div className="catalog-hero-inner">
             <span className="catalog-hero-label">{cat.heroLabel}</span>
             <h1>{cat.heroTitle || cat.title}</h1>
@@ -236,15 +270,18 @@ function CategoryPage() {
                 </h3>
                 {showFilters.categories && (
                   <div className="filter-content">
-                    {subcategories.length > 0 ? subcategories.map((sub) => (
-                      <label
-                        key={sub.slug}
-                        className={`filter-option${(subSlug === sub.slug || (!subSlug && !sub.slug)) ? ' active' : ''}`}
-                        onClick={() => handleSubcatClick(sub.slug)}
-                      >
-                        {sub.label}
-                      </label>
-                    )) : (
+                    {subcategories.length > 0 ? subcategories.map((sub) => {
+                      const isActive = sub.id ? String(subId) === String(sub.id) : (sub.slug ? subSlug === sub.slug : !subSlug && !sub.slug)
+                      return (
+                        <label
+                          key={sub.slug || sub.id || 'all'}
+                          className={`filter-option${isActive ? ' active' : ''}`}
+                          onClick={() => handleSubcatClick(sub.slug, sub.id)}
+                        >
+                          {sub.label || sub.name}
+                        </label>
+                      )
+                    }) : (
                       <label className="filter-option active">{cat.title}</label>
                     )}
                   </div>
@@ -325,10 +362,11 @@ function CategoryPage() {
                   <div className="catalog-grid">
                     {filtered.map(p => {
                       const imgSrc = getImg(p)
-                      const weekly = getWeekly(p.selling_price || p.mrp)
+                      const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
+                      const price = p.selling_price || p.mrp
                       return (
                         <article key={p.id} className="catalog-card">
-                          <Link to={`/product/${p.id}`} className="catalog-card-image">
+                          <Link to={`/product/${p.slug || p.id}`} className="catalog-card-image">
                             <img src={imgSrc} alt={p.name} loading="lazy" />
                             <div className="catalog-card-banner">
                               <span>{p.name}</span>
@@ -337,16 +375,31 @@ function CategoryPage() {
                           <div className="catalog-card-body">
                             <p className="catalog-card-desc">{p.description || `Comfortable ${p.category_name || 'furniture'} piece.`}</p>
                             <div className="catalog-card-pricing">
-                              <span className="catalog-from">From:</span>
-                              <span className="catalog-price">${weekly || 0}</span>
-                              <span className="catalog-weekly">weekly</span>
+                              {hasDiscount ? (
+                                <>
+                                  <span className="catalog-price">${Number(p.selling_price).toLocaleString()}</span>
+                                  <span className="catalog-from" style={{ textDecoration: 'line-through', opacity: 0.6 }}>${Number(p.mrp).toLocaleString()}</span>
+                                </>
+                              ) : (
+                                <span className="catalog-price">${Number(price).toLocaleString()}</span>
+                              )}
                             </div>
-                            <Link to={`/product/${p.id}`} className="catalog-enquire-btn">Enquire Now</Link>
+                            <Link to={`/product/${p.slug || p.id}`} className="catalog-enquire-btn">Enquire Now</Link>
                           </div>
                         </article>
                       )
                     })}
                   </div>
+
+                  {adCampaigns.length > 0 && (
+                    <div className="category-ad-banners">
+                      {adCampaigns.map(ad => (
+                        <a key={ad.id} href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="home-ad-banner">
+                          <img src={ad.image} alt={ad.name} />
+                        </a>
+                      ))}
+                    </div>
+                  )}
 
                   {pagination.total_pages > 1 && (
                     <div className="catalog-pagination">
