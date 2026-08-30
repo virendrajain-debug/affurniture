@@ -13,6 +13,9 @@
 // AUTHENTICATION FLOW:
 //   1. Login with email/password -> get JWT token
 //   2. Send token in header: Authorization: Bearer <token>
+
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
 //   3. Protected routes check token via authenticateToken middleware
 // ============================================================
 
@@ -75,7 +78,7 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, profile_image: user.profile_image }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, profile_image: resolveUrl(user.profile_image) }
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -226,6 +229,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     if (users.length === 0) return res.status(404).json({ message: 'User not found' });
     const [socials] = await pool.execute('SELECT platform, url FROM social_links WHERE enabled = 1');
     const user = users[0];
+    user.profile_image = resolveUrl(user.profile_image);
     socials.forEach(s => { user[s.platform.toLowerCase()] = s.url; });
     res.json(user);
   } catch (error) {

@@ -1,10 +1,20 @@
-const testimonials = [
-  { text: 'The sofa is beautiful and the process was so easy. It has made our lounge our favourite room. The quality is outstanding and the weekly payments make it so affordable.', author: 'Mele T.', location: 'Auckland' },
-  { text: 'Friendly service, great quality, and our new bedroom set looks wonderful. We shopped around but AF Furnishings had the best range and the staff were incredibly helpful.', author: 'Kiri R.', location: 'Wellington' },
-  { text: 'We found everything for our dining space in one place. Highly recommended. The delivery was fast and the team even helped us set up the table.', author: 'Ana S.', location: 'Hamilton' },
-]
+import { useState, useEffect } from 'react'
+import { API_BASE } from '../config'
 
 function Testimonials() {
+  const [testimonials, setTestimonials] = useState([])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/testimonials`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) setTestimonials(data)
+      })
+      .catch(() => {})
+  }, [])
+
+  if (testimonials.length === 0) return null
+
   return (
     <section className="testimonials">
       <div className="section-title fade-in">
@@ -12,15 +22,19 @@ function Testimonials() {
         <h2>Homes made happier.</h2>
       </div>
       <div className="testimonial-grid">
-        {testimonials.map((t, i) => (
-          <blockquote key={i} className="testimonial-card fade-in">
-            <div className="testimonial-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <p>&ldquo;{t.text}&rdquo;</p>
+        {testimonials.slice(0, 3).map((t) => (
+          <blockquote key={t.id} className="testimonial-card fade-in">
+            <div className="testimonial-stars">{'★'.repeat(t.rating || 5)}</div>
+            <p>&ldquo;{t.quote}&rdquo;</p>
             <div className="testimonial-author">
-              <div className="testimonial-avatar">{t.author.charAt(0)}</div>
+              {t.avatar ? (
+                <img src={`${API_BASE}${t.avatar}`} alt={t.name} className="testimonial-avatar" style={{ objectFit: 'cover' }} />
+              ) : (
+                <div className="testimonial-avatar">{t.name?.charAt(0)}</div>
+              )}
               <div>
-                <cite>&mdash; {t.author}</cite>
-                <span className="testimonial-location">{t.location}</span>
+                <cite>&mdash; {t.name}</cite>
+                {t.location && <span className="testimonial-location">{t.location}</span>}
               </div>
             </div>
           </blockquote>

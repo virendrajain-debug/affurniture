@@ -23,7 +23,21 @@ const colorMap = {
   'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
   'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
 }
-function getColorHex(name) { return colorMap[name] || '#ccc' }
+function getColorHex(raw) {
+  if (!raw) return '#ccc'
+  const hexMatch = raw.match(/#([0-9A-Fa-f]{6})/)
+  if (hexMatch) return hexMatch[0]
+  for (const [name, hex] of Object.entries(colorMap)) {
+    if (raw.toLowerCase().includes(name.toLowerCase())) return hex
+  }
+  return '#ccc'
+}
+function getColorName(raw) {
+  if (!raw) return ''
+  const hexMatch = raw.match(/#([0-9A-Fa-f]{6})/)
+  if (hexMatch) return raw.replace(hexMatch[0], '').replace(/[()]/g, '').trim()
+  return raw
+}
 
 function ProductDetail() {
   const { slug } = useParams()
@@ -164,7 +178,7 @@ function ProductDetail() {
                   {product.color.split(',').map(c => c.trim()).filter(Boolean).map((c, i) => (
                     <div key={i} className="pd-colour-item">
                       <span className="pd-colour-dot" style={{ background: getColorHex(c) }} />
-                      <span className="pd-colour-name">{c}</span>
+                      <span className="pd-colour-name">{getColorName(c)}</span>
                     </div>
                   ))}
                 </div>
@@ -202,6 +216,7 @@ function ProductDetail() {
         {/* Full Width Description */}
         {product.description && (
           <div className="pd-desc-full">
+            <h2 className="pd-desc-heading">Description</h2>
             {product.description.split('\n').filter(Boolean).map((para, i) => (
               <p key={i}>{para}</p>
             ))}

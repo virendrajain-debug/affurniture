@@ -174,9 +174,21 @@ function CategoryPage() {
 
   const getWeekly = (price) => price ? Math.ceil(Number(price) / 52) : null
 
-  const getColorHex = (name) => {
+  const getColorHex = (raw) => {
+    if (!raw) return '#ccc'
+    const hexMatch = raw.match(/#([0-9A-Fa-f]{6})/)
+    if (hexMatch) return hexMatch[0]
     const map = { 'White': '#FFFFFF', 'Black': '#1a1a1a', 'Grey': '#808080', 'Charcoal': '#36454F', 'Beige': '#F5F5DC', 'Cream': '#FFFDD0', 'Brown': '#6B4226', 'Walnut': '#5B4332', 'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Natural': '#C19A6B' }
-    return map[name] || '#ccc'
+    for (const [name, hex] of Object.entries(map)) {
+      if (raw.toLowerCase().includes(name.toLowerCase())) return hex
+    }
+    return '#ccc'
+  }
+  const getColorName = (raw) => {
+    if (!raw) return ''
+    const hexMatch = raw.match(/#([0-9A-Fa-f]{6})/)
+    if (hexMatch) return raw.replace(hexMatch[0], '').replace(/[()]/g, '').trim()
+    return raw
   }
 
   const toggleColor = (color) => {
@@ -315,7 +327,7 @@ function CategoryPage() {
                         <label key={color} className="filter-checkbox">
                           <input type="checkbox" checked={selectedColors.includes(color)} onChange={() => toggleColor(color)} />
                           <span className="color-dot" style={{ background: getColorHex(color) }}></span>
-                          {color}
+                          {getColorName(color)}
                         </label>
                       ))}
                     </div>
@@ -373,7 +385,7 @@ function CategoryPage() {
                             </div>
                           </Link>
                           <div className="catalog-card-body">
-                            <p className="catalog-card-desc">{p.description || `Comfortable ${p.category_name || 'furniture'} piece.`}</p>
+                            <p className="catalog-card-desc">{p.description ? (p.description.length > 80 ? p.description.substring(0, 80) + '...' : p.description) : `Comfortable ${p.category_name || 'furniture'} piece.`}</p>
                             <div className="catalog-card-pricing">
                               {hasDiscount ? (
                                 <>

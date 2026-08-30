@@ -9,6 +9,14 @@
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../config'
 
+const colorHexMap = {
+  'White': '#FFFFFF', 'Black': '#1a1a1a', 'Grey': '#808080', 'Charcoal': '#36454F',
+  'Beige': '#F5F5DC', 'Cream': '#FFFDD0', 'Brown': '#6B4226', 'Walnut': '#5B4332',
+  'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
+  'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
+  'Pink': '#E91E8C', 'Yellow': '#F1C40F', 'Maroon': '#800000', 'Olive': '#808000',
+}
+
 function AddProduct({ token }) {
   const [form, setForm] = useState({
     name: '',
@@ -137,6 +145,8 @@ function AddProduct({ token }) {
       Object.entries(form).forEach(([key, val]) => {
         if (typeof val === 'boolean') {
           formData.append(key, val ? '1' : '0')
+        } else if (key === 'discounted_price') {
+          if (val !== '' && val !== null && val !== undefined) formData.append(key, val)
         } else if (val !== '' && val !== null && val !== undefined) {
           formData.append(key, val)
         }
@@ -200,6 +210,13 @@ function AddProduct({ token }) {
         .p-checkbox-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 14px; }
         .p-checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
         .p-checkbox-label input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-color); }
+
+        .color-palette-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+        .color-swatch-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 2px solid var(--border-color); background: var(--header-bg); cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: var(--text-primary); }
+        .color-swatch-btn:hover { border-color: var(--accent-color); }
+        .color-swatch-btn.selected { border-color: var(--accent-color); background: rgba(170,122,62,0.12); }
+        .color-swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+        .color-swatch-label { font-weight: 500; }
 
         .p-media-container { background: var(--header-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
         .p-media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 16px; }
@@ -297,8 +314,8 @@ function AddProduct({ token }) {
             <input type="text" name="brand" className="p-input" placeholder="e.g. California" value={form.brand} onChange={handleChange} />
           </div>
           <div className="p-input-group">
-            <label className="p-label">Material</label>
-            <input type="text" name="material" className="p-input" placeholder="Solid Oak Wood" value={form.material} onChange={handleChange} />
+            <label className="p-label">Material (comma-separated for multiple)</label>
+            <input type="text" name="material" className="p-input" placeholder="e.g. Solid Oak Wood, Leather" value={form.material} onChange={handleChange} />
           </div>
           <div className="p-input-group">
             <label className="p-label">Warranty</label>
@@ -309,7 +326,22 @@ function AddProduct({ token }) {
         <div className="p-grid p-grid-3" style={{ marginTop: '20px' }}>
           <div className="p-input-group">
             <label className="p-label">Colors</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+            <div className="color-palette-grid">
+              {['White','Black','Grey','Charcoal','Beige','Cream','Brown','Walnut','Oak','Tan','Red','Navy Blue','Blue','Green','Teal','Gold','Pink','Yellow','Maroon','Olive'].map(c => {
+                const selected = (form.color || '').split(',').map(x => x.trim()).filter(Boolean).includes(c)
+                return (
+                  <button key={c} type="button" className={`color-swatch-btn ${selected ? 'selected' : ''}`} onClick={() => {
+                    const existing = form.color ? form.color.split(',').map(x => x.trim()).filter(Boolean) : []
+                    const next = selected ? existing.filter(x => x !== c) : [...existing, c]
+                    setForm(prev => ({ ...prev, color: next.join(', ') }))
+                  }}>
+                    <span className="color-swatch-dot" style={{ background: colorHexMap[c] || '#ccc' }} />
+                    <span className="color-swatch-label">{c}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
               {(form.color ? form.color.split(',').map(c => c.trim()).filter(Boolean) : []).map((c, i) => (
                 <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--accent-color)', color: '#fff', padding: '3px 10px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600 }}>
                   {c}
@@ -324,7 +356,8 @@ function AddProduct({ token }) {
             <input
               type="text"
               className="p-input"
-              placeholder="Type a color and press Enter"
+              placeholder="Or type a custom color and press Enter"
+              style={{ marginTop: 8 }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()

@@ -2,6 +2,9 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
+
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -24,6 +27,7 @@ router.get('/', async (req, res) => {
 
     const result = categories.map(cat => ({
       ...cat,
+      image: resolveUrl(cat.image),
       subcategories: subcategories.filter(s => String(s.category_id) === String(cat.id)),
     }));
 

@@ -38,6 +38,7 @@ const FinanceApplications = lazy(() => import('./FinanceApplications'))
 const StoreLocations = lazy(() => import('./StoreLocations'))
 const Settings = lazy(() => import('./Settings'))
 const DynamicPages = lazy(() => import('./DynamicPages'))
+const Testimonials = lazy(() => import('./Testimonials'))
 
 function Dashboard({ onLogout, token }) {
   // Sidebar is open by default on desktop, closed on mobile
@@ -175,6 +176,7 @@ function Dashboard({ onLogout, token }) {
               <Route path="past-enquiry" element={<PastEnquiry token={token} />} />
               <Route path="winz-quotes" element={<WinzQuotes token={token} />} />
               <Route path="finance-applications" element={<FinanceApplications token={token} />} />
+              <Route path="testimonials" element={<Testimonials token={token} />} />
               
               {/* Pages & Store Setup */}
               <Route path="about" element={<About token={token} />} />

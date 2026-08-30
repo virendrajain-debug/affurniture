@@ -2,6 +2,9 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
+
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -15,7 +18,7 @@ router.get('/', async (req, res) => {
     if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
     sql += ' ORDER BY sort_order ASC, id DESC';
     const [rows] = await pool.execute(sql, params);
-    res.json(rows);
+    res.json(rows.map(r => ({ ...r, image: resolveUrl(r.image) })));
   } catch (error) {
     console.error('Get ad campaigns error:', error.message);
     res.status(500).json({ message: 'Server error' });

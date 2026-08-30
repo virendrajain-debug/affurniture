@@ -7,10 +7,24 @@ const colorMap = {
   'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
   'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
 }
-function getColorHex(name) { return colorMap[name] || '#ccc' }
+function getColorHex(raw) {
+  if (!raw) return '#ccc'
+  const hexMatch = raw.match(/#([0-9A-Fa-f]{6})/)
+  if (hexMatch) return hexMatch[0]
+  for (const [name, hex] of Object.entries(colorMap)) {
+    if (raw.toLowerCase().includes(name.toLowerCase())) return hex
+  }
+  return '#ccc'
+}
+function getColorName(raw) {
+  if (!raw) return ''
+  const hexMatch = raw.match(/#([0-9A-Fa-f]{6})/)
+  if (hexMatch) return raw.replace(hexMatch[0], '').replace(/[()]/g, '').trim()
+  return raw
+}
 
 export default function EnquiryModal({ product, onClose }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', message: '', color: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: `I'm interested in ${product.name}. Please provide more details about availability and pricing.`, color: '' })
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -92,7 +106,7 @@ export default function EnquiryModal({ product, onClose }) {
                         title={c}
                       >
                         <span className="enquiry-swatch-dot" style={{ background: getColorHex(c) }} />
-                        <span className="enquiry-swatch-name">{c}</span>
+                        <span className="enquiry-swatch-name">{getColorName(c)}</span>
                       </button>
                     ))}
                   </div>

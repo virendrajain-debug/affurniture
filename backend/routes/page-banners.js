@@ -2,12 +2,15 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
+
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM page_banners ORDER BY sort_order ASC, id ASC');
-    res.json(rows);
+    res.json(rows.map(r => ({ ...r, image: resolveUrl(r.image) })));
   } catch (err) {
     console.error('Get page banners error:', err);
     res.status(500).json({ message: 'Failed to fetch page banners' });
@@ -52,6 +55,16 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Delete page banner error:', err);
     res.status(500).json({ message: 'Failed to delete page banner' });
+  }
+});
+
+router.put('/:id/toggle', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute('UPDATE page_banners SET sort_order = CASE WHEN sort_order > 0 THEN 0 ELSE 1 END WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Toggled' });
+  } catch (err) {
+    console.error('Toggle page banner error:', err);
+    res.status(500).json({ message: 'Failed to toggle page banner' });
   }
 });
 

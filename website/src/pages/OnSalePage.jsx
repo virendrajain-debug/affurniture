@@ -45,13 +45,13 @@ function OnSalePage() {
           </div>
         </section>
 
-        <section className="category-catalogue">
-          <div className="category-catalogue-header">
-            <div className="category-catalogue-info">
-              <h2>Sale Items</h2>
-              <p>Grab these deals before they're gone!</p>
-              <span className="category-product-count">{products.length} items on sale</span>
+        <section className="catalog-page">
+          <div className="catalog-page-header">
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Sale Items</h2>
+              <p style={{ margin: '4px 0 0', color: '#72695d', fontSize: 14 }}>Grab these deals before they're gone!</p>
             </div>
+            <span className="catalog-count">{products.length} items on sale</span>
           </div>
 
           {loading ? (
@@ -66,29 +66,27 @@ function OnSalePage() {
               <Link to="/" className="primary">Back to Home</Link>
             </div>
           ) : (
-            <div className="category-product-grid">
+            <div className="catalog-grid">
               {products.map(p => {
                 const imgSrc = getImg(p)
-                const weekly = getWeekly(p.discounted_price || p.selling_price || p.mrp)
                 const price = p.discounted_price || p.selling_price || p.mrp
                 const discount = getDiscount(p.mrp, price)
                 return (
-                  <article key={p.id} className="category-product-card">
-                    <Link to={`/product/${p.slug || p.id}`} className="category-product-img">
+                  <article key={p.id} className="catalog-card">
+                    <Link to={`/product/${p.slug || p.id}`} className="catalog-card-image">
                       <img src={imgSrc} alt={p.name} loading="lazy" />
-                      {discount > 0 && <span className="product-badge">{discount}% OFF</span>}
+                      {discount > 0 && <div className="catalog-card-banner"><span>{discount}% OFF</span></div>}
                     </Link>
-                    <div className="category-product-body">
+                    <div className="catalog-card-body">
                       <Link to={`/product/${p.slug || p.id}`}>
-                        <h3>{p.name}</h3>
+                        <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem' }}>{p.name}</h3>
                       </Link>
-                      <div className="product-pricing">
-                        <span className="product-price">${Number(price).toLocaleString()}</span>
-                        {p.mrp && Number(p.mrp) !== Number(price) && <span className="product-mrp">${Number(p.mrp).toLocaleString()}</span>}
+                      <p className="catalog-card-desc">{p.material || ''}</p>
+                      <div className="catalog-card-pricing">
+                        <span className="catalog-price">${Number(price).toLocaleString()}</span>
+                        {p.mrp && Number(p.mrp) !== Number(price) && <span className="product-mrp" style={{ fontSize: 14 }}>${Number(p.mrp).toLocaleString()}</span>}
                       </div>
-                      {weekly && <p className="product-weekly">Or just <strong>${weekly}/week</strong> on finance</p>}
-                      {p.material && <p className="product-meta">{p.material}{p.color ? ` - ${p.color}` : ''}</p>}
-                      <Link to={`/product/${p.slug || p.id}`} className="btn-shop-now">Shop Now</Link>
+                      <Link to={`/product/${p.slug || p.id}`} className="catalog-enquire-btn">Enquire Now</Link>
                     </div>
                   </article>
                 )

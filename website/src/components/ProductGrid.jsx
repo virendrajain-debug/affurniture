@@ -2,29 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE } from '../config'
 
-const defaultProducts = [
-  { id: 1, name: 'Marina Lounge Chair', mrp: 1299, selling_price: 1099, images: ['https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Grey', category_name: 'Living Room' },
-  { id: 2, name: 'Haven Three Seat Sofa', mrp: 2499, selling_price: 2199, images: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'], material: 'Pine Wood', color: 'Green', category_name: 'Living Room' },
-  { id: 3, name: 'Ember Two Seat Sofa', mrp: 1899, selling_price: 1699, images: ['https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=800&q=80'], material: 'Metal Frame', color: 'Charcoal', category_name: 'Living Room' },
-  { id: 4, name: 'Harbour Corner Sofa', mrp: 3299, selling_price: 2899, images: ['https://images.unsplash.com/photo-1540574163026-643ea20ade25?auto=format&fit=crop&w=800&q=80'], material: 'Oak Wood', color: 'Beige', category_name: 'Living Room' },
-]
-
-function getWishlist() {
-  try { return JSON.parse(localStorage.getItem('af_wishlist') || '[]') } catch { return [] }
-}
-function toggleWishlist(id) {
-  const list = getWishlist()
-  const next = list.includes(id) ? list.filter(x => x !== id) : [...list, id]
-  localStorage.setItem('af_wishlist', JSON.stringify(next))
-  return next
-}
-
 function ProductGrid({ sectionId, label, title, category, compact }) {
   const [products, setProducts] = useState([])
   const [currentSlide, setCurrentSlide] = useState(0)
   const sliderRef = useRef(null)
   const [slidesPerView, setSlidesPerView] = useState(4)
-  const [wishlist, setWishlist] = useState(getWishlist)
 
   useEffect(() => {
     const updateSPV = () => {
@@ -51,7 +33,7 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
     fetchProducts()
   }, [category])
 
-  const displayProducts = products.length > 0 ? products : defaultProducts
+  const displayProducts = products
   const maxSlide = Math.max(0, displayProducts.length - slidesPerView)
 
   const nextSlide = () => {
@@ -100,13 +82,6 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
     return map[name] || '#ccc'
   }
 
-  const handleWishlist = (e, id) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const next = toggleWishlist(id)
-    setWishlist(next)
-  }
-
   return (
     <section className={`products ${compact ? 'compact' : ''}`} id={sectionId}>
       {label && (
@@ -122,17 +97,11 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
             const imgSrc = getImg(p)
             const weekly = getWeeklyPrice(p.selling_price || p.mrp)
             const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
-            const isWished = wishlist.includes(p.id)
             return (
               <article key={p.id} className="product-card">
                 <Link to={`/product/${p.slug || p.id}`} className="product-card-img">
                   <img src={imgSrc} alt={p.name} loading="lazy" />
                   {hasDiscount && <span className="product-badge">SALE</span>}
-                  <button className={`wishlist-btn ${isWished ? 'active' : ''}`} onClick={(e) => handleWishlist(e, p.id)} title={isWished ? 'Remove from wishlist' : 'Add to wishlist'}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill={isWished ? '#ef4444' : 'none'} stroke={isWished ? '#ef4444' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-                    </svg>
-                  </button>
                 </Link>
                 <div className="product-card-body">
                   <Link to={`/product/${p.slug || p.id}`} className="product-card-link">

@@ -1,0 +1,76 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --page-bg: #1a1e29;
+  --header-bg: #222736;
+  --sidebar-bg: #2a3142;
+  --sidebar-header: #222736;
+  --text-primary: #ffffff;
+  --text-secondary: #a6b0cf;
+  --accent-color: #d4af37;
+  --accent-hover: #e5c158;
+  --accent-glow: rgba(212, 175, 55, 0.35);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(212, 175, 55, 0.35);
+  --hover-bg: rgba(255, 255, 255, 0.03);
+  --active-bg: #222736;
+  --card-radius: 12px;
+  --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--page-bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Global Responsive Wrappers for Tables & Data Grids */
+.p-table-card,
+.p-table-wrap,
+.p-data-table-wrap,
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.p-table-card table,
+.p-data-table-wrap table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+}
+
+/* Mobile Touch Targets & Full-Width Inputs */
+@media (max-width: 768px) {
+  input, select, textarea, button {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS */
+  }
+
+  .p-grid-2, .p-grid-3, .p-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .p-modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 12px auto !important;
+    padding: 16px !important;
+  }
+
+  .p-modal-body {
+    max-height: 75vh !important;
+    overflow-y: auto !important;
+  }
+}
+

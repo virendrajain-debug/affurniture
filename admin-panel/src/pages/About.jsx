@@ -205,6 +205,7 @@ function FeaturesGridCard({ sections, handleFeatureChange, handleFeatureUpload, 
 }
 
 function About({ token }) {
+  const [activeTab, setActiveTab] = useState('homepage')
   const [sections, setSections] = useState({
     main_banner: { title: '', description: '', image: '' },
     primary_section: { title: '', description: '', image: '' },
@@ -215,6 +216,12 @@ function About({ token }) {
   const [uploading, setUploading] = useState(null)
   const [toast, setToast] = useState(null)
   const fileInputs = useRef({})
+  const [homepageAbout, setHomepageAbout] = useState({ company_name: '', tagline: '', description: '', address: '', phone: '', email: '' })
+  const [homepageFeatures, setHomepageFeatures] = useState([
+    { title: 'Premium Quality', subtitle: 'Handpicked materials and craftsmanship', icon: '✦' },
+    { title: 'Flexible Payments', subtitle: 'Weekly plans that suit your budget', icon: '○' },
+    { title: 'Nationwide Delivery', subtitle: 'Careful delivery to your doorstep', icon: '♡' },
+  ])
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
@@ -225,23 +232,45 @@ function About({ token }) {
     const fetchSections = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/about-sections`)
-        if (res.ok) {
-          const data = await res.json()
+        const [sectionsRes, aboutRes] = await Promise.all([
+          fetch(`${API_BASE}/api/about-sections`),
+          fetch(`${API_BASE}/api/about`),
+        ])
+        if (sectionsRes.ok) {
+          const data = await sectionsRes.json()
           if (Array.isArray(data)) {
             const map = {}
             data.forEach((s) => {
-              map[s.type] = {
-                title: s.title || '',
-                description: s.description || '',
-                image: s.image || '',
-              }
+              map[s.type] = { title: s.title || '', description: s.description || '', image: s.image || '' }
             })
             setSections((prev) => ({ ...prev, ...map }))
           }
         }
+        if (aboutRes.ok) {
+          const about = await aboutRes.json()
+          if (about) {
+            setHomepageAbout({
+              company_name: about.company_name || '',
+              tagline: about.tagline || '',
+              description: about.description || '',
+              address: about.address || '',
+              phone: about.phone || '',
+              email: about.email || '',
+            })
+            try {
+              const featuresRes = await fetch(`${API_BASE}/api/about-sections/homepage`)
+              if (featuresRes.ok) {
+                const feat = await featuresRes.json()
+                if (feat?.description) {
+                  const parsed = JSON.parse(feat.description)
+                  if (Array.isArray(parsed) && parsed.length === 3) setHomepageFeatures(parsed)
+                }
+              }
+            } catch {}
+          }
+        }
       } catch {
-        showToast('Failed to load about sections', 'error')
+        showToast('Failed to load about data', 'error')
       } finally {
         setLoading(false)
       }
@@ -343,6 +372,26 @@ function About({ token }) {
     }
   }
 
+  const handleSaveHomepageAbout = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/about`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(homepageAbout),
+      })
+      if (res.ok) {
+        await fetch(`${API_BASE}/api/about-sections/homepage`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ type: 'homepage', title: 'About Features', description: JSON.stringify(homepageFeatures), image: '' }),
+        })
+        showToast('Homepage About saved!', 'success')
+      } else {
+        showToast('Failed to save', 'error')
+      }
+    } catch { showToast('Server error', 'error') }
+  }
+
   const sharedProps = { sections, handleChange, handleSave, handleFileUpload, loading, uploading, fileInputs }
 
   return (
@@ -390,18 +439,67 @@ function About({ token }) {
 
       {toast && <div className={`toast-premium ${toast.type}`}>{toast.msg}</div>}
 
-      <SectionCard type="main_banner" label="Main Banner" number="1" {...sharedProps} />
-      <SectionCard type="primary_section" label="Primary Section" number="2" {...sharedProps} />
-      <FeaturesGridCard
-        sections={sections}
-        handleFeatureChange={handleChange}
-        handleFeatureUpload={handleFeatureUpload}
-        handleSave={handleSave}
-        loading={loading}
-        uploading={uploading}
-        fileInputs={fileInputs}
-      />
-      <SectionCard type="conclusion" label="Conclusion Block" number="4" {...sharedProps} />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        <button className={`p-btn ${activeTab === 'homepage' ? 'p-btn-primary' : 'p-btn-secondary'}`} onClick={() => setActiveTab('homepage')}>Homepage About</button>
+        <button className={`p-btn ${activeTab === 'aboutpage' ? 'p-btn-primary' : 'p-btn-secondary'}`} onClick={() => setActiveTab('aboutpage')}>About Us Page</button>
+      </div>
+
+      {activeTab === 'homepage' && (
+        <div className="p-card">
+          <div className="p-card-header">
+            <h3>Homepage About Section</h3>
+            <button className="p-btn p-btn-primary" onClick={handleSaveHomepageAbout} disabled={loading}>Save Homepage About</button>
+          </div>
+          <div className="p-input-group" style={{ marginBottom: 16 }}>
+            <label className="p-label">Company Name</label>
+            <input type="text" className="p-input" value={homepageAbout.company_name} onChange={e => setHomepageAbout({...homepageAbout, company_name: e.target.value})} placeholder="AF Furnishings" />
+          </div>
+          <div className="p-input-group" style={{ marginBottom: 16 }}>
+            <label className="p-label">Tagline</label>
+            <input type="text" className="p-input" value={homepageAbout.tagline} onChange={e => setHomepageAbout({...homepageAbout, tagline: e.target.value})} placeholder="Quality furniture for every home" />
+          </div>
+          <div className="p-input-group" style={{ marginBottom: 24 }}>
+            <label className="p-label">Description</label>
+            <textarea className="p-input" rows="3" value={homepageAbout.description} onChange={e => setHomepageAbout({...homepageAbout, description: e.target.value})} style={{ resize: 'vertical' }} />
+          </div>
+          <h4 style={{ margin: '0 0 16px', fontSize: '1rem', color: 'var(--text-primary)' }}>Feature Cards</h4>
+          <div className="p-features-horizontal-grid">
+            {homepageFeatures.map((f, idx) => (
+              <div className="p-feature-subcard" key={idx}>
+                <div className="p-input-group" style={{ marginBottom: 12 }}>
+                  <label className="p-label">Icon (emoji/character)</label>
+                  <input type="text" className="p-input" value={f.icon} onChange={e => { const updated = [...homepageFeatures]; updated[idx] = {...updated[idx], icon: e.target.value}; setHomepageFeatures(updated) }} />
+                </div>
+                <div className="p-input-group" style={{ marginBottom: 12 }}>
+                  <label className="p-label">Title</label>
+                  <input type="text" className="p-input" value={f.title} onChange={e => { const updated = [...homepageFeatures]; updated[idx] = {...updated[idx], title: e.target.value}; setHomepageFeatures(updated) }} />
+                </div>
+                <div className="p-input-group">
+                  <label className="p-label">Subtitle</label>
+                  <input type="text" className="p-input" value={f.subtitle} onChange={e => { const updated = [...homepageFeatures]; updated[idx] = {...updated[idx], subtitle: e.target.value}; setHomepageFeatures(updated) }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'aboutpage' && (
+        <>
+          <SectionCard type="main_banner" label="Main Banner" number="1" {...sharedProps} />
+          <SectionCard type="primary_section" label="Primary Section" number="2" {...sharedProps} />
+          <FeaturesGridCard
+            sections={sections}
+            handleFeatureChange={handleChange}
+            handleFeatureUpload={handleFeatureUpload}
+            handleSave={handleSave}
+            loading={loading}
+            uploading={uploading}
+            fileInputs={fileInputs}
+          />
+          <SectionCard type="conclusion" label="Conclusion Block" number="4" {...sharedProps} />
+        </>
+      )}
     </div>
   )
 }

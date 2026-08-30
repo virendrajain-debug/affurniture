@@ -25,6 +25,7 @@ function StoreLocations({ token }) {
     description: '',
     sort_order: 0,
     active: 1,
+    image: '',
   })
   const [showForm, setShowForm] = useState(false)
   const [toast, setToast] = useState(null)
@@ -78,6 +79,7 @@ function StoreLocations({ token }) {
       description: '',
       sort_order: 0,
       active: 1,
+      image: '',
     })
     setEditing(null)
     setShowForm(false)
@@ -141,6 +143,7 @@ function StoreLocations({ token }) {
       description: loc.description || '',
       sort_order: loc.sort_order || 0,
       active: loc.active ? 1 : 0,
+      image: loc.image || '',
     })
     setShowForm(true)
   }
@@ -336,6 +339,40 @@ function StoreLocations({ token }) {
                       rows={3}
                       placeholder="Brief details about this location..."
                     />
+                  </div>
+                  <div className="p-input-group full">
+                    <label className="p-label">Showroom Image</label>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input type="file" accept="image/*" style={{ display: 'none' }} id="store-img-upload"
+                        onChange={async (e) => {
+                          const file = e.target.files[0]
+                          if (!file) return
+                          const fd = new FormData()
+                          fd.append('image', file)
+                          try {
+                            const res = await fetch(`${API_BASE}/api/upload`, {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${token}` },
+                              body: fd,
+                            })
+                            if (res.ok) {
+                              const data = await res.json()
+                              const url = data.url?.startsWith('http') ? data.url : `${API_BASE}${data.url}`
+                              setForm(prev => ({ ...prev, image: url }))
+                              showToast('Image uploaded', 'success')
+                            }
+                          } catch { showToast('Upload failed', 'error') }
+                        }}
+                      />
+                      <button type="button" className="p-btn p-btn-outline" onClick={() => document.getElementById('store-img-upload').click()}>
+                        Choose Image
+                      </button>
+                      <input type="text" name="image" className="p-input" value={form.image} onChange={handleChange}
+                        placeholder="Or paste image URL..." style={{ flex: 1, minWidth: 200 }} />
+                    </div>
+                    {form.image && (
+                      <img src={form.image} alt="Preview" style={{ marginTop: 10, maxWidth: 200, height: 120, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-color)' }} />
+                    )}
                   </div>
                   <div className="p-input-group full">
                     <label className="p-label">Google Maps Embed URL</label>

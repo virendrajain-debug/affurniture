@@ -1,12 +1,16 @@
 import { useState, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { API_BASE } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function ApplyForFinance() {
+  const [searchParams] = useSearchParams()
+  const prefillProduct = searchParams.get('product') || ''
+
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '', phone: '',
-    address: '', city: '', state: '', income_source: '', products: ''
+    address: '', city: '', state: '', income_source: '', products: prefillProduct
   })
   const [files, setFiles] = useState([])
   const [toast, setToast] = useState(null)

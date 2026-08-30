@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { API_BASE } from '../config'
 
 function SocialIcon({ platform }) {
+  const key = (platform || '').toLowerCase().trim()
   const icons = {
     instagram: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -31,7 +32,8 @@ function SocialIcon({ platform }) {
       </svg>
     ),
   }
-  return icons[platform] || (
+  if (icons[key]) return icons[key]
+  return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
     </svg>
@@ -57,8 +59,9 @@ function Footer() {
         .then(r => r.json())
         .then(data => {
           if (data?.site_logo) {
-            setLogoUrl(data.site_logo)
-            localStorage.setItem('site_logo', data.site_logo)
+            const logo = data.site_logo.startsWith('http') ? data.site_logo : `${API_BASE}${data.site_logo}`
+            setLogoUrl(logo)
+            localStorage.setItem('site_logo', logo)
           }
         })
         .catch(() => {})
@@ -71,9 +74,12 @@ function Footer() {
     }
     const logoInterval = setInterval(() => {
       fetch(`${API_BASE}/api/settings`).then(r => r.json()).then(d => {
-        if (d?.site_logo && d.site_logo !== localStorage.getItem('site_logo')) {
-          localStorage.setItem('site_logo', d.site_logo)
-          setLogoUrl(d.site_logo)
+        if (d?.site_logo) {
+          const logo = d.site_logo.startsWith('http') ? d.site_logo : `${API_BASE}${d.site_logo}`
+          if (logo !== localStorage.getItem('site_logo')) {
+            localStorage.setItem('site_logo', logo)
+            setLogoUrl(logo)
+          }
         }
       }).catch(() => {})
     }, 15000)
@@ -105,7 +111,6 @@ function Footer() {
         <div>
           <h3>AF Furnishings</h3>
           <Link to="/store-locations">Store Locations</Link>
-          <Link to="/showrooms">Showrooms</Link>
           <Link to="/contact">Contact us</Link>
           <Link to="/apply-for-finance">Apply for Finance</Link>
         </div>

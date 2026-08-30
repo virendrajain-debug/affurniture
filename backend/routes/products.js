@@ -26,6 +26,20 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+
+function resolveImageUrl(img) {
+  if (!img) return img;
+  if (img.startsWith('http')) return img;
+  return `${BACKEND_URL}${img}`;
+}
+
+function resolveImages(images) {
+  if (!images) return images;
+  if (Array.isArray(images)) return images.map(resolveImageUrl);
+  return images;
+}
+
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
@@ -157,10 +171,10 @@ router.get('/', async (req, res) => {
 
     const [products] = await pool.execute(query, params);
     
-    // Parse images JSON string into JavaScript array
+    // Parse images JSON string into JavaScript array and resolve URLs
     const parsed = products.map(p => ({
       ...p,
-      images: typeof p.images === 'string' ? JSON.parse(p.images) : p.images
+      images: resolveImages(typeof p.images === 'string' ? JSON.parse(p.images) : p.images)
     }));
 
     if (usePagination) {
@@ -196,7 +210,7 @@ router.get('/by-slug/:slug', async (req, res) => {
     );
     if (products.length === 0) return res.status(404).json({ message: 'Product not found' });
     const product = products[0];
-    product.images = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+    product.images = resolveImages(typeof product.images === 'string' ? JSON.parse(product.images) : product.images);
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -222,7 +236,7 @@ router.get('/:id', async (req, res) => {
     if (products.length === 0) return res.status(404).json({ message: 'Product not found' });
     
     const product = products[0];
-    product.images = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
+    product.images = resolveImages(typeof product.images === 'string' ? JSON.parse(product.images) : product.images);
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
@@ -277,7 +291,7 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
     }
 
     // Convert uploaded files to URL paths
-    const images = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
+    const images = req.files ? req.files.map(f => `${BACKEND_URL}/uploads/${f.filename}`) : [];
 
     // Insert product into database
     const [result] = await pool.execute(
@@ -309,7 +323,7 @@ router.put('/:id', authenticateToken, upload.array('images', 10), async (req, re
     // Combine existing images with newly uploaded ones
     let images = existing_images ? JSON.parse(existing_images) : [];
     if (req.files && req.files.length > 0) {
-      images = [...images, ...req.files.map(f => `/uploads/${f.filename}`)];
+      images = [...images, ...req.files.map(f => `${BACKEND_URL}/uploads/${f.filename}`)];
     }
 
     // Generate slug if name or category changed

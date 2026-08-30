@@ -9,6 +9,7 @@ import ProductGrid from './components/ProductGrid'
 import PromoPoster from './components/PromoPoster'
 import Stores from './components/Stores'
 import AboutSection from './components/AboutSection'
+import Testimonials from './components/Testimonials'
 import Footer from './components/Footer'
 import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
@@ -17,7 +18,6 @@ import WinzPage from './pages/WinzPage'
 import WinzQuote from './pages/WinzQuote'
 import ProductDetail from './pages/ProductDetail'
 import PrivacyPage from './pages/PrivacyPage'
-import ShowroomsPage from './pages/ShowroomsPage'
 import DeliveryInfoPage from './pages/DeliveryInfoPage'
 import ShopFurniturePage from './pages/ShopFurniturePage'
 import ReturnsPage from './pages/ReturnsPage'
@@ -101,11 +101,12 @@ function HomePage() {
         <Deals />
         <DynamicCategories />
         {getAd(0) && <AdBanner ad={getAd(0)} />}
-        <PromoPoster />
+        <PromoPoster ad={getAd(1)} />
         {getAd(1) && <AdBanner ad={getAd(1)} />}
         <Stores />
         {getAd(2) && <AdBanner ad={getAd(2)} />}
         <AboutSection />
+        <Testimonials />
       </main>
       <Footer />
     </>
@@ -130,7 +131,6 @@ function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy-policy" element={<PrivacyPage />} />
-        <Route path="/showrooms" element={<ShowroomsPage />} />
         <Route path="/delivery-info" element={<DeliveryInfoPage />} />
         <Route path="/shop-furniture" element={<ShopFurniturePage />} />
         <Route path="/returns" element={<ReturnsPage />} />

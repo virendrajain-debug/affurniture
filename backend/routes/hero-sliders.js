@@ -2,12 +2,15 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
+
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM hero_sliders ORDER BY sort_order ASC, id ASC');
-    res.json(rows);
+    res.json(rows.map(r => ({ ...r, image: resolveUrl(r.image) })));
   } catch (err) {
     console.error('Get hero sliders error:', err);
     res.status(500).json({ message: 'Failed to fetch hero sliders' });
@@ -17,7 +20,7 @@ router.get('/', async (req, res) => {
 router.get('/active', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM hero_sliders WHERE active = 1 ORDER BY sort_order ASC, id ASC');
-    res.json(rows);
+    res.json(rows.map(r => ({ ...r, image: resolveUrl(r.image) })));
   } catch (err) {
     console.error('Get active hero sliders error:', err);
     res.status(500).json({ message: 'Failed to fetch active hero sliders' });

@@ -18,6 +18,7 @@
 import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { sendEnquiryEmail } from '../helpers/email.js';
 
 const router = Router();
 
@@ -88,6 +89,20 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // -----------------------------------------------------------
+// PUT /api/enquiries/:id/read
+// -----------------------------------------------------------
+// Mark a single enquiry as read (status = 'read').
+// -----------------------------------------------------------
+router.put('/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await pool.execute("UPDATE enquiries SET status = 'read' WHERE id = ?", [req.params.id]);
+    res.json({ message: 'Marked as read' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// -----------------------------------------------------------
 // GET /api/enquiries/:id
 // -----------------------------------------------------------
 // Get single enquiry detail. REQUIRES AUTHENTICATION.
@@ -121,6 +136,8 @@ router.post('/', async (req, res) => {
       'INSERT INTO enquiries (name, email, phone, product_id, product_name, message, type) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [name, email, phone || null, product_id || null, product_name || null, message || null, type || 'product']
     );
+
+    sendEnquiryEmail({ name, email, phone, product_name, message, type }).catch(() => {});
 
     res.status(201).json({ message: 'Enquiry submitted successfully', id: result.insertId });
   } catch (error) {

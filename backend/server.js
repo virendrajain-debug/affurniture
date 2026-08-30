@@ -31,6 +31,10 @@ import pageBannerRoutes from './routes/page-banners.js';
 import subcategoryRoutes from './routes/subcategories.js';
 import adCampaignRoutes from './routes/ad-campaigns.js';
 import dynamicPageRoutes from './routes/dynamic-pages.js';
+import testimonialRoutes from './routes/testimonials.js';
+import pagesRoutes from './routes/pages.js';
+import contactRoutes from './routes/contact.js';
+import notificationRoutes from './routes/notifications.js';
 
 dotenv.config();
 
@@ -80,6 +84,10 @@ app.use('/api/page-banners', pageBannerRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/ad-campaigns', adCampaignRoutes);
 app.use('/api/dynamic-pages', dynamicPageRoutes);
+app.use('/api/testimonials', testimonialRoutes);
+app.use('/api/pages', pagesRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -385,6 +393,22 @@ async function autoSetup() {
     )
   `);
 
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      role TEXT DEFAULT 'Customer',
+      quote TEXT NOT NULL,
+      avatar TEXT DEFAULT '',
+      location TEXT DEFAULT '',
+      rating INTEGER DEFAULT 5,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Migrate: add subcategory_id to products if missing
   try { pool.execute("ALTER TABLE products ADD COLUMN subcategory_id INTEGER"); } catch {}
   try { pool.execute("ALTER TABLE products ADD COLUMN slug TEXT"); } catch {}
@@ -401,6 +425,7 @@ async function autoSetup() {
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL"); } catch {}
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL"); } catch {}
   try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply_read INTEGER DEFAULT 0"); } catch {}
+  try { pool.execute("ALTER TABLE store_locations ADD COLUMN image TEXT DEFAULT ''"); } catch {}
 
   const [socialExists] = pool.execute('SELECT id FROM social_links LIMIT 1');
   if (socialExists.length === 0) {

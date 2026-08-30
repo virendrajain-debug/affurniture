@@ -2,12 +2,15 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
+
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM about_sections ORDER BY id ASC');
-    res.json(rows);
+    res.json(rows.map(r => ({ ...r, image: resolveUrl(r.image) })));
   } catch (err) {
     console.error('Get about sections error:', err);
     res.status(500).json({ message: 'Failed to fetch about sections' });
@@ -17,7 +20,9 @@ router.get('/', async (req, res) => {
 router.get('/:type', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM about_sections WHERE type=? LIMIT 1', [req.params.type]);
-    res.json(rows[0] || {});
+    const row = rows[0] || {};
+    if (row.image) row.image = resolveUrl(row.image);
+    res.json(row);
   } catch (err) {
     console.error('Get about section error:', err);
     res.status(500).json({ message: 'Failed to fetch about section' });

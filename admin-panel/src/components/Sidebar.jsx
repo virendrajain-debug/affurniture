@@ -126,6 +126,7 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', onLogout }
               <SubLink to="/dashboard/past-enquiry">Past Enquiries</SubLink>
               <SubLink to="/dashboard/winz-quotes">WinZ Quotes</SubLink>
               <SubLink to="/dashboard/finance-applications">Finance Applications</SubLink>
+              <SubLink to="/dashboard/testimonials">Testimonials</SubLink>
             </>
           ))}
 

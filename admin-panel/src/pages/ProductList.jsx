@@ -31,6 +31,8 @@ function ProductList({ token }) {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
   
   // Edit Modal States
   const [editProduct, setEditProduct] = useState(null)
@@ -39,6 +41,7 @@ function ProductList({ token }) {
   const [existingImages, setExistingImages] = useState([])
   const [saving, setSaving] = useState(false)
   const [categories, setCategories] = useState([])
+  const [subcategories, setSubcategories] = useState([])
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
@@ -82,8 +85,10 @@ function ProductList({ token }) {
     setEditForm({
       name: p.name || '',
       category_id: p.category_id || '',
+      subcategory_id: p.subcategory_id || '',
       mrp: p.mrp || '',
       selling_price: p.selling_price || '',
+      discounted_price: p.discounted_price || '',
       description: p.description || '',
       stock: p.stock || '',
       material: p.material || '',
@@ -93,16 +98,31 @@ function ProductList({ token }) {
       weight: p.weight || '',
       warranty: p.warranty || '',
       delivery_info: p.delivery_info || '',
+      brand: p.brand || '',
       featured: p.featured ? true : false,
       new_arrival: p.new_arrival ? true : false,
+      on_sale: p.on_sale ? true : false,
     })
     setExistingImages(Array.isArray(p.images) ? p.images : [])
     setEditImages([])
+    setSubcategories([])
+    if (p.category_id) {
+      fetch(`${API_BASE}/api/subcategories?category_id=${p.category_id}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setSubcategories(data) })
+        .catch(() => {})
+    }
   }
 
   const handleEditChange = (e) => {
     const { name, value, type, checked } = e.target
     setEditForm({ ...editForm, [name]: type === 'checkbox' ? checked : value })
+    if (name === 'category_id' && value) {
+      fetch(`${API_BASE}/api/subcategories?category_id=${value}`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setSubcategories(data) })
+        .catch(() => {})
+    }
   }
 
   const handleEditImageUpload = (e) => {
@@ -253,6 +273,28 @@ function ProductList({ token }) {
 
       {toast && <div className={`toast-premium ${toast.type}`}>{toast.msg}</div>}
 
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="p-input"
+          style={{ maxWidth: 300 }}
+        />
+        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="p-input" style={{ maxWidth: 200 }}>
+          <option value="">All Categories</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          {products.filter(p => {
+            const matchSearch = !searchTerm || p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+            const matchCat = !filterCategory || String(p.category_id) === String(filterCategory)
+            return matchSearch && matchCat
+          }).length} products
+        </span>
+      </div>
+
       {loading ? (
         <div className="p-empty-state"><p>Loading catalog...</p></div>
       ) : products.length === 0 ? (
@@ -280,7 +322,11 @@ function ProductList({ token }) {
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {products.filter(p => {
+                const matchSearch = !searchTerm || p.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                const matchCat = !filterCategory || String(p.category_id) === String(filterCategory)
+                return matchSearch && matchCat
+              }).map((p) => (
                 <tr key={p.id}>
                   <td className="p-order-id" style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>#{p.id}</td>
                   <td>
@@ -345,7 +391,7 @@ function ProductList({ token }) {
             </div>
             
             <div className="p-modal-body">
-              <div className="p-grid p-grid-2">
+              <div className="p-grid p-grid-3">
                 <div className="p-input-group">
                   <label className="p-label">Product Name</label>
                   <input type="text" name="name" className="p-input" value={editForm.name} onChange={handleEditChange} />
@@ -355,6 +401,13 @@ function ProductList({ token }) {
                   <select name="category_id" className="p-input" value={editForm.category_id} onChange={handleEditChange}>
                     <option value="">Select Category</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="p-input-group">
+                  <label className="p-label">Subcategory</label>
+                  <select name="subcategory_id" className="p-input" value={editForm.subcategory_id} onChange={handleEditChange}>
+                    <option value="">Select Subcategory</option>
+                    {subcategories.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -369,49 +422,99 @@ function ProductList({ token }) {
                   <input type="number" name="selling_price" className="p-input" value={editForm.selling_price} onChange={handleEditChange} />
                 </div>
                 <div className="p-input-group">
+                  <label className="p-label">Discounted Price ($)</label>
+                  <input type="number" name="discounted_price" className="p-input" value={editForm.discounted_price} onChange={handleEditChange} placeholder="Optional" />
+                </div>
+              </div>
+
+              <div className="p-grid p-grid-3">
+                <div className="p-input-group">
                   <label className="p-label">Stock</label>
                   <input type="number" name="stock" className="p-input" value={editForm.stock} onChange={handleEditChange} />
                 </div>
-              </div>
-
-              <div className="p-grid p-grid-2">
                 <div className="p-input-group">
                   <label className="p-label">Brand</label>
-                  <input type="text" name="brand" className="p-input" value={editForm.brand || ''} onChange={handleEditChange} />
+                  <input type="text" name="brand" className="p-input" value={editForm.brand} onChange={handleEditChange} />
                 </div>
                 <div className="p-input-group">
-                  <label className="p-label">Material</label>
-                  <input type="text" name="material" className="p-input" value={editForm.material} onChange={handleEditChange} />
+                  <label className="p-label">Weight (kg)</label>
+                  <input type="number" name="weight" className="p-input" value={editForm.weight} onChange={handleEditChange} placeholder="Optional" />
                 </div>
               </div>
 
-              <div className="p-grid p-grid-2">
+              <div className="p-grid p-grid-3">
                 <div className="p-input-group">
                   <label className="p-label">Dimensions</label>
                   <input type="text" name="dimensions" className="p-input" value={editForm.dimensions} onChange={handleEditChange} />
                 </div>
                 <div className="p-input-group">
                   <label className="p-label">Warranty</label>
-                  <input type="text" name="warranty" className="p-input" value={editForm.warranty || ''} onChange={handleEditChange} />
+                  <input type="text" name="warranty" className="p-input" value={editForm.warranty} onChange={handleEditChange} />
+                </div>
+                <div className="p-input-group">
+                  <label className="p-label">Delivery Info</label>
+                  <input type="text" name="delivery_info" className="p-input" value={editForm.delivery_info} onChange={handleEditChange} placeholder="e.g. 2-3 business days" />
                 </div>
               </div>
 
               <div className="p-input-group" style={{ marginBottom: '20px' }}>
-                <label className="p-label">Color</label>
-                <div className="p-color-grid">
-                  {COLOR_SWATCHES.map(c => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      className={`p-color-swatch ${editForm.color === c.name ? 'selected' : ''}`}
-                      title={c.name}
-                      onClick={() => setEditForm({ ...editForm, color: c.name })}
-                      style={{ background: c.hex, border: c.hex === '#FFFFFF' ? '1px solid var(--border-color)' : '1px solid transparent' }}
-                    >
-                      {editForm.color === c.name && <span>✓</span>}
-                    </button>
+                <label className="p-label">Colors</label>
+                <div className="color-palette-grid">
+                  {['White','Black','Grey','Charcoal','Beige','Cream','Brown','Walnut','Oak','Tan','Red','Navy Blue','Blue','Green','Teal','Gold','Pink','Yellow','Maroon','Olive'].map(c => {
+                    const selected = (editForm.color || '').split(',').map(x => x.trim()).filter(Boolean).includes(c)
+                    return (
+                      <button key={c} type="button" className={`color-swatch-btn ${selected ? 'selected' : ''}`} onClick={() => {
+                        const existing = editForm.color ? editForm.color.split(',').map(x => x.trim()).filter(Boolean) : []
+                        const next = selected ? existing.filter(x => x !== c) : [...existing, c]
+                        setEditForm(prev => ({ ...prev, color: next.join(', ') }))
+                      }}>
+                        <span className="color-swatch-dot" style={{ background: editColorHexMap[c] || '#ccc' }} />
+                        <span className="color-swatch-label">{c}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  {(editForm.color || '').split(',').map(c => c.trim()).filter(Boolean).map((c, i) => (
+                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--accent-color)', color: '#fff', padding: '3px 10px', borderRadius: 12, fontSize: '0.8rem', fontWeight: 600 }}>
+                      {c}
+                      <span style={{ cursor: 'pointer', marginLeft: 2 }} onClick={() => {
+                        const colors = editForm.color.split(',').map(x => x.trim()).filter(Boolean)
+                        colors.splice(i, 1)
+                        setEditForm(prev => ({ ...prev, color: colors.join(', ') }))
+                      }}>&times;</span>
+                    </span>
                   ))}
                 </div>
+                <input
+                  type="text"
+                  className="p-input"
+                  placeholder="Or type a custom color and press Enter"
+                  style={{ marginTop: 8 }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const val = e.target.value.trim()
+                      if (val) {
+                        const existing = editForm.color ? editForm.color.split(',').map(c => c.trim()).filter(Boolean) : []
+                        if (!existing.includes(val)) {
+                          setEditForm(prev => ({ ...prev, color: [...existing, val].join(', ') }))
+                        }
+                        e.target.value = ''
+                      }
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="p-input-group" style={{ marginBottom: '20px' }}>
+                <label className="p-label">Size Options (comma-separated)</label>
+                <input type="text" name="size" className="p-input" value={editForm.size} onChange={handleEditChange} placeholder="e.g. Standard, King, Queen" />
+              </div>
+
+              <div className="p-input-group" style={{ marginBottom: '20px' }}>
+                <label className="p-label">Material (comma-separated for multiple)</label>
+                <input type="text" name="material" className="p-input" value={editForm.material} onChange={handleEditChange} placeholder="e.g. Solid Oak, Leather" />
               </div>
 
               <div className="p-input-group" style={{ marginBottom: '20px' }}>
@@ -458,6 +561,10 @@ function ProductList({ token }) {
                 <label className="p-checkbox-label">
                   <input type="checkbox" name="new_arrival" checked={editForm.new_arrival} onChange={handleEditChange} />
                   New Arrival
+                </label>
+                <label className="p-checkbox-label">
+                  <input type="checkbox" name="on_sale" checked={editForm.on_sale} onChange={handleEditChange} />
+                  On Sale
                 </label>
               </div>
             </div>
