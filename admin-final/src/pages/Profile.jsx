@@ -13,6 +13,8 @@ import { getAuthToken } from '../utils/api'
 function Profile({ profileImage, onProfileImageChange, token }) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [siteLogo, setSiteLogo] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   
   // Social Media States
   const [instagram, setInstagram] = useState('')
@@ -64,6 +66,13 @@ function Profile({ profileImage, onProfileImageChange, token }) {
     }
 
     if (authToken) fetchProfile()
+
+    fetch(`${API_BASE}/api/settings/all`, {
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    })
+      .then(r => r.json())
+      .then(d => { if (d?.site_logo) setSiteLogo(d.site_logo) })
+      .catch(() => {})
   }, [token])
 
   const handleSave = async (e) => {
@@ -156,16 +165,28 @@ function Profile({ profileImage, onProfileImageChange, token }) {
         const url = data.imageUrl || data.url
         onProfileImageChange(url)
         
-        // Auto-save to profile
-        await fetch(`${API_BASE}/api/auth/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify({ name, email, profile_image: url, instagram, facebook, linkedin, twitter }),
-        })
-        showToast('Profile photo updated!', 'success')
+        // Save to profile + website settings simultaneously
+        await Promise.all([
+          fetch(`${API_BASE}/api/auth/profile`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ name, email, profile_image: url, instagram, facebook, linkedin, twitter }),
+          }),
+          fetch(`${API_BASE}/api/settings`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ site_logo: url }),
+          }),
+        ])
+        localStorage.setItem('site_logo', url)
+        window.dispatchEvent(new Event('logo-updated'))
+        showToast('Logo updated everywhere!', 'success')
       } else {
         showToast('Failed to upload image', 'error')
       }
@@ -179,17 +200,84 @@ function Profile({ profileImage, onProfileImageChange, token }) {
   const handleRemovePhoto = async () => {
     onProfileImageChange('')
     try {
-      await fetch(`${API_BASE}/api/auth/profile`, {
+      await Promise.all([
+        fetch(`${API_BASE}/api/auth/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ name, email, profile_image: '', instagram, facebook, linkedin, twitter }),
+        }),
+        fetch(`${API_BASE}/api/settings`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ site_logo: '' }),
+        }),
+      ])
+      localStorage.removeItem('site_logo')
+      window.dispatchEvent(new Event('logo-updated'))
+      showToast('Logo removed', 'info')
+    } catch {
+      showToast('Error saving changes', 'error')
+    }
+  }
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: fd,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.url || data.imageUrl || ''
+        setSiteLogo(url)
+        await fetch(`${API_BASE}/api/settings`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ site_logo: url }),
+        })
+        localStorage.setItem('site_logo', url)
+        window.dispatchEvent(new Event('logo-updated'))
+        showToast('Website logo updated!', 'success')
+      } else {
+        showToast('Logo upload failed', 'error')
+      }
+    } catch {
+      showToast('Error uploading logo', 'error')
+    }
+    setUploadingLogo(false)
+  }
+
+  const handleRemoveLogo = async () => {
+    setSiteLogo('')
+    try {
+      await fetch(`${API_BASE}/api/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`,
         },
-        body: JSON.stringify({ name, email, profile_image: '', instagram, facebook, linkedin, twitter }),
+        body: JSON.stringify({ site_logo: '' }),
       })
-      showToast('Profile photo removed', 'info')
+      localStorage.removeItem('site_logo')
+      window.dispatchEvent(new Event('logo-updated'))
+      showToast('Website logo removed', 'info')
     } catch {
-      showToast('Error saving changes', 'error')
+      showToast('Error removing logo', 'error')
     }
   }
 

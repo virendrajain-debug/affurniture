@@ -46,6 +46,7 @@ function Settings({ token }) {
   const [toast, setToast] = useState(null)
 
   const authToken = getAuthToken(token)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
@@ -108,6 +109,32 @@ function Settings({ token }) {
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await fetch(`${API_BASE}/api/upload/image`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+        body: fd,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.url || data.imageUrl || ''
+        setSettings((prev) => ({ ...prev, site_logo: url }))
+        showToast('Logo uploaded successfully', 'success')
+      } else {
+        showToast('Logo upload failed', 'error')
+      }
+    } catch {
+      showToast('Server error uploading logo', 'error')
+    }
+    setUploadingLogo(false)
+  }
+
   return (
     <div className="admin-page">
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
@@ -128,6 +155,24 @@ function Settings({ token }) {
           <div className="admin-card">
             <div className="admin-card-header">
               <h3 className="admin-card-title">Business Information & Legal Registration</h3>
+            </div>
+
+            <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div>
+                <label className="form-label">Website Logo</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+                  {settings.site_logo && (
+                    <img src={settings.site_logo} alt="Logo" style={{ height: '48px', borderRadius: '6px', border: '1px solid var(--border-color)', objectFit: 'contain', background: '#fff', padding: '4px' }} />
+                  )}
+                  <label style={{ cursor: 'pointer', padding: '8px 16px', background: 'var(--accent-color, #aa7a3e)', color: '#fff', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'inline-block' }}>
+                    {uploadingLogo ? 'Uploading...' : 'Change Logo'}
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} disabled={uploadingLogo} />
+                  </label>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                  This logo appears in the website header and footer.
+                </span>
+              </div>
             </div>
 
             <div className="admin-grid-2">

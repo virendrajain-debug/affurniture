@@ -60,7 +60,10 @@ function Testimonials({ token }) {
   const fetchTestimonials = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/testimonials`)
+      const authToken = getActiveToken()
+      const res = await fetch(`${API_BASE}/api/testimonials/all`, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      })
       if (res.ok) {
         const data = await res.json()
         setTestimonials(Array.isArray(data) ? data : [])

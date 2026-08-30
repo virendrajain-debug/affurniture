@@ -28,6 +28,8 @@ const upload = multer({
 
 function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
 
+const router = Router();
+
 function mapAdminFields(body) {
   return {
     name: body.name || body.client_name || '',
@@ -45,7 +47,14 @@ function mapAdminFields(body) {
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM testimonials WHERE active = 1 ORDER BY sort_order ASC, created_at DESC');
-    res.json(rows.map(r => ({ ...r, avatar: resolveUrl(r.avatar) })));
+    res.json(rows.map(r => ({
+      ...r,
+      avatar: resolveUrl(r.avatar),
+      client_name: r.name,
+      role_or_city: r.role,
+      review_text: r.quote,
+      is_active: r.active,
+    })));
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch testimonials', error: err.message });
   }
@@ -55,7 +64,14 @@ router.get('/', async (req, res) => {
 router.get('/all', authenticateToken, async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM testimonials ORDER BY sort_order ASC, created_at DESC');
-    res.json(rows.map(r => ({ ...r, avatar: resolveUrl(r.avatar) })));
+    res.json(rows.map(r => ({
+      ...r,
+      avatar: resolveUrl(r.avatar),
+      client_name: r.name,
+      role_or_city: r.role,
+      review_text: r.quote,
+      is_active: r.active,
+    })));
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch testimonials', error: err.message });
   }
@@ -75,7 +91,8 @@ router.post('/', authenticateToken, upload.single('avatar'), async (req, res) =>
       [mapped.name, mapped.role, mapped.quote, mapped.avatar, mapped.location, mapped.rating, mapped.sort_order, mapped.active]
     );
     const [rows] = await pool.execute('SELECT * FROM testimonials WHERE id = ?', [result.insertId]);
-    res.status(201).json({ ...rows[0], avatar: resolveUrl(rows[0].avatar) });
+    const r = rows[0];
+    res.status(201).json({ ...r, avatar: resolveUrl(r.avatar), client_name: r.name, role_or_city: r.role, review_text: r.quote, is_active: r.active });
   } catch (err) {
     console.error('Create testimonial error:', err.message);
     res.status(500).json({ message: 'Failed to create testimonial', error: err.message });
@@ -96,7 +113,8 @@ router.put('/:id', authenticateToken, upload.single('avatar'), async (req, res) 
       [mapped.name, mapped.role, mapped.quote, mapped.avatar, mapped.location, mapped.rating, mapped.sort_order, mapped.active, req.params.id]
     );
     const [rows] = await pool.execute('SELECT * FROM testimonials WHERE id = ?', [req.params.id]);
-    res.json({ ...rows[0], avatar: resolveUrl(rows[0].avatar) });
+    const r = rows[0];
+    res.json({ ...r, avatar: resolveUrl(r.avatar), client_name: r.name, role_or_city: r.role, review_text: r.quote, is_active: r.active });
   } catch (err) {
     console.error('Update testimonial error:', err.message);
     res.status(500).json({ message: 'Failed to update testimonial', error: err.message });
@@ -116,7 +134,8 @@ router.put('/:id/toggle', authenticateToken, async (req, res) => {
   try {
     await pool.execute('UPDATE testimonials SET active = NOT active, updated_at = datetime("now") WHERE id = ?', [req.params.id]);
     const [rows] = await pool.execute('SELECT * FROM testimonials WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Toggled', is_active: rows[0]?.active, active: rows[0]?.active });
+    const r = rows[0];
+    res.json({ message: 'Toggled', is_active: r?.active, active: r?.active });
   } catch (err) {
     res.status(500).json({ message: 'Failed to toggle testimonial', error: err.message });
   }

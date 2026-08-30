@@ -9,7 +9,7 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM page_banners ORDER BY sort_order ASC, id ASC');
+    const [rows] = await pool.execute('SELECT * FROM page_banners ORDER BY id ASC');
     res.json(rows.map(r => ({ ...r, image: resolveUrl(r.image) })));
   } catch (err) {
     console.error('Get page banners error:', err);
@@ -60,8 +60,9 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
 router.put('/:id/toggle', authenticateToken, async (req, res) => {
   try {
-    await pool.execute('UPDATE page_banners SET sort_order = CASE WHEN sort_order > 0 THEN 0 ELSE 1 END WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Toggled' });
+    const [rows] = await pool.execute('SELECT * FROM page_banners WHERE id = ?', [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Banner not found' });
+    res.json({ message: 'Toggled', banner: rows[0] });
   } catch (err) {
     console.error('Toggle page banner error:', err);
     res.status(500).json({ message: 'Failed to toggle page banner' });
