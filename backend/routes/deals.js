@@ -10,9 +10,9 @@ function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BAC
 // GET /api/deals - public endpoint
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.execute("SELECT * FROM site_settings WHERE setting_key = 'deals'");
+    const [rows] = await pool.execute("SELECT * FROM site_settings WHERE `key` = 'deals'");
     if (rows.length > 0) {
-      const val = rows[0].setting_value;
+      const val = rows[0].value;
       try { res.json(JSON.parse(val)); } catch { res.json({}); }
     } else {
       res.json({});
@@ -26,11 +26,11 @@ router.get('/', async (req, res) => {
 // PUT /api/deals - protected
 router.put('/', authenticateToken, async (req, res) => {
   try {
-    const [existing] = await pool.execute("SELECT id FROM site_settings WHERE setting_key = 'deals'");
+    const [existing] = await pool.execute("SELECT id FROM site_settings WHERE `key` = 'deals'");
     if (existing.length > 0) {
-      await pool.execute("UPDATE site_settings SET setting_value = ? WHERE setting_key = 'deals'", [JSON.stringify(req.body)]);
+      await pool.execute("UPDATE site_settings SET `value` = ? WHERE `key` = 'deals'", [JSON.stringify(req.body)]);
     } else {
-      await pool.execute("INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)", ['deals', JSON.stringify(req.body)]);
+      await pool.execute("INSERT INTO site_settings (`key`, `value`) VALUES (?, ?)", ['deals', JSON.stringify(req.body)]);
     }
     res.json({ message: 'Deals updated' });
   } catch (error) {

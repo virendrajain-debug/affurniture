@@ -108,10 +108,10 @@ function CategoryPage() {
   const [catImage, setCatImage] = useState('')
   const [dbCategory, setDbCategory] = useState(null)
 
+  const cat = categoryData[slug] || { ...defaultCategory, title: slug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), apiCategory: slug, heroLabel: '', heroTitle: '', heroDesc: '', colors: [], sizes: [], subcategories: [] }
+
   const displayImage = dbCategory?.image || cat.image
   const apiCategory = dbCategory?.name || cat.apiCategory
-
-  const cat = categoryData[slug] || { ...defaultCategory, title: slug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), apiCategory: slug, heroLabel: '', heroTitle: '', heroDesc: '', colors: [], sizes: [], subcategories: [] }
 
   const PER_PAGE = 12
 

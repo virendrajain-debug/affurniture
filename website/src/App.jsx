@@ -19,7 +19,6 @@ import WinzQuote from './pages/WinzQuote'
 import ProductDetail from './pages/ProductDetail'
 import PrivacyPage from './pages/PrivacyPage'
 import DeliveryInfoPage from './pages/DeliveryInfoPage'
-import ShopFurniturePage from './pages/ShopFurniturePage'
 import ReturnsPage from './pages/ReturnsPage'
 import ApplyForFinance from './pages/ApplyForFinance'
 import CategoryPage from './pages/CategoryPage'
@@ -132,7 +131,6 @@ function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy-policy" element={<PrivacyPage />} />
         <Route path="/delivery-info" element={<DeliveryInfoPage />} />
-        <Route path="/shop-furniture" element={<ShopFurniturePage />} />
         <Route path="/returns" element={<ReturnsPage />} />
         <Route path="/page/:slug" element={<DynamicPage />} />
       </Routes>

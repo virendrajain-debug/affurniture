@@ -19,8 +19,6 @@ import PageSkeletonLoader from '../components/PageSkeletonLoader'
 // Lazy Route Imports for Code Splitting
 const Overview = lazyRetry(() => import('./Overview'))
 const Categories = lazyRetry(() => import('./Categories'))
-const Subcategories = lazyRetry(() => import('./Subcategories'))
-const AddProduct = lazyRetry(() => import('./AddProduct'))
 const ProductList = lazyRetry(() => import('./ProductList'))
 const WinzInventory = lazyRetry(() => import('./WinzInventory'))
 const AdCampaign = lazyRetry(() => import('./AdCampaign'))
@@ -28,18 +26,11 @@ const PageEditor = lazyRetry(() => import('./PageEditor'))
 const HomeManager = lazyRetry(() => import('./HomeManager'))
 const CustomerEnquiries = lazyRetry(() => import('./CustomerEnquiries'))
 const ContactEnquiries = lazyRetry(() => import('./ContactEnquiries'))
-const Terms = lazyRetry(() => import('./Terms'))
-const PrivacyPolicy = lazyRetry(() => import('./PrivacyPolicy'))
-const Contact = lazyRetry(() => import('./Contact'))
 const Profile = lazyRetry(() => import('./Profile'))
 const WinzQuotes = lazyRetry(() => import('./WinzQuotes'))
 const FinanceApplications = lazyRetry(() => import('./FinanceApplications'))
-const DeliveryInfo = lazyRetry(() => import('./DeliveryInfo'))
-const ShopFurniture = lazyRetry(() => import('./ShopFurniture'))
-const Returns = lazyRetry(() => import('./Returns'))
 const StoreLocations = lazyRetry(() => import('./StoreLocations'))
 const Settings = lazyRetry(() => import('./Settings'))
-const DynamicPages = lazyRetry(() => import('./DynamicPages'))
 const Testimonials = lazyRetry(() => import('./Testimonials'))
 
 function Dashboard({ onLogout, token }) {
@@ -208,56 +199,27 @@ function Dashboard({ onLogout, token }) {
           <Suspense fallback={<PageSkeletonLoader />}>
             <Routes>
               <Route index element={<Overview token={token} />} />
-              
-              {/* 1. Collections & Catalog */}
+
               <Route path="categories" element={<Categories token={token} />} />
-              <Route path="subcategories" element={<Navigate to="/dashboard/categories" replace />} />
-              <Route path="add-product" element={<Navigate to="/dashboard/products" replace />} />
               <Route path="products" element={<ProductList token={token} />} />
-            <Route path="winz-inventory" element={<WinzInventory token={token} />} />
-              
-              {/* 2. Promotion & Testimonial */}
+              <Route path="winz-inventory" element={<WinzInventory token={token} />} />
+
               <Route path="ad-campaign" element={<AdCampaign token={token} />} />
               <Route path="testimonials" element={<Testimonials token={token} />} />
-              
-              {/* 3. Requests & Applications */}
+
               <Route path="winz-quotes" element={<WinzQuotes token={token} />} />
               <Route path="finance-applications" element={<FinanceApplications token={token} />} />
-              
-              {/* 4. Inquiries */}
+
               <Route path="customer-enquiries" element={<CustomerEnquiries token={token} />} />
               <Route path="contact-enquiries" element={<ContactEnquiries token={token} />} />
-              <Route path="active-enquiry" element={<Navigate to="/dashboard/customer-enquiries" replace />} />
-              <Route path="past-enquiry" element={<Navigate to="/dashboard/customer-enquiries" replace />} />
-              
-              {/* 5. Pages & Media (Storefront CMS pages) */}
+
               <Route path="pages" element={<PageEditor token={token} />} />
               <Route path="pages/:pageKey" element={<PageEditor token={token} />} />
-              <Route path="page-banners" element={<PageEditor token={token} />} />
               <Route path="home-manager" element={<HomeManager token={token} />} />
-              <Route path="slider" element={<Navigate to="/dashboard/pages/home" replace />} />
-              <Route path="about" element={<Navigate to="/dashboard/pages/about" replace />} />
-              <Route path="dynamic-pages" element={<DynamicPages token={token} />} />
-
-              {/* 6. Direct Aliases for Pages & Media */}
-              <Route path="terms" element={<PageEditor token={token} />} />
-              <Route path="privacy-policy" element={<PageEditor token={token} />} />
-              <Route path="delivery-info" element={<PageEditor token={token} />} />
-              <Route path="returns" element={<PageEditor token={token} />} />
-              <Route path="shop-furniture" element={<PageEditor token={token} />} />
-              <Route path="contact" element={<PageEditor token={token} />} />
-
-              {/* 7. Store Locations & Showrooms */}
               <Route path="store-locations" element={<StoreLocations token={token} />} />
-              <Route path="showrooms" element={<Navigate to="/dashboard/store-locations" replace />} />
-              <Route path="winz-finance" element={<Navigate to="/dashboard/pages/winz" replace />} />
-              <Route path="winz" element={<Navigate to="/dashboard/pages/winz" replace />} />
-              <Route path="finance" element={<Navigate to="/dashboard/pages/finance" replace />} />
-              
-              {/* Profile & Settings */}
+
               <Route path="profile" element={<Profile profileImage={profileImage} onProfileImageChange={handleProfileImageChange} token={token} />} />
               <Route path="settings" element={<Settings token={token} />} />
-              <Route path="audit-logs" element={<Navigate to="/dashboard" replace />} />
               
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

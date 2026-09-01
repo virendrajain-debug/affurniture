@@ -55,19 +55,18 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
 
   const toggle = (section) => setOpen(open === section ? '' : section)
 
-  // Auto-expand menu section matching current active route
   useEffect(() => {
     const p = location.pathname
-    if (p.includes('/categories') || p.includes('/subcategories') || p.includes('/add-product') || p.includes('/products') || p.includes('/winz-inventory')) {
+    if (p.includes('/categories') || p.includes('/products') || p.includes('/winz-inventory')) {
       setOpen('catalog')
-    } else if (p.includes('/ad-campaign') || p.includes('/testimonials')) {
-      setOpen('marketing')
+    } else if (p.includes('/home-manager') || p.includes('/pages') || p.includes('/store-locations') || p.includes('/testimonials')) {
+      setOpen('content')
+    } else if (p.includes('/ad-campaign') || p.includes('/deals')) {
+      setOpen('promotions')
     } else if (p.includes('/winz-quotes') || p.includes('/finance-applications')) {
       setOpen('requests')
-    } else if (p.includes('/customer-enquiries') || p.includes('/contact-enquiries') || p.includes('/active-enquiry') || p.includes('/past-enquiry')) {
+    } else if (p.includes('/customer-enquiries') || p.includes('/contact-enquiries')) {
       setOpen('inquiries')
-    } else if (p.includes('/pages/') || p.includes('/page-banners') || p.includes('/banners') || p.includes('/slider') || p.includes('/dynamic-pages') || p.includes('/store-locations') || p.includes('/showrooms')) {
-      setOpen('pages')
     }
   }, [location.pathname])
 
@@ -469,7 +468,6 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
 
         {/* Navigation Tree */}
         <nav className="p-sidebar-nav">
-          {/* Dashboard Overview */}
           <NavLink
             to="/dashboard"
             end
@@ -481,7 +479,6 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
             </div>
           </NavLink>
 
-          {/* 1. Catalog */}
           <div
             className={`p-sidebar-link ${open === 'catalog' ? 'active' : ''}`}
             onClick={() => toggle('catalog')}
@@ -500,25 +497,41 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
             </div>
           )}
 
-          {/* 2. Promotion & Testimonial */}
           <div
-            className={`p-sidebar-link ${open === 'marketing' ? 'active' : ''}`}
-            onClick={() => toggle('marketing')}
+            className={`p-sidebar-link ${open === 'content' ? 'active' : ''}`}
+            onClick={() => toggle('content')}
           >
             <div className="p-link-content">
-              <Icon path="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-              <span>Promotion & Testimonial</span>
+              <Icon path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <span>Content</span>
             </div>
-            <Arrow section="marketing" />
+            <Arrow section="content" />
           </div>
-          {open === 'marketing' && (
+          {open === 'content' && (
             <div className="p-submenu">
-              <SubLink to="/dashboard/ad-campaign">Ad Campaigns</SubLink>
+              <SubLink to="/dashboard/home-manager">Home Page Editor</SubLink>
+              <SubLink to="/dashboard/pages">Pages & Content</SubLink>
+              <SubLink to="/dashboard/store-locations">Store Locations</SubLink>
               <SubLink to="/dashboard/testimonials">Testimonials</SubLink>
             </div>
           )}
 
-          {/* 3. Requests & Applications */}
+          <div
+            className={`p-sidebar-link ${open === 'promotions' ? 'active' : ''}`}
+            onClick={() => toggle('promotions')}
+          >
+            <div className="p-link-content">
+              <Icon path="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              <span>Promotions</span>
+            </div>
+            <Arrow section="promotions" />
+          </div>
+          {open === 'promotions' && (
+            <div className="p-submenu">
+              <SubLink to="/dashboard/ad-campaign">Ad Campaigns</SubLink>
+            </div>
+          )}
+
           <div
             className={`p-sidebar-link ${open === 'requests' ? 'active' : ''}`}
             onClick={() => toggle('requests')}
@@ -543,7 +556,6 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
             </div>
           )}
 
-          {/* 4. Inquiries */}
           <div
             className={`p-sidebar-link ${open === 'inquiries' ? 'active' : ''}`}
             onClick={() => toggle('inquiries')}
@@ -568,29 +580,6 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
             </div>
           )}
 
-          {/* 5. Banners */}
-          <NavLink
-            to="/dashboard/banners"
-            className={({ isActive }) => `p-sidebar-link ${isActive ? 'active' : ''}`}
-          >
-            <div className="p-link-content">
-              <Icon path="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              <span>Banners</span>
-            </div>
-          </NavLink>
-
-          {/* 6. Pages (CMS Content) */}
-          <NavLink
-            to="/dashboard/pages"
-            className={({ isActive }) => `p-sidebar-link ${isActive ? 'active' : ''}`}
-          >
-            <div className="p-link-content">
-              <Icon path="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              <span>Pages</span>
-            </div>
-          </NavLink>
-
-          {/* 7. Site Settings */}
           <NavLink
             to="/dashboard/settings"
             className={({ isActive }) => `p-sidebar-link ${isActive ? 'active' : ''}`}

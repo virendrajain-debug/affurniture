@@ -27,10 +27,6 @@ function GlobalSettings({ token }) {
     // 3. Social Media Channels
     facebook_url: 'https://facebook.com/affurnishings',
     instagram_url: 'https://instagram.com/affurnishings',
-    twitter_url: '',
-    youtube_url: '',
-    tiktok_url: '',
-    linkedin_url: '',
 
     // 4. Footer & Legal
     footer_text: '© 2026 AF Furnishings. All rights reserved.',
@@ -74,10 +70,6 @@ function GlobalSettings({ token }) {
               operating_hours: incoming.operating_hours || incoming.business_hours || prev.operating_hours,
               facebook_url: incoming.facebook_url || incoming.facebook || prev.facebook_url,
               instagram_url: incoming.instagram_url || incoming.instagram || prev.instagram_url,
-              twitter_url: incoming.twitter_url || incoming.twitter || prev.twitter_url,
-              youtube_url: incoming.youtube_url || incoming.youtube || prev.youtube_url,
-              tiktok_url: incoming.tiktok_url || incoming.tiktok || prev.tiktok_url,
-              linkedin_url: incoming.linkedin_url || incoming.linkedin || prev.linkedin_url,
               footer_text: incoming.footer_text || incoming.footer_copyright || prev.footer_text,
               footer_tagline: incoming.footer_tagline || prev.footer_tagline,
             }))
@@ -146,10 +138,6 @@ function GlobalSettings({ token }) {
       business_hours: form.operating_hours,
       facebook: form.facebook_url,
       instagram: form.instagram_url,
-      twitter: form.twitter_url,
-      youtube: form.youtube_url,
-      tiktok: form.tiktok_url,
-      linkedin: form.linkedin_url,
       footer_copyright: form.footer_text,
     }
 
@@ -639,54 +627,6 @@ function GlobalSettings({ token }) {
                   value={form.instagram_url}
                   onChange={handleChange}
                   placeholder="https://instagram.com/..."
-                  className="gs-input"
-                />
-              </div>
-
-              <div className="gs-field-group">
-                <label className="gs-label">Twitter / X Profile URL</label>
-                <input
-                  type="url"
-                  name="twitter_url"
-                  value={form.twitter_url}
-                  onChange={handleChange}
-                  placeholder="https://x.com/..."
-                  className="gs-input"
-                />
-              </div>
-
-              <div className="gs-field-group">
-                <label className="gs-label">YouTube Channel URL</label>
-                <input
-                  type="url"
-                  name="youtube_url"
-                  value={form.youtube_url}
-                  onChange={handleChange}
-                  placeholder="https://youtube.com/..."
-                  className="gs-input"
-                />
-              </div>
-
-              <div className="gs-field-group">
-                <label className="gs-label">TikTok Profile URL</label>
-                <input
-                  type="url"
-                  name="tiktok_url"
-                  value={form.tiktok_url}
-                  onChange={handleChange}
-                  placeholder="https://tiktok.com/@..."
-                  className="gs-input"
-                />
-              </div>
-
-              <div className="gs-field-group">
-                <label className="gs-label">LinkedIn Profile URL</label>
-                <input
-                  type="url"
-                  name="linkedin_url"
-                  value={form.linkedin_url}
-                  onChange={handleChange}
-                  placeholder="https://linkedin.com/company/..."
                   className="gs-input"
                 />
               </div>

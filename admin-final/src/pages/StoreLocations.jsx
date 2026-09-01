@@ -7,7 +7,7 @@
 // ============================================================
 
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
 function StoreLocations({ token }) {
@@ -24,11 +24,13 @@ function StoreLocations({ token }) {
     latitude: '',
     longitude: '',
     description: '',
+    image: '',
     sort_order: 0,
     active: 1,
   })
   const [showForm, setShowForm] = useState(false)
   const [toast, setToast] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const authToken = getAuthToken(token)
 
@@ -68,6 +70,35 @@ function StoreLocations({ token }) {
     })
   }
 
+  const handleImageUpload = async (file) => {
+    if (!file) return
+    setUploadingImage(true)
+    const formData = new FormData()
+    formData.append('image', file)
+    formData.append('file', file)
+    try {
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.url || data.imageUrl || data.image_url || data.secure_url
+        if (url) {
+          setForm((prev) => ({ ...prev, image: url }))
+          showToast('Image uploaded successfully', 'success')
+        }
+      } else {
+        showToast('Failed to upload image', 'error')
+      }
+    } catch {
+      showToast('Error uploading image', 'error')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const resetForm = () => {
     setForm({
       name: '',
@@ -79,6 +110,7 @@ function StoreLocations({ token }) {
       latitude: '',
       longitude: '',
       description: '',
+      image: '',
       sort_order: 0,
       active: 1,
     })
@@ -139,6 +171,7 @@ function StoreLocations({ token }) {
       latitude: loc.latitude || '',
       longitude: loc.longitude || '',
       description: loc.description || '',
+      image: loc.image || '',
       sort_order: loc.sort_order ?? 0,
       active: loc.active ? 1 : 0,
     })
@@ -267,6 +300,79 @@ function StoreLocations({ token }) {
                   />
                 </div>
 
+                {form.google_map_url && (
+                  <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                    <iframe
+                      src={form.google_map_url}
+                      width="100%"
+                      height="250"
+                      style={{ border: 0, display: 'block' }}
+                      allowFullScreen=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Google Maps Preview"
+                    />
+                  </div>
+                )}
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Store Image</label>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    {form.image && (
+                      <div style={{ width: '120px', height: '90px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+                        <img
+                          src={getAssetUrl(form.image)}
+                          alt="Store Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.src = '/placeholder.png' }}
+                        />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <input
+                        type="text"
+                        name="image"
+                        className="form-input"
+                        value={form.image}
+                        onChange={handleChange}
+                        placeholder="Or enter image URL"
+                      />
+                      <label
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          borderRadius: '8px',
+                          background: 'var(--hover-bg)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)',
+                          fontSize: '0.84rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleImageUpload(e.target.files[0])
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Description</label>
                   <textarea
@@ -336,6 +442,7 @@ function StoreLocations({ token }) {
             <thead>
               <tr>
                 <th style={{ width: '60px' }}>Order</th>
+                <th style={{ width: '60px' }}>Image</th>
                 <th>Location Name</th>
                 <th>City</th>
                 <th>Phone</th>
@@ -348,6 +455,20 @@ function StoreLocations({ token }) {
                 <tr key={loc.id}>
                   <td style={{ color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                     #{loc.sort_order ?? 0}
+                  </td>
+                  <td>
+                    {loc.image ? (
+                      <img
+                        src={getAssetUrl(loc.image)}
+                        alt={loc.name}
+                        style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                        onError={(e) => { e.target.src = '/placeholder.png' }}
+                      />
+                    ) : (
+                      <div style={{ width: '40px', height: '40px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                        No img
+                      </div>
+                    )}
                   </td>
                   <td>
                     <strong style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>{loc.name}</strong>

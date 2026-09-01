@@ -15,7 +15,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
 // Rich Text Editor Component
@@ -83,7 +83,6 @@ const PAGES_LIST = [
   { key: 'returns', label: 'Returns & Refund Policy Page' },
   { key: 'terms', label: 'Terms & Conditions Page' },
   { key: 'privacy-policy', label: 'Privacy Policy Page' },
-  { key: 'shop-furniture', label: 'Shop Furniture Guide Page' },
   { key: 'contact', label: 'Contact Us Page' },
   { key: 'store-locations', label: 'Store Locations Page' },
 ]
@@ -392,16 +391,26 @@ function PageEditor({ token }) {
                     <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="e.g. Contact Us" />
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '12px' }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label" style={{ fontSize: '0.78rem' }}>Subtitle</label>
                     <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="e.g. We'd love to hear from you" />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Banner Image URL</label>
-                    <input type="text" className="form-input" value={form.banner_image || ''} onChange={(e) => handleFieldChange('banner_image', e.target.value)} placeholder="https://example.com/banner.jpg" />
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Hero Image URL</label>
+                    <input type="text" className="form-input" value={form.hero_image || ''} onChange={(e) => handleFieldChange('hero_image', e.target.value)} placeholder="https://example.com/hero.jpg" />
                   </div>
                 </div>
+                {form.hero_image && (
+                  <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                    <img
+                      src={getAssetUrl(form.hero_image)}
+                      alt="Hero Banner Preview"
+                      style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }}
+                      onError={(e) => { e.target.style.display = 'none' }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Store Location & Contact Info */}
@@ -412,8 +421,9 @@ function PageEditor({ token }) {
                 <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
                   Manage your store addresses, phone numbers and opening hours from the dedicated Store Locations manager.
                 </p>
-                <a
-                  href="#/dashboard/store-locations"
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/store-locations')}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -426,6 +436,7 @@ function PageEditor({ token }) {
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     textDecoration: 'none',
+                    cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -434,7 +445,7 @@ function PageEditor({ token }) {
                     <circle cx="12" cy="10" r="3" />
                   </svg>
                   Manage Store Locations
-                </a>
+                </button>
               </div>
 
               {/* Social Media Links */}
@@ -445,8 +456,9 @@ function PageEditor({ token }) {
                 <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
                   Manage your social media profile links (Facebook, Instagram, etc.) from Site Settings.
                 </p>
-                <a
-                  href="#/dashboard/settings"
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/settings')}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -459,6 +471,7 @@ function PageEditor({ token }) {
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     textDecoration: 'none',
+                    cursor: 'pointer',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -467,7 +480,7 @@ function PageEditor({ token }) {
                     <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
                   </svg>
                   Manage Social Links
-                </a>
+                </button>
               </div>
             </>
           )}
