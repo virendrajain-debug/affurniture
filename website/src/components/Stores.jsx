@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 
 const DEFAULT_STORES = [
   {
@@ -29,7 +29,7 @@ function Stores() {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setStores(data.map(s => ({
-            img: s.image || DEFAULT_STORES[0].img,
+            img: getAssetUrl(s.image) || DEFAULT_STORES[0].img,
             city: s.name,
             desc: s.description || s.address || '',
             id: s.id,

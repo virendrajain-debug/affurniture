@@ -170,11 +170,10 @@ function Header() {
 
   const getSocialIcon = (platform) => {
     const icons = {
-      instagram: <img src="/instagram.png" alt="Instagram" width="20" height="20" style={{borderRadius:'5px'}} />,
-      facebook: <img src="/facebook.png" alt="Facebook" width="20" height="20" style={{borderRadius:'5px'}} />,
-      twitter: <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>,
+      instagram: <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" alt="Instagram" width="20" height="20" />,
+      facebook: <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="20" height="20" />,
     }
-    return icons[platform?.toLowerCase()] || <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+    return icons[platform?.toLowerCase()] || null
   }
 
   return (

@@ -106,16 +106,38 @@ function CategoryPage() {
   const [adCampaigns, setAdCampaigns] = useState([])
   const [apiSubcategories, setApiSubcategories] = useState([])
   const [catImage, setCatImage] = useState('')
+  const [dbCategory, setDbCategory] = useState(null)
+
+  const displayImage = dbCategory?.image || cat.image
+  const apiCategory = dbCategory?.name || cat.apiCategory
 
   const cat = categoryData[slug] || { ...defaultCategory, title: slug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), apiCategory: slug, heroLabel: '', heroTitle: '', heroDesc: '', colors: [], sizes: [], subcategories: [] }
 
   const PER_PAGE = 12
 
   useEffect(() => {
+    fetch(`${API_BASE}/api/categories`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const match = data.find(c => {
+            const cSlug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            return cSlug === slug || c.name.toLowerCase().replace(/\s+/g, '-') === slug
+          })
+          if (match) {
+            setDbCategory(match)
+            if (match.subcategories) setApiSubcategories(match.subcategories)
+          }
+        }
+      })
+      .catch(() => {})
+  }, [slug])
+
+  useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true)
       try {
-        let url = `${API_BASE}/api/products?category=${encodeURIComponent(cat.apiCategory)}&page=${currentPage}&per_page=${PER_PAGE}`
+        let url = `${API_BASE}/api/products?category=${encodeURIComponent(apiCategory)}&page=${currentPage}&per_page=${PER_PAGE}`
         if (subId) url += `&subcategory_id=${subId}`
         else if (subSlug) url += `&subcategory=${subSlug}`
         const res = await fetch(url)
@@ -130,27 +152,12 @@ function CategoryPage() {
       setLoading(false)
     }
     fetchProducts()
-    fetch(`${API_BASE}/api/categories`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const match = data.find(c => {
-            const cSlug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-            return cSlug === slug || c.name.toLowerCase().replace(/\s+/g, '-') === slug
-          })
-          if (match) {
-            if (match.image) setCatImage(match.image)
-            if (match.subcategories) setApiSubcategories(match.subcategories)
-          }
-        }
-      })
-      .catch(() => {})
     fetch(`${API_BASE}/api/ad-campaigns/active?position=category_detail`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
       .catch(() => {})
     window.scrollTo(0, 0)
-  }, [cat.apiCategory, subSlug, subId, currentPage])
+  }, [apiCategory, subSlug, subId, currentPage])
 
   let filtered = products
   if (selectedColors.length > 0) {
@@ -234,7 +241,7 @@ function CategoryPage() {
     <>
       <Header />
       <main className="about-page">
-        <section className="catalog-hero" style={catImage ? { backgroundImage: `url(${catImage})` } : undefined}>
+        <section className="catalog-hero" style={displayImage ? { backgroundImage: `url(${displayImage})` } : undefined}>
           <div className="catalog-hero-inner">
             <span className="catalog-hero-label">{cat.heroLabel}</span>
             <h1>{cat.heroTitle || cat.title}</h1>

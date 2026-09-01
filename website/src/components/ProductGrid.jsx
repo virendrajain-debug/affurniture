@@ -27,7 +27,7 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
           : `${API_BASE}/api/products?limit=8`
         const res = await fetch(url)
         const data = await res.json()
-        if (Array.isArray(data) && data.length > 0) setProducts(data)
+        const items = Array.isArray(data) ? data : (data.products || []); if (items.length > 0) setProducts(items)
       } catch {}
     }
     fetchProducts()

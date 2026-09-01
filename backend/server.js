@@ -35,6 +35,7 @@ import testimonialRoutes from './routes/testimonials.js';
 import pagesRoutes from './routes/pages.js';
 import contactRoutes from './routes/contact.js';
 import notificationRoutes from './routes/notifications.js';
+import dealsRoutes from './routes/deals.js';
 
 dotenv.config();
 
@@ -88,6 +89,7 @@ app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/deals', dealsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -478,11 +480,18 @@ async function autoSetup() {
     console.log('Admin password reset to admin123');
   }
 
+  const categoryImages = {
+    'Living Room': '/uploads/category-living-room.jpg',
+    'Bedroom': '/uploads/category-bedroom.jpg',
+    'Dining': '/uploads/category-dining.jpg',
+    'Office': '/uploads/category-office.jpg',
+    'Outdoor': '/uploads/category-outdoor.jpg'
+  };
   const categories = ['Living Room', 'Bedroom', 'Dining', 'Office', 'Outdoor'];
   for (const cat of categories) {
     const [existingCat] = pool.execute('SELECT id FROM categories WHERE name = ?', [cat]);
     if (existingCat.length === 0) {
-      pool.execute('INSERT INTO categories (name) VALUES (?)', [cat]);
+      pool.execute('INSERT INTO categories (name, image) VALUES (?, ?)', [cat, categoryImages[cat] || '']);
     }
   }
 
@@ -531,12 +540,12 @@ async function autoSetup() {
   const [storeExists] = pool.execute('SELECT id FROM store_locations LIMIT 1');
   if (storeExists.length === 0) {
     pool.execute(
-      'INSERT INTO store_locations (name, address, city, phone, email, google_map_url, latitude, longitude, description, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ['AF Furnishings Auckland', '123 Queen Street', 'Auckland', '12345667890', 'affurniture@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3192.3!2d174.76!3d-36.85!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1', '-36.85', '174.76', 'Central Auckland showroom with over 200 furniture displays.', 1]
+      'INSERT INTO store_locations (name, address, city, phone, email, google_map_url, latitude, longitude, description, image, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['AF Furnishings Auckland', '123 Queen Street', 'Auckland', '12345667890', 'affurniture@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3192.3!2d174.76!3d-36.85!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1', '-36.85', '174.76', 'Central Auckland showroom with over 200 furniture displays.', '/uploads/store-auckland.jpg', 1]
     );
     pool.execute(
-      'INSERT INTO store_locations (name, address, city, phone, email, google_map_url, latitude, longitude, description, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ['AF Furnishings Wellington', '45 Cuba Street', 'Wellington', '12345667890', 'affurniture@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3192.3!2d174.77!3d-41.29!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1', '-41.29', '174.77', 'Wellington design studio with curated collections.', 2]
+      'INSERT INTO store_locations (name, address, city, phone, email, google_map_url, latitude, longitude, description, image, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['AF Furnishings Wellington', '45 Cuba Street', 'Wellington', '12345667890', 'affurniture@gmail.com', 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3192.3!2d174.77!3d-41.29!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1', '-41.29', '174.77', 'Wellington design studio with curated collections.', '/uploads/store-wellington.jpg', 2]
     );
   }
   if (productExists.length === 0) {
@@ -564,6 +573,26 @@ async function autoSetup() {
       );
     }
     console.log('Sample products created.');
+  }
+
+  const [testimonialExists] = pool.execute('SELECT id FROM testimonials LIMIT 1');
+  if (testimonialExists.length === 0) {
+    const testimonials = [
+      { name: 'Sarah Mitchell', role: 'Homeowner', quote: 'The quality of our new sofa exceeded all expectations. AF Furnishings made the whole process seamless.', location: 'Auckland', rating: 5 },
+      { name: 'James Chen', role: 'Interior Designer', quote: 'I recommend AF Furnishings to all my clients. Their range is fantastic and the quality is consistently excellent.', location: 'Wellington', rating: 5 },
+      { name: 'Emma Rodriguez', role: 'First Home Buyer', quote: 'Furnished our entire first home from AF Furnishings. Great value for money and the delivery team was wonderful.', location: 'Hamilton', rating: 5 },
+      { name: 'David Patel', role: 'Business Owner', quote: 'Outfitting our office was a breeze with AF Furnishings. Professional service and quality products.', location: 'Auckland', rating: 5 },
+      { name: 'Lisa Thompson', role: 'Repeat Customer', quote: 'This is our third purchase from AF Furnishings. The bedroom set is absolutely stunning and so comfortable.', location: 'Christchurch', rating: 5 },
+      { name: 'Michael Wang', role: 'Renovator', quote: 'During our home renovation, AF Furnishings provided beautiful pieces that transformed our living spaces.', location: 'Tauranga', rating: 5 },
+      { name: 'Rachel Kelly', role: 'Mum of Three', quote: 'Durable, stylish and affordable. Everything I need as a busy mum. The kids love their new beds too!', location: 'Dunedin', rating: 5 },
+      { name: 'Tom Nguyen', role: 'Property Manager', quote: 'Reliable supplier for all our rental properties. Consistent quality and great wholesale pricing.', location: 'Palmerston North', rating: 5 }
+    ];
+    for (const t of testimonials) {
+      pool.execute(
+        'INSERT INTO testimonials (name, role, quote, location, rating, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [t.name, t.role, t.quote, t.location, t.rating, 0, 1]
+      );
+    }
   }
 
   console.log('Setup complete!');

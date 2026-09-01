@@ -26,7 +26,6 @@ const WinzInventory = lazyRetry(() => import('./WinzInventory'))
 const AdCampaign = lazyRetry(() => import('./AdCampaign'))
 const PageEditor = lazyRetry(() => import('./PageEditor'))
 const HomeManager = lazyRetry(() => import('./HomeManager'))
-const Banners = lazyRetry(() => import('./Banners'))
 const CustomerEnquiries = lazyRetry(() => import('./CustomerEnquiries'))
 const ContactEnquiries = lazyRetry(() => import('./ContactEnquiries'))
 const Terms = lazyRetry(() => import('./Terms'))
@@ -235,7 +234,6 @@ function Dashboard({ onLogout, token }) {
               <Route path="pages" element={<PageEditor token={token} />} />
               <Route path="pages/:pageKey" element={<PageEditor token={token} />} />
               <Route path="page-banners" element={<PageEditor token={token} />} />
-              <Route path="banners" element={<Banners token={token} />} />
               <Route path="home-manager" element={<HomeManager token={token} />} />
               <Route path="slider" element={<Navigate to="/dashboard/pages/home" replace />} />
               <Route path="about" element={<Navigate to="/dashboard/pages/about" replace />} />

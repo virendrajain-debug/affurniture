@@ -373,9 +373,109 @@ function PageEditor({ token }) {
           )}
 
           {/* ============================================================
-              3. STANDARD CMS PAGES (WinZ, Delivery, Returns, Terms, Privacy, Shop Furniture, Contact, Store Locations)
+              3. CONTACT US PAGE (Special Handling)
           ============================================================ */}
-          {activePageKey !== 'about' && activePageKey !== 'home' && (
+          {activePageKey === 'contact' && (
+            <>
+              {/* Hero Banner Section */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  Hero Banner
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Small Label Above Heading</label>
+                    <input type="text" className="form-input" value={form.eyebrow || ''} onChange={(e) => handleFieldChange('eyebrow', e.target.value)} placeholder="e.g. GET IN TOUCH" />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Main Heading</label>
+                    <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="e.g. Contact Us" />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Subtitle</label>
+                    <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="e.g. We'd love to hear from you" />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Banner Image URL</label>
+                    <input type="text" className="form-input" value={form.banner_image || ''} onChange={(e) => handleFieldChange('banner_image', e.target.value)} placeholder="https://example.com/banner.jpg" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Store Location & Contact Info */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  Store Location &amp; Contact Info
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
+                  Manage your store addresses, phone numbers and opening hours from the dedicated Store Locations manager.
+                </p>
+                <a
+                  href="#/dashboard/store-locations"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    background: 'var(--hover-bg)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--accent-color, #d4af37)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  Manage Store Locations
+                </a>
+              </div>
+
+              {/* Social Media Links */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  Social Media Links
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
+                  Manage your social media profile links (Facebook, Instagram, etc.) from Site Settings.
+                </p>
+                <a
+                  href="#/dashboard/settings"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 18px',
+                    borderRadius: '8px',
+                    background: 'var(--hover-bg)',
+                    border: '1px solid var(--border-color)',
+                    color: 'var(--accent-color, #d4af37)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                  </svg>
+                  Manage Social Links
+                </a>
+              </div>
+            </>
+          )}
+
+          {/* ============================================================
+              4. STANDARD CMS PAGES (WinZ, Delivery, Returns, Terms, Privacy, Shop Furniture, Store Locations)
+          ============================================================ */}
+          {activePageKey !== 'about' && activePageKey !== 'home' && activePageKey !== 'contact' && (
             <div className="admin-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <h4 style={{ margin: '0 0 10px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 {PAGES_LIST.find(p => p.key === activePageKey)?.label} Content

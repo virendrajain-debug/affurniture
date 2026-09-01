@@ -126,7 +126,7 @@ router.get('/', async (req, res) => {
 
     // Filter on-sale products (have discounted price)
     if (on_sale === 'true') {
-      query += ' AND p.discounted_price IS NOT NULL AND p.discounted_price > 0 AND p.discounted_price < p.mrp';
+      query += " AND ((p.discounted_price IS NOT NULL AND p.discounted_price > 0 AND p.discounted_price < p.mrp) OR (p.selling_price IS NOT NULL AND p.selling_price > 0 AND p.selling_price < p.mrp))";
     }
 
     query += ' ORDER BY p.created_at DESC';
@@ -154,7 +154,7 @@ router.get('/', async (req, res) => {
       if (search) { countQuery += ' AND (p.name LIKE ? OR p.description LIKE ?)'; countParams.push(`%${search}%`, `%${search}%`); }
       if (featured === 'true') { countQuery += ' AND p.featured = 1'; }
       if (new_arrival === 'true') { countQuery += ' AND p.new_arrival = 1'; }
-      if (on_sale === 'true') { countQuery += ' AND p.discounted_price IS NOT NULL AND p.discounted_price > 0 AND p.discounted_price < p.mrp'; }
+      if (on_sale === 'true') { countQuery += " AND ((p.discounted_price IS NOT NULL AND p.discounted_price > 0 AND p.discounted_price < p.mrp) OR (p.selling_price IS NOT NULL AND p.selling_price > 0 AND p.selling_price < p.mrp))"; }
       const [countResult] = await pool.execute(countQuery, countParams);
       totalProducts = countResult[0].total;
       totalPages = Math.ceil(totalProducts / perPage);

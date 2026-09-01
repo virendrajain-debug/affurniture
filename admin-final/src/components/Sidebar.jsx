@@ -534,11 +534,11 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
           </div>
           {open === 'requests' && (
             <div className="p-submenu">
-              <SubLink to="/dashboard/winz-quotes" badge={badgeCounts.winzQuotes}>
-                WinZ Quotes
-              </SubLink>
               <SubLink to="/dashboard/finance-applications" badge={badgeCounts.financeApplications}>
                 Finance Applications
+              </SubLink>
+              <SubLink to="/dashboard/winz-quotes" badge={badgeCounts.winzQuotes}>
+                WinZ Quotes
               </SubLink>
             </div>
           )}

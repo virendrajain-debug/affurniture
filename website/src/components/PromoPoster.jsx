@@ -5,7 +5,7 @@ function PromoPoster({ ad }) {
       <div>
         <span>AF WEEKLY SPECIAL</span>
         <h2>{ad?.name || 'Bring comfort home.'}</h2>
-        <p>{ad?.name ? 'Check out our latest deals and offers.' : 'Explore our latest living-room arrivals, all priced at $00.'}</p>
+        <p>{ad?.name ? 'Check out our latest deals and offers.' : 'Explore our latest arrivals with flexible weekly payments.'}</p>
         <a className="primary" href={ad?.link || '#'} target="_blank" rel="noopener noreferrer">View</a>
       </div>
     </section>

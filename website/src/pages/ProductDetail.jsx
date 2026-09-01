@@ -59,7 +59,11 @@ function ProductDetail() {
     setLoading(true)
     setError(null)
     setSelectedImg(0)
-    fetch(`${API_BASE}/api/products/by-slug/${slug}`)
+    setProduct(null)
+    setRelated([])
+    setAllCategoryProducts([])
+    const controller = new AbortController()
+    fetch(`${API_BASE}/api/products/by-slug/${slug}`, { signal: controller.signal })
       .then(r => {
         if (!r.ok) throw new Error('Product not found')
         return r.json()
@@ -73,7 +77,7 @@ function ProductDetail() {
           fetch(`${API_BASE}/api/products?category=${encodeURIComponent(data.category_name)}&limit=50`)
             .then(r => r.json())
             .then(items => {
-              const list = Array.isArray(items) ? items : []
+              const list = Array.isArray(items) ? items : (items.products || [])
               setRelated(list.filter(p => p.id !== data.id).slice(0, 3))
               setAllCategoryProducts(list)
             })
@@ -81,13 +85,16 @@ function ProductDetail() {
         }
       })
       .catch(err => {
-        setError(err.message)
-        setLoading(false)
+        if (err.name !== 'AbortError') {
+          setError(err.message)
+          setLoading(false)
+        }
       })
     fetch(`${API_BASE}/api/ad-campaigns/active?position=product_detail`)
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
       .catch(() => {})
+    return () => controller.abort()
   }, [slug])
 
   const getImages = (p) => {

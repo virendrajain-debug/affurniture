@@ -13,7 +13,7 @@ function OnSalePage() {
       try {
         const res = await fetch(`${API_BASE}/api/products?on_sale=true`)
         const data = await res.json()
-        setProducts(Array.isArray(data) ? data : [])
+        setProducts(Array.isArray(data) ? data : (data.products || []))
       } catch { setProducts([]) }
       setLoading(false)
     }
