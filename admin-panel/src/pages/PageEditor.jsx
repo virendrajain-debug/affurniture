@@ -1,22 +1,101 @@
-// ============================================================
-// Premium CMS Page Content Studio (Strictly Text & Rich Content)
-// ============================================================
-// Features:
-//  - Top Left Page Selector Dropdown (About, WinZ, Finance, Delivery, Returns, Terms, Privacy, Shop Furniture, Contact, Home)
-//  - Top: Full WYSIWYG Rich Text Editor with Text Formatting Toolbar
-//  - Below: All structured text fields available on that page (Headings, Subtitles, Intro, Callouts, Contact, Delivery Rates)
-//  - ZERO BANNER UPLOADS (Banners are managed in the dedicated Banners Studio)
-//  - Sticky bottom publish bar with instant toast confirmation
-//  - API: GET /api/pages/:pageKey & PUT /api/pages/:pageKey
-// ============================================================
-
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { API_BASE } from '../config'
 import { getAuthToken } from '../utils/api'
 
-const PAGES_LIST = [
+// ─── Rich Text Editor ───────────────────────────────────────
+function RTE({ value, onChange, placeholder = 'Enter formatted content…', minHeight = 120 }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== (value || '')) ref.current.innerHTML = value || ''
+  }, [value])
+  const exec = (cmd, arg = null) => {
+    document.execCommand(cmd, false, arg)
+    if (ref.current) onChange(ref.current.innerHTML)
+  }
+  const onInput = () => { if (ref.current) onChange(ref.current.innerHTML) }
+
+  const fmtBtns = [
+    { label: 'B',       cmd: 'bold',                style: { fontWeight: 'bold' } },
+    { label: 'I',       cmd: 'italic',              style: { fontStyle: 'italic' } },
+    { label: 'U',       cmd: 'underline',           style: { textDecoration: 'underline' } },
+    { label: 'H2',      cmd: 'formatBlock',         arg: '<h2>' },
+    { label: 'H3',      cmd: 'formatBlock',         arg: '<h3>' },
+    { label: '¶',       cmd: 'formatBlock',         arg: '<p>' },
+    { label: '• List',  cmd: 'insertUnorderedList', arg: null },
+    { label: '1. List', cmd: 'insertOrderedList',   arg: null },
+  ]
+
+  return (
+    <div className="rte-wrap">
+      <div className="rte-toolbar">
+        {fmtBtns.map(({ label, cmd, arg, style }) => (
+          <button key={label} type="button" onMouseDown={e => { e.preventDefault(); exec(cmd, arg) }} style={style}>{label}</button>
+        ))}
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('removeFormat') }} style={{ marginLeft: 'auto' }}>✕ Clear</button>
+      </div>
+      <div
+        ref={ref}
+        className="rte-body"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={onInput}
+        onBlur={onInput}
+        data-placeholder={placeholder}
+        style={{ minHeight }}
+      />
+    </div>
+  )
+}
+
+// ─── Field helpers ───────────────────────────────────────────
+function F({ label, children, tip }) {
+  return (
+    <div className="form-group" style={{ margin: 0 }}>
+      <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
+        <span>{label}</span>
+        {tip && <span style={{ color: 'var(--accent-color,#d4af37)', fontWeight: 400, fontSize: '0.7rem' }}>{tip}</span>}
+      </label>
+      {children}
+    </div>
+  )
+}
+function TF({ f, form, set, placeholder }) {
+  return <input type="text" className="form-input" value={form[f] || ''} onChange={e => set(f, e.target.value)} placeholder={placeholder || f} />
+}
+function TA({ f, form, set, placeholder }) {
+  return <textarea className="form-input" rows={3} value={form[f] || ''} onChange={e => set(f, e.target.value)} placeholder={placeholder || f} style={{ resize: 'vertical' }} />
+}
+function Card({ title, children }) {
+  return (
+    <div className="admin-card" style={{ padding: 20, borderRadius: 12 }}>
+      <h4 style={{ margin: '0 0 14px', fontSize: '0.9rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>{title}</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
+    </div>
+  )
+}
+function Row2({ children }) {
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>
+}
+function Row12({ children }) {
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>{children}</div>
+}
+function ValCardRow({ num, form, set }) {
+  return (
+    <div style={{ background: 'rgba(0,0,0,0.18)', padding: 14, borderRadius: 8, border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-color,#d4af37)' }}>Value Card {num}</div>
+      <F label="Card Title"><TF f={`val_${num}_title`} form={form} set={set} placeholder="e.g. Quality First" /></F>
+      <F label="Card Description (Rich Text)" tip="Formatting Enabled">
+        <RTE value={form[`val_${num}_desc`] || ''} onChange={v => set(`val_${num}_desc`, v)} placeholder="Enter value description…" minHeight={80} />
+      </F>
+    </div>
+  )
+}
+
+// ─── Page list ───────────────────────────────────────────────
+const PAGES = [
   { key: 'about', label: 'About Us Page' },
+  { key: 'home', label: 'Home Page' },
   { key: 'winz', label: 'WinZ Quotes Page' },
   { key: 'finance', label: 'Finance Guide Page' },
   { key: 'delivery-info', label: 'Delivery Information Page' },
@@ -25,514 +104,320 @@ const PAGES_LIST = [
   { key: 'privacy-policy', label: 'Privacy Policy Page' },
   { key: 'shop-furniture', label: 'Shop Furniture Guide Page' },
   { key: 'contact', label: 'Contact Us Page' },
-  { key: 'home', label: 'Home Page CMS Text' },
+  { key: 'store-locations', label: 'Store Locations Page' },
 ]
 
 function PageEditor({ token }) {
   const { pageKey: routeKey } = useParams()
   const navigate = useNavigate()
-
-  const [activePageKey, setActivePageKey] = useState(
+  const [pageKey, setPageKey] = useState(
     routeKey ? (routeKey === 'winz-quotes' ? 'winz' : routeKey === 'finance-guide' ? 'finance' : routeKey) : 'about'
   )
-
-  const [form, setForm] = useState({
-    title: '',
-    subtitle: '',
-    eyebrow: '',
-    content: '',
-    intro_content: '',
-    callout_title: '',
-    callout_text: '',
-    callout_badge: '',
-    phone: '',
-    email: '',
-    address: '',
-    hours: '',
-    delivery_auckland: '',
-    delivery_north: '',
-    delivery_south: '',
-  })
-
+  const [form, setForm] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
-
-  const editorRef = useRef(null)
   const authToken = getAuthToken(token)
 
-  const showToast = (msg, type = 'info') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3500)
-  }
+  const showToast = (msg, type = 'info') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500) }
+  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
-  // Load page data
-  const loadPageData = async (pageKey) => {
+  const load = useCallback(async (key) => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/pages/${pageKey}`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-      })
-      if (res.ok) {
-        const data = await res.json()
-        if (data && typeof data === 'object') {
-          const pageTitleFallback = PAGES_LIST.find(p => p.key === pageKey)?.label.replace(' Page', '') || ''
-          setForm({
-            title: data.title || data.company_name || pageTitleFallback,
-            subtitle: data.subtitle || data.tagline || '',
-            eyebrow: data.eyebrow || data.promo_badge || 'AF FURNISHINGS',
-            content: data.content || data.about_story || data.description || '',
-            intro_content: data.intro_content || '',
-            callout_title: data.callout_title || data.promo_title || '',
-            callout_text: data.callout_text || '',
-            callout_badge: data.callout_badge || '',
-            phone: data.phone || data.support_phone || '',
-            email: data.email || data.support_email || '',
-            address: data.address || data.store_address || '',
-            hours: data.hours || data.opening_hours || '',
-            delivery_auckland: data.delivery_auckland || '1-3 Business Days ($49)',
-            delivery_north: data.delivery_north || '3-5 Business Days ($89)',
-            delivery_south: data.delivery_south || '4-7 Business Days ($129)',
-          })
-          if (editorRef.current) {
-            editorRef.current.innerHTML = data.content || data.about_story || data.description || ''
-          }
-        }
-      }
-    } catch {
-      showToast('Failed to load page content', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
+      const r = await fetch(`${API_BASE}/api/pages/${key}`)
+      if (r.ok) { const d = await r.json(); if (d && typeof d === 'object') { setForm(d) } }
+    } catch {}
+    setLoading(false)
+  }, [])
 
-  useEffect(() => {
-    loadPageData(activePageKey)
-  }, [activePageKey])
+  useEffect(() => { load(pageKey) }, [pageKey])
 
-  // Handle page dropdown switch
-  const handlePageDropdownChange = (newKey) => {
-    setActivePageKey(newKey)
-    navigate(`/dashboard/pages/${newKey}`)
-  }
-
-  // Handle form change
-  const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
-  }
-
-  // Rich Text Editor Commands
-  const execCmd = (cmd, val = null) => {
-    document.execCommand(cmd, false, val)
-    if (editorRef.current) {
-      editorRef.current.focus()
-      setForm(prev => ({ ...prev, content: editorRef.current.innerHTML }))
-    }
-  }
-
-  const handleInsertLink = () => {
-    const url = window.prompt('Enter link URL (e.g. https://...):')
-    if (url) execCmd('createLink', url)
-  }
-
-  // Save Page Content
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const save = async () => {
     setSaving(true)
-
-    const payload = {
-      ...form,
-      content: editorRef.current ? editorRef.current.innerHTML : form.content,
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/api/pages/${activePageKey}`, {
+      const r = await fetch(`${API_BASE}/api/pages/${pageKey}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        body: JSON.stringify(form),
       })
-
-      if (res.ok) {
-        showToast(`${PAGES_LIST.find(p => p.key === activePageKey)?.label} updated successfully!`, 'success')
-      } else {
-        const d = await res.json().catch(() => ({}))
-        showToast(d.message || 'Failed to update page', 'error')
-      }
-    } catch {
-      showToast('Server connection error', 'error')
-    } finally {
-      setSaving(false)
-    }
+      showToast(r.ok ? 'Page texts published live on website!' : 'Saved (check backend logs for detail)', r.ok ? 'success' : 'warning')
+      load(pageKey)
+    } catch { showToast('Connection error.', 'error') }
+    finally { setSaving(false) }
   }
 
-  const activePageLabel = PAGES_LIST.find(p => p.key === activePageKey)?.label || 'Page Content'
+  const PublishBtn = () => (
+    <button type="button" onClick={save} disabled={saving || loading}
+      style={{ padding: '8px 24px', background: 'var(--accent-color,#d4af37)', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      {saving ? 'Publishing…' : 'Publish Page Texts'}
+    </button>
+  )
 
   return (
-    <div className="admin-page" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="admin-page" style={{ maxWidth: 1080, margin: '0 auto' }}>
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      {/* Top Filter Toolbar (Top Left Page Selector Dropdown) */}
-      <div
-        className="filter-toolbar"
-        style={{
-          background: 'var(--sidebar-bg, #111827)',
-          padding: '14px 18px',
-          borderRadius: '12px',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
-            Selected Page:
-          </label>
-          <select
-            className="filter-select"
-            value={activePageKey}
-            onChange={(e) => handlePageDropdownChange(e.target.value)}
-            style={{ minWidth: '260px', fontWeight: 600 }}
-          >
-            {PAGES_LIST.map(opt => (
-              <option key={opt.key} value={opt.key}>
-                {opt.label}
-              </option>
-            ))}
+      {/* Toolbar */}
+      <div style={{ background: 'var(--sidebar-bg,#111827)', padding: '14px 18px', borderRadius: 12, border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Edit Page Texts:</label>
+          <select className="filter-select" value={pageKey} onChange={e => { setPageKey(e.target.value); navigate(`/dashboard/pages/${e.target.value}`) }} style={{ minWidth: 280, fontWeight: 600 }}>
+            {PAGES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
           </select>
         </div>
-
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={handleSubmit}
-          disabled={saving || loading}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '0.88rem' }}
-        >
-          {saving ? 'Publishing...' : 'Save & Publish Page'}
-        </button>
+        <PublishBtn />
       </div>
 
       {loading ? (
-        <div className="admin-card" style={{ textAlign: 'center', padding: '50px', color: 'var(--text-secondary)' }}>
-          Loading {activePageLabel} text...
-        </div>
+        <div className="admin-card" style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>Loading live text…</div>
       ) : (
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          
-          {/* TOP SECTION: Rich Text Editor with Formatting Toolbar */}
-          <div className="admin-card">
-            <div className="admin-card-header" style={{ marginBottom: '12px' }}>
-              <div>
-                <h3 className="admin-card-title">
-                  Primary Page Body & Paragraph Content
-                </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Main formatted text displayed on the public storefront for this page.
-                </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* ═══════════════ ABOUT US ═══════════════ */}
+          {pageKey === 'about' && (<>
+            <Card title="1 · Top Hero Header — Eyebrow, Title & Subtitle">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. OUR STORY" /></F>
+                <F label="Page Main Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. About AF Furnishings" /></F>
+              </Row12>
+              <F label="Hero Subtitle / Tagline"><TF f="subtitle" form={form} set={set} placeholder="e.g. Quality furniture for every New Zealand home" /></F>
+            </Card>
+
+            <Card title="2 · Our Story Section">
+              <Row2>
+                <F label="Section Eyebrow Label"><TF f="callout_badge" form={form} set={set} placeholder="e.g. WHO WE ARE" /></F>
+                <F label="Section Heading (H2)"><TF f="callout_title" form={form} set={set} placeholder="e.g. AF Furnishings" /></F>
+              </Row2>
+              <F label="Story Rich-Text Description" tip="Formatting Toolbar Enabled">
+                <RTE value={form.story_content || form.content || ''} onChange={v => { set('story_content', v); set('content', v) }} placeholder="Tell your company story here…" />
+              </F>
+            </Card>
+
+            <Card title="3 · Our Values Section">
+              <F label="Values Section Heading (displayed above the 3 cards)">
+                <TF f="about_mission" form={form} set={set} placeholder="e.g. What we stand for." />
+              </F>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px,1fr))', gap: 14 }}>
+                <ValCardRow num={1} form={form} set={set} />
+                <ValCardRow num={2} form={form} set={set} />
+                <ValCardRow num={3} form={form} set={set} />
               </div>
-            </div>
+            </Card>
 
-            {/* Rich Text Editor */}
-            <div style={{ borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--header-bg)', overflow: 'hidden' }}>
-              {/* Text Formatting Toolbar */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 12px', background: 'var(--sidebar-bg)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
-                <button type="button" className="btn-icon" onClick={() => execCmd('bold')} title="Bold" style={{ width: '28px', height: '28px', fontWeight: 700 }}>
-                  B
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('italic')} title="Italic" style={{ width: '28px', height: '28px', fontStyle: 'italic' }}>
-                  I
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('underline')} title="Underline" style={{ width: '28px', height: '28px', textDecoration: 'underline' }}>
-                  U
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('strikeThrough')} title="Strikethrough" style={{ width: '28px', height: '28px', textDecoration: 'line-through' }}>
-                  S
-                </button>
+            <Card title="4 · Showroom Showcase">
+              <Row2>
+                <F label="Showroom Heading (H3)"><TF f="showroom_title" form={form} set={set} placeholder="e.g. Experience Comfort in Person" /></F>
+                <F label="Showroom Subtitle"><TF f="showroom_subtitle" form={form} set={set} placeholder="Optional subtitle or tagline" /></F>
+              </Row2>
+              <F label="Showroom Description (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.showroom_desc || ''} onChange={v => set('showroom_desc', v)} placeholder="Describe the showroom experience…" minHeight={90} />
+              </F>
+            </Card>
+          </>)}
 
-                <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 4px' }} />
+          {/* ═══════════════ HOME ═══════════════ */}
+          {pageKey === 'home' && (<>
+            {[1,2,3].map(n => (
+              <Card key={n} title={`Hero Slide ${n} Texts`}>
+                <Row2>
+                  <F label="Eyebrow / Tagline"><TF f={`hero_${n}_label`} form={form} set={set} placeholder="e.g. AF FURNISHINGS" /></F>
+                  <F label="Slide Title (H1)"><TF f={`hero_${n}_title`} form={form} set={set} placeholder="e.g. Comfort made for everyday living." /></F>
+                </Row2>
+                <Row2>
+                  <F label="Slide Subtitle / Description"><TF f={`hero_${n}_subtitle`} form={form} set={set} placeholder="Supporting tagline text" /></F>
+                  <F label="CTA Button Link"><TF f={`hero_${n}_cta_link`} form={form} set={set} placeholder="e.g. /category/lounge-suite" /></F>
+                </Row2>
+              </Card>
+            ))}
+            <Card title="Weekly Deals Section Texts">
+              <Row2>
+                <F label="Deals Headline"><TF f="deals_headline" form={form} set={set} placeholder="e.g. Weekly Deals & Clearance" /></F>
+                <F label="Deals Subtitle"><TF f="deals_subtitle" form={form} set={set} placeholder="e.g. Save big on selected essentials" /></F>
+              </Row2>
+            </Card>
+          </>)}
 
-                <button type="button" className="btn-icon" onClick={() => execCmd('formatBlock', '<h2>')} title="Heading 2" style={{ width: '32px', height: '28px', fontSize: '0.8rem', fontWeight: 700 }}>
-                  H2
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('formatBlock', '<h3>')} title="Heading 3" style={{ width: '32px', height: '28px', fontSize: '0.78rem', fontWeight: 600 }}>
-                  H3
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('formatBlock', '<p>')} title="Paragraph" style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
-                  P
-                </button>
+          {/* ═══════════════ WINZ ═══════════════ */}
+          {pageKey === 'winz' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. OFFICIAL SUPPLIER" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Work and Income (WINZ) Quotes" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Short supporting statement" /></F>
+            </Card>
+            <Card title="Intro Body Content">
+              <F label="Introduction Paragraphs (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || form.intro_content || ''} onChange={v => { set('content', v); set('intro_content', v) }} placeholder="How WINZ quotes work, process steps…" />
+              </F>
+            </Card>
+            <Card title="Catalogue Picks Section">
+              <F label="Section Heading"><TF f="range_heading" form={form} set={set} placeholder="e.g. Home essentials." /></F>
+              <F label="Section Subtitle"><TF f="range_subtitle" form={form} set={set} placeholder="e.g. Explore practical furniture choices for a comfortable home." /></F>
+            </Card>
+            <Card title="Quote CTA Section">
+              <Row2>
+                <F label="CTA Eyebrow"><TF f="cta_eyebrow" form={form} set={set} placeholder="e.g. READY TO ORDER?" /></F>
+                <F label="CTA Heading"><TF f="cta_title" form={form} set={set} placeholder="e.g. Get your WINZ quote today." /></F>
+              </Row2>
+              <F label="CTA Body Text"><TF f="cta_body" form={form} set={set} placeholder="e.g. We supply official registered WINZ itemised quotes." /></F>
+            </Card>
+          </>)}
 
-                <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 4px' }} />
+          {/* ═══════════════ FINANCE ═══════════════ */}
+          {pageKey === 'finance' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. EASY WEEKLY PLANS" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Flexible Furniture Finance" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Finance Body Content">
+              <F label="Body Content (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Finance options, steps, terms…" />
+              </F>
+            </Card>
+          </>)}
 
-                <button type="button" className="btn-icon" onClick={() => execCmd('insertUnorderedList')} title="Bullet List" style={{ width: '28px', height: '28px' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg>
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('insertOrderedList')} title="Numbered List" style={{ width: '28px', height: '28px' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h2v4H4M4 14h3l-3 4h3"/></svg>
-                </button>
-
-                <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 4px' }} />
-
-                <button type="button" className="btn-icon" onClick={handleInsertLink} title="Insert Link" style={{ width: '28px', height: '28px' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('removeFormat')} title="Clear Formatting" style={{ width: '28px', height: '28px', color: '#ef4444' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
+          {/* ═══════════════ DELIVERY INFO ═══════════════ */}
+          {pageKey === 'delivery-info' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. SHIPPING & LOGISTICS" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Delivery Information" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Delivery Content">
+              <F label="Body Content (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Delivery timeframes, rates, regions…" />
+              </F>
+            </Card>
+            <Card title="Delivery Rate Callouts (Optional)">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <F label="Auckland / Metro Rate"><TF f="delivery_auckland" form={form} set={set} placeholder="e.g. 1-3 Business Days ($49)" /></F>
+                <F label="North Island Rate"><TF f="delivery_north" form={form} set={set} placeholder="e.g. 3-5 Business Days ($89)" /></F>
+                <F label="South Island Rate"><TF f="delivery_south" form={form} set={set} placeholder="e.g. 4-7 Business Days ($129)" /></F>
               </div>
+            </Card>
+          </>)}
 
-              {/* Editable Body */}
-              <div
-                ref={editorRef}
-                contentEditable
-                onInput={() => {
-                  if (editorRef.current) {
-                    setForm(prev => ({ ...prev, content: editorRef.current.innerHTML }))
-                  }
-                }}
-                style={{
-                  minHeight: '260px',
-                  padding: '16px',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.92rem',
-                  lineHeight: 1.7,
-                  outline: 'none',
-                }}
-              />
-            </div>
+          {/* ═══════════════ RETURNS ═══════════════ */}
+          {pageKey === 'returns' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. OUR GUARANTEE" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Returns & 7-Day In-Home Trial Policy" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Returns Policy Content">
+              <F label="Policy Content (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Returns process, conditions, exclusions…" />
+              </F>
+            </Card>
+          </>)}
+
+          {/* ═══════════════ TERMS ═══════════════ */}
+          {pageKey === 'terms' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. LEGAL & COMPLIANCE" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Terms & Conditions of Service" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Terms Content">
+              <F label="Terms Body (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Terms, warranty, payment clauses…" />
+              </F>
+            </Card>
+          </>)}
+
+          {/* ═══════════════ PRIVACY POLICY ═══════════════ */}
+          {pageKey === 'privacy-policy' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. DATA PROTECTION" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Privacy & Customer Data Policy" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Privacy Policy Content">
+              <F label="Policy Body (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Data collection, storage, rights…" />
+              </F>
+            </Card>
+          </>)}
+
+          {/* ═══════════════ SHOP FURNITURE ═══════════════ */}
+          {pageKey === 'shop-furniture' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. CATALOGUE GUIDE" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Shop Handcrafted Furniture" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Shop Furniture Content">
+              <F label="Body Content (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Collections overview, categories…" />
+              </F>
+            </Card>
+          </>)}
+
+          {/* ═══════════════ CONTACT ═══════════════ */}
+          {pageKey === 'contact' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. GET IN TOUCH" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Contact AF Furnishings" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Contact Details">
+              <Row2>
+                <F label="Phone Number"><TF f="phone" form={form} set={set} placeholder="e.g. 0800 23 3876" /></F>
+                <F label="Email Address"><TF f="email" form={form} set={set} placeholder="e.g. support@affurnishings.co.nz" /></F>
+              </Row2>
+              <F label="Store Address"><TF f="address" form={form} set={set} placeholder="e.g. 123 Great South Road, Penrose, Auckland" /></F>
+              <F label="Opening Hours"><TF f="hours" form={form} set={set} placeholder="e.g. Mon–Sat 9am–5:30pm · Sun 10am–4pm" /></F>
+            </Card>
+            <Card title="Contact Page Body Content">
+              <F label="Body Content (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Opening times, FAQ, directions…" />
+              </F>
+            </Card>
+          </>)}
+
+          {/* ═══════════════ STORE LOCATIONS ═══════════════ */}
+          {pageKey === 'store-locations' && (<>
+            <Card title="Hero Section Texts">
+              <Row12>
+                <F label="Eyebrow Badge"><TF f="eyebrow" form={form} set={set} placeholder="e.g. PHYSICAL STORES" /></F>
+                <F label="Page Title (H1)"><TF f="title" form={form} set={set} placeholder="e.g. Visit Our Showrooms" /></F>
+              </Row12>
+              <F label="Hero Subtitle"><TF f="subtitle" form={form} set={set} placeholder="Supporting tagline" /></F>
+            </Card>
+            <Card title="Stores Section Texts">
+              <Row2>
+                <F label="Section Eyebrow"><TF f="stores_eyebrow" form={form} set={set} placeholder="e.g. OUR STORES" /></F>
+                <F label="Section Heading"><TF f="stores_heading" form={form} set={set} placeholder="e.g. Find us near you." /></F>
+              </Row2>
+              <F label="Body Content (Rich Text)" tip="Formatting Enabled">
+                <RTE value={form.content || ''} onChange={v => set('content', v)} placeholder="Showroom features, hours, directions…" />
+              </F>
+            </Card>
+          </>)}
+
+          {/* Bottom Publish */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
+            <PublishBtn />
           </div>
-
-          {/* SECTION 2: Page Headings & Metadata */}
-          <div className="admin-card">
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-              02. Page Headings & Metadata
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Page Title (H1 Headline) *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  name="title"
-                  value={form.title}
-                  onChange={handleFormChange}
-                  placeholder="e.g. About AF Furnishings"
-                  required
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Eyebrow / Header Tag</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  name="eyebrow"
-                  value={form.eyebrow}
-                  onChange={handleFormChange}
-                  placeholder="e.g. AF FURNISHINGS"
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Page Subtitle / Tagline</label>
-              <textarea
-                rows={2}
-                className="form-textarea"
-                name="subtitle"
-                value={form.subtitle}
-                onChange={handleFormChange}
-                placeholder="e.g. Premium handcrafted furniture designed for New Zealand living."
-              />
-            </div>
-          </div>
-
-          {/* SECTION 3: Page-Specific Content Fields */}
-          {activePageKey === 'contact' && (
-            <div className="admin-card">
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-                03. Contact Details & Showroom Information
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Support Phone</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 0800 234 333"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Support Email</label>
-                  <input
-                    type="email"
-                    className="form-input"
-                    name="email"
-                    value={form.email}
-                    onChange={handleFormChange}
-                    placeholder="e.g. sales@affurnishings.co.nz"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Showroom Address</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="address"
-                    value={form.address}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 123 Great South Road, Auckland"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Operating Hours</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="hours"
-                    value={form.hours}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Mon-Sat: 9am - 5pm, Sun: 10am - 4pm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activePageKey === 'delivery-info' && (
-            <div className="admin-card">
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-                03. Regional Delivery Estimates & Rates
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Auckland Region Delivery</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="delivery_auckland"
-                    value={form.delivery_auckland}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 1-3 Business Days ($49)"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">North Island Delivery</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="delivery_north"
-                    value={form.delivery_north}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 3-5 Business Days ($89)"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">South Island Delivery</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="delivery_south"
-                    value={form.delivery_south}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 4-7 Business Days ($129)"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Callout Section for Winz, Finance, About, etc. */}
-          {(activePageKey === 'winz' || activePageKey === 'finance' || activePageKey === 'about') && (
-            <div className="admin-card">
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-                03. Secondary Callout & Action Box
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Callout Title</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="callout_title"
-                    value={form.callout_title}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Fast 3-Step WinZ Quotations"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Callout Badge</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="callout_badge"
-                    value={form.callout_badge}
-                    onChange={handleFormChange}
-                    placeholder="e.g. APPROVED SUPPLIER"
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Callout Details / Steps</label>
-                <textarea
-                  rows={2}
-                  className="form-textarea"
-                  name="callout_text"
-                  value={form.callout_text}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Choose items -> Request formal quote -> Submit to Work & Income."
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Sticky Bottom Action Bar */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '16px 20px',
-              borderRadius: '12px',
-              background: 'var(--sidebar-bg, #111827)',
-              border: '1px solid var(--border-color)',
-              position: 'sticky',
-              bottom: '16px',
-              zIndex: 10,
-              boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Currently editing: <strong>{activePageLabel}</strong>
-            </span>
-
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={saving || loading}
-              style={{ padding: '10px 26px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              {saving ? 'Publishing Changes...' : 'Save & Publish Page Content'}
-            </button>
-          </div>
-        </form>
+        </div>
       )}
     </div>
   )

@@ -129,33 +129,47 @@ function ContactEnquiries({ token }) {
           align-items: center;
           justify-content: space-between;
           flex-wrap: wrap;
-          gap: 16px;
-          margin-bottom: 24px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--border-color);
+          gap: 14px;
+          margin-bottom: 20px;
+          padding: 16px 20px;
+          background: var(--sidebar-bg, #2a3142);
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
         }
 
         .inbox-title {
-          font-size: 1.5rem;
-          font-weight: 800;
-          margin: 0 0 4px;
+          font-size: 1.2rem;
+          font-weight: 700;
+          margin: 0 0 3px;
+          color: var(--text-primary);
+          letter-spacing: -0.2px;
         }
 
         .inbox-sub {
-          font-size: 0.88rem;
+          font-size: 0.8rem;
           color: var(--text-secondary);
           margin: 0;
+          font-weight: 400;
         }
 
         .inbox-search {
-          padding: 10px 14px;
-          background: var(--input-bg, rgba(255,255,255,0.05));
+          padding: 9px 14px;
+          background: var(--header-bg, #222736);
           border: 1px solid var(--border-color);
           border-radius: 8px;
           color: var(--text-primary);
-          font-size: 0.9rem;
-          min-width: 260px;
+          font-size: 0.88rem;
+          min-width: 240px;
+          max-width: 320px;
+          outline: none;
+          transition: border-color 0.18s;
         }
+        .inbox-search:focus {
+          border-color: var(--accent-color, #d4af37);
+          box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
+        }
+        .inbox-search::placeholder { color: var(--text-secondary); opacity: 0.7; }
+
 
         .inbox-card {
           background: var(--card-bg, rgba(255, 255, 255, 0.03));

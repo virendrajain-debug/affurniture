@@ -1,13 +1,16 @@
 // ============================================================
-// Premium CMS Page Content Studio (Strictly Text & Rich Content)
+// Premium CMS Page Content & Text Studio
 // ============================================================
 // Features:
-//  - Top Left Page Selector Dropdown (About, WinZ, Finance, Delivery, Returns, Terms, Privacy, Shop Furniture, Contact, Home)
-//  - Top: Full WYSIWYG Rich Text Editor with Text Formatting Toolbar
-//  - Below: All structured text fields available on that page (Headings, Subtitles, Intro, Callouts, Contact, Delivery Rates)
-//  - ZERO BANNER UPLOADS (Banners are managed in the dedicated Banners Studio)
-//  - Sticky bottom publish bar with instant toast confirmation
-//  - API: GET /api/pages/:pageKey & PUT /api/pages/:pageKey
+//   - Dropdown page selector (About Us, Home, WinZ, Finance, Delivery, Returns, Terms, Privacy, Shop Furniture, Contact, Store Locations)
+//   - For About Us Page:
+//     - 1. Top Hero Eyebrow, Title, Subtitle
+//     - 2. Our Story Section: Title + Rich Text Formatted Story Content
+//     - 3. Our Values 3-Grid: Title + Rich Text Formatted Description (NO subtitle!)
+//     - 4. Showroom Showcase: Headline + Rich Text Formatted Description
+//   - For Home Page: Hero Carousel Titles/Subtitles & Deals Text
+//   - For Standard CMS Pages: Eyebrow, Title, Subtitle & Full Rich Text WYSIWYG Content
+//   - Sticky top and bottom publish buttons with instant toast feedback
 // ============================================================
 
 import React, { useState, useEffect, useRef } from 'react'
@@ -15,8 +18,65 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { API_BASE } from '../config'
 import { getAuthToken } from '../utils/api'
 
+// Rich Text Editor Component
+function RichTextEditor({ value, onChange, placeholder = 'Enter formatted text content...' }) {
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== (value || '')) {
+      editorRef.current.innerHTML = value || ''
+    }
+  }, [value])
+
+  const execCmd = (cmd, arg = null) => {
+    document.execCommand(cmd, false, arg)
+    if (editorRef.current) onChange(editorRef.current.innerHTML)
+  }
+
+  const handleInput = () => {
+    if (editorRef.current) onChange(editorRef.current.innerHTML)
+  }
+
+  return (
+    <div style={{ borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--card-bg, #1f2937)', overflow: 'hidden' }}>
+      {/* Formatting Toolbar */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 10px', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+        <button type="button" onClick={() => execCmd('bold')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Bold"><strong>B</strong></button>
+        <button type="button" onClick={() => execCmd('italic')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Italic"><em>I</em></button>
+        <button type="button" onClick={() => execCmd('underline')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Underline"><u>U</u></button>
+        <button type="button" onClick={() => execCmd('formatBlock', '<h2>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Heading 2">H2</button>
+        <button type="button" onClick={() => execCmd('formatBlock', '<h3>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Heading 3">H3</button>
+        <button type="button" onClick={() => execCmd('formatBlock', '<p>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Paragraph">P</button>
+        <button type="button" onClick={() => execCmd('insertUnorderedList')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Bullet List">• List</button>
+        <button type="button" onClick={() => execCmd('insertOrderedList')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Numbered List">1. List</button>
+        <button type="button" onClick={() => execCmd('removeFormat')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto' }} title="Clear Formatting">✕</button>
+      </div>
+
+      {/* Content Area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        onBlur={handleInput}
+        data-placeholder={placeholder}
+        style={{
+          minHeight: '120px',
+          maxHeight: '260px',
+          overflowY: 'auto',
+          padding: '12px 14px',
+          color: 'var(--text-primary)',
+          fontSize: '0.85rem',
+          lineHeight: 1.5,
+          outline: 'none',
+        }}
+      />
+    </div>
+  )
+}
+
 const PAGES_LIST = [
   { key: 'about', label: 'About Us Page' },
+  { key: 'home', label: 'Home Page CMS Text' },
   { key: 'winz', label: 'WinZ Quotes Page' },
   { key: 'finance', label: 'Finance Guide Page' },
   { key: 'delivery-info', label: 'Delivery Information Page' },
@@ -25,7 +85,7 @@ const PAGES_LIST = [
   { key: 'privacy-policy', label: 'Privacy Policy Page' },
   { key: 'shop-furniture', label: 'Shop Furniture Guide Page' },
   { key: 'contact', label: 'Contact Us Page' },
-  { key: 'home', label: 'Home Page CMS Text' },
+  { key: 'store-locations', label: 'Store Locations Page' },
 ]
 
 function PageEditor({ token }) {
@@ -36,29 +96,11 @@ function PageEditor({ token }) {
     routeKey ? (routeKey === 'winz-quotes' ? 'winz' : routeKey === 'finance-guide' ? 'finance' : routeKey) : 'about'
   )
 
-  const [form, setForm] = useState({
-    title: '',
-    subtitle: '',
-    eyebrow: '',
-    content: '',
-    intro_content: '',
-    callout_title: '',
-    callout_text: '',
-    callout_badge: '',
-    phone: '',
-    email: '',
-    address: '',
-    hours: '',
-    delivery_auckland: '',
-    delivery_north: '',
-    delivery_south: '',
-  })
-
+  const [form, setForm] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
 
-  const editorRef = useRef(null)
   const authToken = getAuthToken(token)
 
   const showToast = (msg, type = 'info') => {
@@ -66,41 +108,18 @@ function PageEditor({ token }) {
     setTimeout(() => setToast(null), 3500)
   }
 
-  // Load page data
   const loadPageData = async (pageKey) => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/pages/${pageKey}`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-      })
+      const res = await fetch(`${API_BASE}/api/pages/${pageKey}`)
       if (res.ok) {
         const data = await res.json()
         if (data && typeof data === 'object') {
-          const pageTitleFallback = PAGES_LIST.find(p => p.key === pageKey)?.label.replace(' Page', '') || ''
-          setForm({
-            title: data.title || data.company_name || pageTitleFallback,
-            subtitle: data.subtitle || data.tagline || '',
-            eyebrow: data.eyebrow || data.promo_badge || 'AF FURNISHINGS',
-            content: data.content || data.about_story || data.description || '',
-            intro_content: data.intro_content || '',
-            callout_title: data.callout_title || data.promo_title || '',
-            callout_text: data.callout_text || '',
-            callout_badge: data.callout_badge || '',
-            phone: data.phone || data.support_phone || '',
-            email: data.email || data.support_email || '',
-            address: data.address || data.store_address || '',
-            hours: data.hours || data.opening_hours || '',
-            delivery_auckland: data.delivery_auckland || '1-3 Business Days ($49)',
-            delivery_north: data.delivery_north || '3-5 Business Days ($89)',
-            delivery_south: data.delivery_south || '4-7 Business Days ($129)',
-          })
-          if (editorRef.current) {
-            editorRef.current.innerHTML = data.content || data.about_story || data.description || ''
-          }
+          setForm(data)
         }
       }
     } catch {
-      showToast('Failed to load page content', 'error')
+      showToast('Failed to load page text from server', 'error')
     } finally {
       setLoading(false)
     }
@@ -110,41 +129,13 @@ function PageEditor({ token }) {
     loadPageData(activePageKey)
   }, [activePageKey])
 
-  // Handle page dropdown switch
-  const handlePageDropdownChange = (newKey) => {
-    setActivePageKey(newKey)
-    navigate(`/dashboard/pages/${newKey}`)
+  const handleFieldChange = (key, val) => {
+    setForm(prev => ({ ...prev, [key]: val }))
   }
 
-  // Handle form change
-  const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
-  }
-
-  // Rich Text Editor Commands
-  const execCmd = (cmd, val = null) => {
-    document.execCommand(cmd, false, val)
-    if (editorRef.current) {
-      editorRef.current.focus()
-      setForm(prev => ({ ...prev, content: editorRef.current.innerHTML }))
-    }
-  }
-
-  const handleInsertLink = () => {
-    const url = window.prompt('Enter link URL (e.g. https://...):')
-    if (url) execCmd('createLink', url)
-  }
-
-  // Save Page Content
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSave = async (e) => {
+    if (e) e.preventDefault()
     setSaving(true)
-
-    const payload = {
-      ...form,
-      content: editorRef.current ? editorRef.current.innerHTML : form.content,
-    }
 
     try {
       const res = await fetch(`${API_BASE}/api/pages/${activePageKey}`, {
@@ -153,14 +144,15 @@ function PageEditor({ token }) {
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(form),
       })
 
       if (res.ok) {
-        showToast(`${PAGES_LIST.find(p => p.key === activePageKey)?.label} updated successfully!`, 'success')
+        showToast('Page text & formatted descriptions published live!', 'success')
+        loadPageData(activePageKey)
       } else {
         const d = await res.json().catch(() => ({}))
-        showToast(d.message || 'Failed to update page', 'error')
+        showToast(d.message || 'Failed to save page', 'error')
       }
     } catch {
       showToast('Server connection error', 'error')
@@ -169,13 +161,11 @@ function PageEditor({ token }) {
     }
   }
 
-  const activePageLabel = PAGES_LIST.find(p => p.key === activePageKey)?.label || 'Page Content'
-
   return (
     <div className="admin-page" style={{ maxWidth: '1100px', margin: '0 auto' }}>
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      {/* Top Filter Toolbar (Top Left Page Selector Dropdown) */}
+      {/* Top Filter Toolbar */}
       <div
         className="filter-toolbar"
         style={{
@@ -193,18 +183,19 @@ function PageEditor({ token }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
-            Selected Page:
+            Select Page to Edit Texts:
           </label>
           <select
             className="filter-select"
             value={activePageKey}
-            onChange={(e) => handlePageDropdownChange(e.target.value)}
-            style={{ minWidth: '260px', fontWeight: 600 }}
+            onChange={(e) => {
+              setActivePageKey(e.target.value)
+              navigate(`/dashboard/pages/${e.target.value}`)
+            }}
+            style={{ minWidth: '300px', fontWeight: 600 }}
           >
-            {PAGES_LIST.map(opt => (
-              <option key={opt.key} value={opt.key}>
-                {opt.label}
-              </option>
+            {PAGES_LIST.map(p => (
+              <option key={p.key} value={p.key}>{p.label}</option>
             ))}
           </select>
         </div>
@@ -212,327 +203,223 @@ function PageEditor({ token }) {
         <button
           type="button"
           className="btn-primary"
-          onClick={handleSubmit}
+          onClick={handleSave}
           disabled={saving || loading}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '0.88rem' }}
+          style={{ padding: '8px 22px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
         >
-          {saving ? 'Publishing...' : 'Save & Publish Page'}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {saving ? 'Publishing...' : 'Publish Page Texts'}
         </button>
       </div>
 
       {loading ? (
-        <div className="admin-card" style={{ textAlign: 'center', padding: '50px', color: 'var(--text-secondary)' }}>
-          Loading {activePageLabel} text...
+        <div className="admin-card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+          Loading page content...
         </div>
       ) : (
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          
-          {/* TOP SECTION: Rich Text Editor with Formatting Toolbar */}
-          <div className="admin-card">
-            <div className="admin-card-header" style={{ marginBottom: '12px' }}>
-              <div>
-                <h3 className="admin-card-title">
-                  Primary Page Body & Paragraph Content
-                </h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Main formatted text displayed on the public storefront for this page.
-                </span>
-              </div>
-            </div>
-
-            {/* Rich Text Editor */}
-            <div style={{ borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--header-bg)', overflow: 'hidden' }}>
-              {/* Text Formatting Toolbar */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 12px', background: 'var(--sidebar-bg)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
-                <button type="button" className="btn-icon" onClick={() => execCmd('bold')} title="Bold" style={{ width: '28px', height: '28px', fontWeight: 700 }}>
-                  B
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('italic')} title="Italic" style={{ width: '28px', height: '28px', fontStyle: 'italic' }}>
-                  I
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('underline')} title="Underline" style={{ width: '28px', height: '28px', textDecoration: 'underline' }}>
-                  U
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('strikeThrough')} title="Strikethrough" style={{ width: '28px', height: '28px', textDecoration: 'line-through' }}>
-                  S
-                </button>
-
-                <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 4px' }} />
-
-                <button type="button" className="btn-icon" onClick={() => execCmd('formatBlock', '<h2>')} title="Heading 2" style={{ width: '32px', height: '28px', fontSize: '0.8rem', fontWeight: 700 }}>
-                  H2
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('formatBlock', '<h3>')} title="Heading 3" style={{ width: '32px', height: '28px', fontSize: '0.78rem', fontWeight: 600 }}>
-                  H3
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('formatBlock', '<p>')} title="Paragraph" style={{ width: '28px', height: '28px', fontSize: '0.8rem' }}>
-                  P
-                </button>
-
-                <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 4px' }} />
-
-                <button type="button" className="btn-icon" onClick={() => execCmd('insertUnorderedList')} title="Bullet List" style={{ width: '28px', height: '28px' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor"/><circle cx="4" cy="12" r="1.5" fill="currentColor"/><circle cx="4" cy="18" r="1.5" fill="currentColor"/></svg>
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('insertOrderedList')} title="Numbered List" style={{ width: '28px', height: '28px' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h2v4H4M4 14h3l-3 4h3"/></svg>
-                </button>
-
-                <span style={{ width: '1px', height: '18px', background: 'var(--border-color)', margin: '0 4px' }} />
-
-                <button type="button" className="btn-icon" onClick={handleInsertLink} title="Insert Link" style={{ width: '28px', height: '28px' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                </button>
-                <button type="button" className="btn-icon" onClick={() => execCmd('removeFormat')} title="Clear Formatting" style={{ width: '28px', height: '28px', color: '#ef4444' }}>
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-
-              {/* Editable Body */}
-              <div
-                ref={editorRef}
-                contentEditable
-                onInput={() => {
-                  if (editorRef.current) {
-                    setForm(prev => ({ ...prev, content: editorRef.current.innerHTML }))
-                  }
-                }}
-                style={{
-                  minHeight: '260px',
-                  padding: '16px',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.92rem',
-                  lineHeight: 1.7,
-                  outline: 'none',
-                }}
-              />
-            </div>
-          </div>
-
-          {/* SECTION 2: Page Headings & Metadata */}
-          <div className="admin-card">
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-              02. Page Headings & Metadata
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Page Title (H1 Headline) *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  name="title"
-                  value={form.title}
-                  onChange={handleFormChange}
-                  placeholder="e.g. About AF Furnishings"
-                  required
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Eyebrow / Header Tag</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  name="eyebrow"
-                  value={form.eyebrow}
-                  onChange={handleFormChange}
-                  placeholder="e.g. AF FURNISHINGS"
-                />
-              </div>
-            </div>
-
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Page Subtitle / Tagline</label>
-              <textarea
-                rows={2}
-                className="form-textarea"
-                name="subtitle"
-                value={form.subtitle}
-                onChange={handleFormChange}
-                placeholder="e.g. Premium handcrafted furniture designed for New Zealand living."
-              />
-            </div>
-          </div>
-
-          {/* SECTION 3: Page-Specific Content Fields */}
-          {activePageKey === 'contact' && (
-            <div className="admin-card">
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-                03. Contact Details & Showroom Information
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Support Phone</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 0800 234 333"
-                  />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          {/* ============================================================
+              1. ABOUT US PAGE TEXT STUDIO
+          ============================================================ */}
+          {activePageKey === 'about' && (
+            <>
+              {/* Section 1: Top Hero Header */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  1. Top Hero Header Text
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '14px', marginBottom: '12px' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Eyebrow / Tagline</label>
+                    <input type="text" className="form-input" value={form.eyebrow || ''} onChange={(e) => handleFieldChange('eyebrow', e.target.value)} placeholder="e.g. OUR STORY" />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Page Main Title</label>
+                    <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="e.g. About AF Furnishings" />
+                  </div>
                 </div>
-
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Support Email</label>
-                  <input
-                    type="email"
-                    className="form-input"
-                    name="email"
-                    value={form.email}
-                    onChange={handleFormChange}
-                    placeholder="e.g. sales@affurnishings.co.nz"
-                  />
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Hero Subtitle</label>
+                  <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="e.g. Quality furniture for every New Zealand home" />
                 </div>
+              </div>
 
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Showroom Address</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="address"
-                    value={form.address}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 123 Great South Road, Auckland"
-                  />
+              {/* Section 2: Our Story Feature Section */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  2. Our Story Feature Text &amp; Rich Description
+                </h4>
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Story Section Title</label>
+                  <input type="text" className="form-input" value={form.story_title || ''} onChange={(e) => handleFieldChange('story_title', e.target.value)} placeholder="e.g. Who We Are" />
                 </div>
-
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Operating Hours</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="hours"
-                    value={form.hours}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Mon-Sat: 9am - 5pm, Sun: 10am - 4pm"
-                  />
+                  <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Formatted Story Description *</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--accent-color, #d4af37)' }}>Rich Text Formatting Enabled</span>
+                  </label>
+                  <RichTextEditor value={form.story_content || ''} onChange={(val) => handleFieldChange('story_content', val)} placeholder="Enter company background and story..." />
+                </div>
+              </div>
+
+              {/* Section 3: Our Values 3-Grid (Title & Description Only, NO Subtitle) */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  3. Our Values 3-Grid (Title &amp; Description Only)
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                  {/* Card 1 */}
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 1 Title</label>
+                      <input type="text" className="form-input" value={form.val_1_title || ''} onChange={(e) => handleFieldChange('val_1_title', e.target.value)} placeholder="e.g. Quality First" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 1 Description</label>
+                      <RichTextEditor value={form.val_1_desc || ''} onChange={(val) => handleFieldChange('val_1_desc', val)} placeholder="Enter description..." />
+                    </div>
+                  </div>
+
+                  {/* Card 2 */}
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 2 Title</label>
+                      <input type="text" className="form-input" value={form.val_2_title || ''} onChange={(e) => handleFieldChange('val_2_title', e.target.value)} placeholder="e.g. Comfort Always" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 2 Description</label>
+                      <RichTextEditor value={form.val_2_desc || ''} onChange={(val) => handleFieldChange('val_2_desc', val)} placeholder="Enter description..." />
+                    </div>
+                  </div>
+
+                  {/* Card 3 */}
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div className="form-group" style={{ marginBottom: '10px' }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 3 Title</label>
+                      <input type="text" className="form-input" value={form.val_3_title || ''} onChange={(e) => handleFieldChange('val_3_title', e.target.value)} placeholder="e.g. For Every Home" />
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 3 Description</label>
+                      <RichTextEditor value={form.val_3_desc || ''} onChange={(val) => handleFieldChange('val_3_desc', val)} placeholder="Enter description..." />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Showroom Showcase Text */}
+              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
+                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  4. Showroom Showcase Text &amp; Description
+                </h4>
+                <div className="form-group" style={{ marginBottom: '12px' }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Showroom Section Headline</label>
+                  <input type="text" className="form-input" value={form.showroom_title || ''} onChange={(e) => handleFieldChange('showroom_title', e.target.value)} placeholder="e.g. Experience Comfort in Person" />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Showroom Formatted Description</label>
+                  <RichTextEditor value={form.showroom_desc || ''} onChange={(val) => handleFieldChange('showroom_desc', val)} placeholder="Enter showroom description..." />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ============================================================
+              2. HOME PAGE CMS TEXT
+          ============================================================ */}
+          {activePageKey === 'home' && (
+            <div className="admin-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                Homepage Hero Slides Text &amp; Deals
+              </h4>
+
+              {/* Slide 1 */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Hero Slide 1 Text</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <input type="text" className="form-input" value={form.hero_1_title || ''} onChange={(e) => handleFieldChange('hero_1_title', e.target.value)} placeholder="Slide 1 Title" />
+                  <input type="text" className="form-input" value={form.hero_1_subtitle || ''} onChange={(e) => handleFieldChange('hero_1_subtitle', e.target.value)} placeholder="Slide 1 Subtitle" />
+                </div>
+              </div>
+
+              {/* Slide 2 */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Hero Slide 2 Text</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <input type="text" className="form-input" value={form.hero_2_title || ''} onChange={(e) => handleFieldChange('hero_2_title', e.target.value)} placeholder="Slide 2 Title" />
+                  <input type="text" className="form-input" value={form.hero_2_subtitle || ''} onChange={(e) => handleFieldChange('hero_2_subtitle', e.target.value)} placeholder="Slide 2 Subtitle" />
+                </div>
+              </div>
+
+              {/* Slide 3 */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Hero Slide 3 Text</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <input type="text" className="form-input" value={form.hero_3_title || ''} onChange={(e) => handleFieldChange('hero_3_title', e.target.value)} placeholder="Slide 3 Title" />
+                  <input type="text" className="form-input" value={form.hero_3_subtitle || ''} onChange={(e) => handleFieldChange('hero_3_subtitle', e.target.value)} placeholder="Slide 3 Subtitle" />
+                </div>
+              </div>
+
+              {/* Deals Text */}
+              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Deals Section Text</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <input type="text" className="form-input" value={form.deals_headline || ''} onChange={(e) => handleFieldChange('deals_headline', e.target.value)} placeholder="Deals Headline" />
+                  <input type="text" className="form-input" value={form.deals_subtitle || ''} onChange={(e) => handleFieldChange('deals_subtitle', e.target.value)} placeholder="Deals Subtitle" />
                 </div>
               </div>
             </div>
           )}
 
-          {activePageKey === 'delivery-info' && (
-            <div className="admin-card">
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-                03. Regional Delivery Estimates & Rates
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Auckland Region Delivery</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="delivery_auckland"
-                    value={form.delivery_auckland}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 1-3 Business Days ($49)"
-                  />
-                </div>
+          {/* ============================================================
+              3. STANDARD CMS PAGES (WinZ, Delivery, Returns, Terms, Privacy, Shop Furniture, Contact, Store Locations)
+          ============================================================ */}
+          {activePageKey !== 'about' && activePageKey !== 'home' && (
+            <div className="admin-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                {PAGES_LIST.find(p => p.key === activePageKey)?.label} Content
+              </h4>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '14px' }}>
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">North Island Delivery</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="delivery_north"
-                    value={form.delivery_north}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 3-5 Business Days ($89)"
-                  />
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Eyebrow / Badge</label>
+                  <input type="text" className="form-input" value={form.eyebrow || ''} onChange={(e) => handleFieldChange('eyebrow', e.target.value)} placeholder="e.g. LEGAL / INFO" />
                 </div>
-
                 <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">South Island Delivery</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="delivery_south"
-                    value={form.delivery_south}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 4-7 Business Days ($129)"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Callout Section for Winz, Finance, About, etc. */}
-          {(activePageKey === 'winz' || activePageKey === 'finance' || activePageKey === 'about') && (
-            <div className="admin-card">
-              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '12px' }}>
-                03. Secondary Callout & Action Box
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Callout Title</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="callout_title"
-                    value={form.callout_title}
-                    onChange={handleFormChange}
-                    placeholder="e.g. Fast 3-Step WinZ Quotations"
-                  />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Callout Badge</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    name="callout_badge"
-                    value={form.callout_badge}
-                    onChange={handleFormChange}
-                    placeholder="e.g. APPROVED SUPPLIER"
-                  />
+                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Main Page Title</label>
+                  <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="Page Title" />
                 </div>
               </div>
 
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Callout Details / Steps</label>
-                <textarea
-                  rows={2}
-                  className="form-textarea"
-                  name="callout_text"
-                  value={form.callout_text}
-                  onChange={handleFormChange}
-                  placeholder="e.g. Choose items -> Request formal quote -> Submit to Work & Income."
-                />
+                <label className="form-label" style={{ fontSize: '0.78rem' }}>Page Subtitle</label>
+                <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="Page Subtitle" />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Main Body Content (Rich Text Formatted)</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--accent-color, #d4af37)' }}>Toolbar Formatting</span>
+                </label>
+                <RichTextEditor value={form.content || form.intro_content || ''} onChange={(val) => handleFieldChange('content', val)} placeholder="Enter full page content..." />
               </div>
             </div>
           )}
 
-          {/* Sticky Bottom Action Bar */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '16px 20px',
-              borderRadius: '12px',
-              background: 'var(--sidebar-bg, #111827)',
-              border: '1px solid var(--border-color)',
-              position: 'sticky',
-              bottom: '16px',
-              zIndex: 10,
-              boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-            }}
-          >
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Currently editing: <strong>{activePageLabel}</strong>
-            </span>
-
+          {/* Bottom Action Bar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
             <button
-              type="submit"
+              type="button"
               className="btn-primary"
+              onClick={handleSave}
               disabled={saving || loading}
-              style={{ padding: '10px 26px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              style={{ padding: '10px 28px', fontSize: '0.9rem', fontWeight: 700 }}
             >
-              {saving ? 'Publishing Changes...' : 'Save & Publish Page Content'}
+              {saving ? 'Publishing...' : 'Publish Page Texts'}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   )

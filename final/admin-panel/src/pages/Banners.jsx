@@ -1,81 +1,19 @@
 // ============================================================
-// Premium Banners Management Studio
+// Premium Banners Management Studio (Strictly Banners & Media Only)
 // ============================================================
 // Features:
-//   - Home Page: 3-Image Slider only (Hero Slide 1, 2, 3)
-//   - About Us Page: 1-1-3-1 layout with rich text editor for descriptions
-//     - Values 3-grid: ONLY Title & Description (No Subtitle)
-//   - Live active thumbnail & explicit 📁 Upload button
-//   - Uploaded Media Gallery with Red Cross delete button
+//   - ZERO text inputs (all text editing is in the Pages module)
+//   - Clean graphic management for every banner slot across all pages
+//   - Live active thumbnail preview & remove option
+//   - Explicit 📁 Upload Image button
+//   - Direct Image URL input with "Set URL"
+//   - Previously Uploaded Media Gallery with Red Cross delete button
+//   - Single "Save Banner" button per slot
 // ============================================================
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
-
-// Rich Text Editor Component for Banner Descriptions
-function RichTextDescriptionEditor({ value, onChange, placeholder = 'Enter formatted description...' }) {
-  const [mode, setMode] = useState('visual') // 'visual' | 'code'
-  const editorRef = useRef(null)
-
-  useEffect(() => {
-    if (editorRef.current && mode === 'visual') {
-      if (editorRef.current.innerHTML !== (value || '')) {
-        editorRef.current.innerHTML = value || ''
-      }
-    }
-  }, [value, mode])
-
-  const execCmd = (cmd, arg = null) => {
-    if (mode !== 'visual') return
-    document.execCommand(cmd, false, arg)
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML)
-    }
-  }
-
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML)
-    }
-  }
-
-  return (
-    <div style={{ borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--card-bg, #1f2937)', overflow: 'hidden', marginTop: '4px' }}>
-      {/* Editor Toolbar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '6px 8px', background: 'rgba(0,0,0,0.25)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
-        <button type="button" onClick={() => execCmd('bold')} style={{ padding: '2px 7px', fontSize: '0.78rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Bold"><strong>B</strong></button>
-        <button type="button" onClick={() => execCmd('italic')} style={{ padding: '2px 7px', fontSize: '0.78rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Italic"><em>I</em></button>
-        <button type="button" onClick={() => execCmd('underline')} style={{ padding: '2px 7px', fontSize: '0.78rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Underline"><u>U</u></button>
-        <button type="button" onClick={() => execCmd('formatBlock', '<h2>')} style={{ padding: '2px 6px', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Heading 2">H2</button>
-        <button type="button" onClick={() => execCmd('formatBlock', '<h3>')} style={{ padding: '2px 6px', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Heading 3">H3</button>
-        <button type="button" onClick={() => execCmd('formatBlock', '<p>')} style={{ padding: '2px 6px', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Paragraph">P</button>
-        <button type="button" onClick={() => execCmd('insertUnorderedList')} style={{ padding: '2px 6px', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Bullet List">• List</button>
-        <button type="button" onClick={() => execCmd('insertOrderedList')} style={{ padding: '2px 6px', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Numbered List">1. List</button>
-        <button type="button" onClick={() => execCmd('removeFormat')} style={{ padding: '2px 6px', fontSize: '0.75rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto' }} title="Clear Formatting">✕</button>
-      </div>
-
-      {/* Editable Area */}
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onBlur={handleInput}
-        data-placeholder={placeholder}
-        style={{
-          minHeight: '80px',
-          maxHeight: '180px',
-          overflowY: 'auto',
-          padding: '8px 10px',
-          color: 'var(--text-primary)',
-          fontSize: '0.82rem',
-          lineHeight: 1.45,
-          outline: 'none',
-        }}
-      />
-    </div>
-  )
-}
 
 const PAGE_DEFINITIONS = [
   {
@@ -86,9 +24,9 @@ const PAGE_DEFINITIONS = [
         title: 'Homepage Hero Carousel Slides (3-Column Grid)',
         isGrid: true,
         slots: [
-          { key: 'hero_1', name: 'Hero Slide 1 (Green Sofa)', desc: 'First rotating hero slide on the homepage.' },
-          { key: 'hero_2', name: 'Hero Slide 2 (Bedroom Suite)', desc: 'Second rotating hero slide on the homepage.' },
-          { key: 'hero_3', name: 'Hero Slide 3 (Dining Room)', desc: 'Third rotating hero slide on the homepage.' },
+          { key: 'hero_1', name: 'Hero Slide 1 (Green Sofa)', desc: 'First rotating hero slide on homepage.' },
+          { key: 'hero_2', name: 'Hero Slide 2 (Bedroom Suite)', desc: 'Second rotating hero slide on homepage.' },
+          { key: 'hero_3', name: 'Hero Slide 3 (Dining Room)', desc: 'Third rotating hero slide on homepage.' },
         ],
       },
     ],
@@ -99,24 +37,24 @@ const PAGE_DEFINITIONS = [
     sections: [
       {
         title: '1. Top Hero Header Banner',
-        slots: [{ key: 'hero', name: 'Top Hero Banner (1)', desc: 'Large hero header banner at the top of About Us page.', hasSubtitle: true }],
+        slots: [{ key: 'hero', name: 'Top Hero Header Banner (1)', desc: 'Large hero header banner at top of About Us page.' }],
       },
       {
         title: '2. Our Story Feature Section',
-        slots: [{ key: 'story', name: 'Our Story Feature Image & Description (1)', desc: 'Image and formatted story description beside the company details.', hasRichDesc: true, hasSubtitle: true }],
+        slots: [{ key: 'story', name: 'Our Story Feature Graphic (1)', desc: 'Feature image displayed beside the company story.' }],
       },
       {
-        title: '3. Our Values Grid (3-Column Layout - Title & Description Only)',
+        title: '3. Our Values Grid (3-Column Graphics)',
         isGrid: true,
         slots: [
-          { key: 'val_1', name: 'Quality First Card (3)', desc: 'First card in the 3-column values grid.', hasRichDesc: true, noSubtitle: true },
-          { key: 'val_2', name: 'Comfort Always Card (3)', desc: 'Second card in the 3-column values grid.', hasRichDesc: true, noSubtitle: true },
-          { key: 'val_3', name: 'For Every Home Card (3)', desc: 'Third card in the 3-column values grid.', hasRichDesc: true, noSubtitle: true },
+          { key: 'val_1', name: 'Quality First Card Graphic (3)', desc: 'Graphic for 1st value card.' },
+          { key: 'val_2', name: 'Comfort Always Card Graphic (3)', desc: 'Graphic for 2nd value card.' },
+          { key: 'val_3', name: 'For Every Home Card Graphic (3)', desc: 'Graphic for 3rd value card.' },
         ],
       },
       {
-        title: '4. Showroom Secondary Banner',
-        slots: [{ key: 'showroom', name: 'Showroom Secondary Banner (1)', desc: 'Secondary showroom banner with formatted description.', hasRichDesc: true, hasSubtitle: true }],
+        title: '4. Showroom Showcase Banner',
+        slots: [{ key: 'showroom', name: 'Showroom Showcase Banner (1)', desc: 'Showroom interior photograph or showcase banner.' }],
       },
     ],
   },
@@ -126,15 +64,15 @@ const PAGE_DEFINITIONS = [
     sections: [
       {
         title: 'Top Hero Banner',
-        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for Work and Income quotations guide.', hasSubtitle: true }],
+        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for Work and Income quotations guide.' }],
       },
       {
-        title: 'Catalogue Picks Grid (3-Column Frontend Layout)',
+        title: 'Catalogue Picks Grid (3-Column Graphics)',
         isGrid: true,
         slots: [
-          { key: 'cat_1', name: 'Catalogue Pick 1 (Haven Sofa)', desc: 'Living room suite catalogue pick.', hasSubtitle: true },
-          { key: 'cat_2', name: 'Catalogue Pick 2 (Willow Bedroom)', desc: 'Bedroom suite catalogue pick.', hasSubtitle: true },
-          { key: 'cat_3', name: 'Catalogue Pick 3 (Haven Dining)', desc: 'Dining collection catalogue pick.', hasSubtitle: true },
+          { key: 'cat_1', name: 'Catalogue Pick 1 Graphic (Haven Sofa)', desc: 'Living room suite catalogue pick.' },
+          { key: 'cat_2', name: 'Catalogue Pick 2 Graphic (Willow Bedroom)', desc: 'Bedroom suite catalogue pick.' },
+          { key: 'cat_3', name: 'Catalogue Pick 3 Graphic (Haven Dining)', desc: 'Dining collection catalogue pick.' },
         ],
       },
     ],
@@ -146,8 +84,8 @@ const PAGE_DEFINITIONS = [
       {
         title: 'Delivery & Logistics Layout',
         slots: [
-          { key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for nationwide logistics.', hasSubtitle: true },
-          { key: 'logistics', name: 'Logistics Fleet Photo', desc: 'Delivery truck or warehouse image.', hasSubtitle: true },
+          { key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for nationwide logistics.' },
+          { key: 'logistics', name: 'Logistics Fleet Photo', desc: 'Delivery truck or warehouse image.' },
         ],
       },
     ],
@@ -159,8 +97,8 @@ const PAGE_DEFINITIONS = [
       {
         title: 'Finance Guide Layout',
         slots: [
-          { key: 'hero', name: 'Top Hero Banner', desc: 'Hero header banner for Finance page.', hasSubtitle: true },
-          { key: 'feature', name: 'Finance Feature Guide Image', desc: 'Feature image for weekly repayment calculator.', hasSubtitle: true },
+          { key: 'hero', name: 'Top Hero Banner', desc: 'Hero header banner for Finance page.' },
+          { key: 'feature', name: 'Finance Feature Guide Image', desc: 'Feature image for weekly repayment calculator.' },
         ],
       },
     ],
@@ -171,7 +109,7 @@ const PAGE_DEFINITIONS = [
     sections: [
       {
         title: 'Returns Policy Header Banner',
-        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for 7-day returns policy.', hasSubtitle: true }],
+        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for 7-day returns policy.' }],
       },
     ],
   },
@@ -181,7 +119,7 @@ const PAGE_DEFINITIONS = [
     sections: [
       {
         title: 'Terms of Service Header Banner',
-        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for terms and warranty clauses.', hasSubtitle: true }],
+        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for terms and warranty clauses.' }],
       },
     ],
   },
@@ -191,7 +129,7 @@ const PAGE_DEFINITIONS = [
     sections: [
       {
         title: 'Privacy Policy Header Banner',
-        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for customer data privacy.', hasSubtitle: true }],
+        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for customer data privacy.' }],
       },
     ],
   },
@@ -201,7 +139,7 @@ const PAGE_DEFINITIONS = [
     sections: [
       {
         title: 'Shop Furniture Header Banner',
-        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for catalog showcase guide.', hasSubtitle: true }],
+        slots: [{ key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for catalog showcase guide.' }],
       },
     ],
   },
@@ -212,8 +150,8 @@ const PAGE_DEFINITIONS = [
       {
         title: 'Contact Header & Showroom Location',
         slots: [
-          { key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for contact enquiries.', hasSubtitle: true },
-          { key: 'showroom', name: 'Showroom Location Photo', desc: 'Photo of the physical showroom or store entrance.', hasSubtitle: true },
+          { key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for contact enquiries.' },
+          { key: 'showroom', name: 'Showroom Location Photo', desc: 'Photo of the physical showroom or store entrance.' },
         ],
       },
     ],
@@ -225,9 +163,9 @@ const PAGE_DEFINITIONS = [
       {
         title: 'Store Locations Header & Showrooms',
         slots: [
-          { key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for store locations.', hasSubtitle: true },
-          { key: 'auckland_store', name: 'Auckland Showroom Photo', desc: 'Photo of the Auckland showroom floor.', hasSubtitle: true },
-          { key: 'wellington_store', name: 'Wellington Showroom Photo', desc: 'Photo of the Wellington showroom floor.', hasSubtitle: true },
+          { key: 'hero', name: 'Top Hero Banner', desc: 'Header banner for store locations.' },
+          { key: 'auckland_store', name: 'Auckland Showroom Photo', desc: 'Photo of the Auckland showroom floor.' },
+          { key: 'wellington_store', name: 'Wellington Showroom Photo', desc: 'Photo of the Wellington showroom floor.' },
         ],
       },
     ],
@@ -299,13 +237,6 @@ function Banners({ token }) {
             page_key: selectedPage,
             slot: slot.key,
             image: existingBanner.image || '',
-            title: existingBanner.title || existingBanner.label || slot.name,
-            subtitle: existingBanner.subtitle || '',
-            description: existingBanner.description || existingBanner.subtitle || '',
-            label: existingBanner.label || slot.name,
-            cta_text: existingBanner.cta_text || '',
-            cta_link: existingBanner.cta_link || '',
-            active: existingBanner.active !== undefined ? Number(existingBanner.active) : 1,
             directUrl: '',
           }
         } else {
@@ -314,13 +245,6 @@ function Banners({ token }) {
             page_key: selectedPage,
             slot: slot.key,
             image: '',
-            title: slot.name,
-            subtitle: '',
-            description: '',
-            label: slot.name,
-            cta_text: '',
-            cta_link: '',
-            active: 1,
             directUrl: '',
           }
         }
@@ -406,13 +330,7 @@ function Banners({ token }) {
       const payload = {
         page_key: selectedPage,
         slot: slotKey,
-        title: draft.title || '',
-        subtitle: draft.subtitle || '',
-        description: draft.description || draft.subtitle || '',
-        label: draft.label || draft.title || slotKey,
         image: draft.image.trim(),
-        cta_text: draft.cta_text || '',
-        cta_link: draft.cta_link || '',
         active: 1,
         sort_order: 0,
       }
@@ -427,7 +345,7 @@ function Banners({ token }) {
       })
 
       if (res.ok) {
-        showToast('Banner saved & live on website frontend!', 'success')
+        showToast('Banner graphic saved & live on website frontend!', 'success')
         fetchBanners()
         fetchMediaGallery()
       } else {
@@ -472,28 +390,41 @@ function Banners({ token }) {
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: '8px',
-            paddingBottom: '12px',
+            paddingBottom: '10px',
             borderBottom: '1px solid var(--border-color)',
-            marginBottom: '14px',
+            marginBottom: '12px',
           }}
         >
           <div>
-            <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+            <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 600 }}>
               {slot.name}
             </h4>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               {slot.desc}
             </span>
           </div>
+
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => handleSaveSlot(slot.key)}
+            disabled={isSavingThis || isUploadingThis}
+            style={{ padding: '5px 14px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            {isSavingThis ? 'Saving...' : 'Save Banner'}
+          </button>
         </div>
 
         {/* Live Active Thumbnail Preview */}
-        <div style={{ marginBottom: '14px' }}>
+        <div style={{ marginBottom: '10px' }}>
           {draft.image ? (
-            <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', height: isGridItem ? '140px' : '170px', border: '1px solid var(--border-color)', background: '#000', marginBottom: '8px' }}>
+            <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', height: isGridItem ? '160px' : '200px', border: '1px solid var(--border-color)', background: '#000', marginBottom: '8px' }}>
               <img
                 src={getAssetUrl(draft.image)}
-                alt={draft.title || slot.name}
+                alt={slot.name}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { e.target.src = 'https://placehold.co/800x300?text=Banner+Image' }}
               />
@@ -512,7 +443,7 @@ function Banners({ token }) {
               style={{
                 border: '2px dashed var(--border-color)',
                 borderRadius: '8px',
-                padding: '22px 14px',
+                padding: '24px 14px',
                 textAlign: 'center',
                 cursor: 'pointer',
                 background: 'rgba(255,255,255,0.02)',
@@ -543,7 +474,7 @@ function Banners({ token }) {
           />
 
           {/* Action Row: Upload Button + Direct URL input + Gallery button */}
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <button
               type="button"
               className="btn-secondary"
@@ -597,7 +528,7 @@ function Banners({ token }) {
 
           {/* Uploaded Gallery Grid with Cross Deletion */}
           {isGalleryOpen && (
-            <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', marginBottom: '10px' }}>
+            <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', marginTop: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color, #d4af37)', textTransform: 'uppercase' }}>
                   Select from Uploaded Gallery ({mediaGallery.length}):
@@ -666,68 +597,6 @@ function Banners({ token }) {
             </div>
           )}
         </div>
-
-        {/* Text Fields */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
-          {/* Title */}
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '2px' }}>Title / Headline</label>
-            <input
-              type="text"
-              className="form-input"
-              value={draft.title || ''}
-              onChange={(e) => handleDraftChange(slot.key, 'title', e.target.value)}
-              placeholder="e.g. Comfort made for everyday living."
-              style={{ fontSize: '0.82rem', padding: '6px 10px' }}
-            />
-          </div>
-
-          {/* Subtitle (Hidden for Values 3-grid) */}
-          {!slot.noSubtitle && (
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '2px' }}>Subtitle / Short Tagline</label>
-              <input
-                type="text"
-                className="form-input"
-                value={draft.subtitle || ''}
-                onChange={(e) => handleDraftChange(slot.key, 'subtitle', e.target.value)}
-                placeholder="e.g. Furniture, beds and appliances..."
-                style={{ fontSize: '0.82rem', padding: '6px 10px' }}
-              />
-            </div>
-          )}
-
-          {/* Rich Text Description (For About Us Story, Values 3-grid, and Showroom) */}
-          {slot.hasRichDesc && (
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Formatted Description *</span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--accent-color, #d4af37)' }}>Click toolbar to format</span>
-              </label>
-              <RichTextDescriptionEditor
-                value={draft.description || draft.subtitle || ''}
-                onChange={(val) => handleDraftChange(slot.key, 'description', val)}
-                placeholder="Enter formatted description..."
-              />
-            </div>
-          )}
-
-          {/* Action Button */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => handleSaveSlot(slot.key)}
-              disabled={isSavingThis || isUploadingThis}
-              style={{ padding: '6px 16px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              {isSavingThis ? 'Saving...' : 'Save Banner'}
-            </button>
-          </div>
-        </div>
       </div>
     )
   }
@@ -771,7 +640,7 @@ function Banners({ token }) {
         </div>
 
         <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-          Managing <strong>{currentPageDef.label.split(' (')[0]}</strong> banners
+          Managing <strong>{currentPageDef.label.split(' (')[0]}</strong> banner graphics
         </span>
       </div>
 

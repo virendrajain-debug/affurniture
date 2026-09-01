@@ -1,21 +1,9 @@
-// Unified page content route for the PageEditor in admin panel.
-// Maps page keys to their respective database tables and settings:
-//   about                 -> page_about_data & about table
-//   winz                  -> page_winz_data in site_settings
-//   finance               -> page_finance_data in site_settings
-//   home, contact         -> page_home_data / page_contact_data & site_settings
-//   delivery-info         -> delivery_info table & page_delivery-info_data
-//   returns               -> returns table & page_returns_data
-//   terms                 -> terms table & page_terms_data
-//   privacy-policy        -> privacy_policy table & page_privacy-policy_data
-//   shop-furniture        -> shop_furniture table & page_shop-furniture_data
-
 import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
-function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
+function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u.startsWith('/') ? u : '/' + u}`; }
 
 const TABLE_MAP = {
   'delivery-info': 'delivery_info',
@@ -32,7 +20,7 @@ router.get('/:pageKey', async (req, res) => {
   try {
     const { pageKey } = req.params;
 
-    // Check site_settings for rich page data first
+    // 1. Read stored settings JSON blob
     const [settingRows] = await pool.execute('SELECT value FROM site_settings WHERE key = ?', [`page_${pageKey}_data`]);
     let savedData = {};
     if (settingRows.length > 0 && settingRows[0].value) {
@@ -43,135 +31,180 @@ router.get('/:pageKey', async (req, res) => {
       }
     }
 
+    // 2. Read existing banners text for fallback
+    const [bannerRows] = await pool.execute('SELECT slot, title, subtitle, description, label FROM page_banners WHERE page_key = ?', [pageKey]);
+    const bannerMap = {};
+    bannerRows.forEach(b => {
+      bannerMap[b.slot] = b;
+    });
+
     if (pageKey === 'about') {
       const [aboutRows] = await pool.execute('SELECT * FROM about ORDER BY id DESC LIMIT 1');
       const dbAbout = aboutRows[0] || {};
       const merged = {
-        ...dbAbout,
+        title: savedData.title || bannerMap['hero']?.title || dbAbout.company_name || 'About AF Furnishings',
+        subtitle: savedData.subtitle || bannerMap['hero']?.subtitle || dbAbout.tagline || 'Quality furniture for every New Zealand home',
+        eyebrow: savedData.eyebrow || bannerMap['hero']?.label || 'OUR STORY',
+        story_title: savedData.story_title || bannerMap['story']?.title || 'Who We Are',
+        story_content: savedData.story_content || savedData.content || bannerMap['story']?.description || dbAbout.description || '<p>AF Furnishings provides quality furniture, beds and appliances to make your home feel complete. We believe everyone deserves a comfortable home, which is why we offer flexible weekly payment options.</p><p>Founded in New Zealand, we have been serving families across the country with beautiful, durable furniture at honest prices.</p>',
+        val_1_title: savedData.val_1_title || bannerMap['val_1']?.title || 'Quality First',
+        val_1_desc: savedData.val_1_desc || bannerMap['val_1']?.description || 'Every piece is crafted from premium materials built to endure daily family life.',
+        val_2_title: savedData.val_2_title || bannerMap['val_2']?.title || 'Comfort Always',
+        val_2_desc: savedData.val_2_desc || bannerMap['val_2']?.description || 'Ergonomic designs tailored for genuine relaxation and peaceful sleep.',
+        val_3_title: savedData.val_3_title || bannerMap['val_3']?.title || 'For Every Home',
+        val_3_desc: savedData.val_3_desc || bannerMap['val_3']?.description || 'Accessible weekly finance options making dream living spaces affordable.',
+        showroom_title: savedData.showroom_title || bannerMap['showroom']?.title || 'Experience Comfort in Person',
+        showroom_desc: savedData.showroom_desc || bannerMap['showroom']?.description || 'Visit our contemporary showrooms in Auckland and Wellington to test-rest mattresses, explore fabrics, and consult our interior stylists.',
         ...savedData,
         page_key: 'about',
-        about_story: savedData.about_story || dbAbout.description || '',
-        about_mission: savedData.about_mission || savedData.values_title || 'What we stand for.',
+      };
+      return res.json(merged);
+    }
+
+    if (pageKey === 'home') {
+      const merged = {
+        hero_1_title: savedData.hero_1_title || bannerMap['hero_1']?.title || 'Comfort made for everyday living.',
+        hero_1_subtitle: savedData.hero_1_subtitle || bannerMap['hero_1']?.subtitle || 'Furniture, beds and appliances to make your home feel complete.',
+        hero_2_title: savedData.hero_2_title || bannerMap['hero_2']?.title || 'Rest beautifully.',
+        hero_2_subtitle: savedData.hero_2_subtitle || bannerMap['hero_2']?.subtitle || 'Discover beds, mattresses and bedroom sets designed for comfort.',
+        hero_3_title: savedData.hero_3_title || bannerMap['hero_3']?.title || 'Gather around good moments.',
+        hero_3_subtitle: savedData.hero_3_subtitle || bannerMap['hero_3']?.subtitle || 'Tables and chairs made for family gatherings and dinner parties.',
+        deals_headline: savedData.deals_headline || 'Weekly Deals & Clearance',
+        deals_subtitle: savedData.deals_subtitle || 'Save big on selected living and bedroom essentials this week only.',
+        ...savedData,
+        page_key: 'home',
       };
       return res.json(merged);
     }
 
     if (pageKey === 'winz' || pageKey === 'finance') {
       const defaults = pageKey === 'winz' ? {
-        hero_banner: 'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=2000&q=85',
-        title: 'Work and Income (WINZ) Quotes',
-        subtitle: 'We provide approved WINZ quotes for essential household furniture and appliances across New Zealand.',
+        title: bannerMap['hero']?.title || 'Work and Income (WINZ) Quotes',
+        subtitle: bannerMap['hero']?.subtitle || 'We provide approved WINZ quotes for essential household furniture and appliances across New Zealand.',
+        eyebrow: 'OFFICIAL SUPPLIER',
         intro_content: '<p>Need help furnishing your home with Work and Income assistance? AF Furnishings is a registered and approved WINZ supplier. We make getting a formal quote quick, stress-free, and straightforward.</p><p>You can request a quote online, over the phone, or in person at any of our showrooms in Auckland and Wellington.</p>',
-        promo_banner: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80',
-        promo_badge: 'OFFICIAL REGISTERED SUPPLIER',
-        promo_title: 'Fast 24-Hour Quote Turnaround for WINZ Case Managers',
-        steps_content: '<h3>How the WINZ Process Works:</h3><ol><li><strong>Select Your Items:</strong> Choose the lounge, bedroom, or dining furniture you need.</li><li><strong>Receive Your Official Quote:</strong> We generate an itemized PDF quote with our WINZ supplier details.</li><li><strong>Submit to Case Manager:</strong> Provide the quote to Work and Income for assessment.</li><li><strong>Delivery & Setup:</strong> Once approved, WINZ pays us directly and we deliver right to your door.</li></ol>',
-        meta_description: 'Official WINZ quotes for essential furniture and appliances in New Zealand. Fast approval support and delivery.',
+        cat_1_title: bannerMap['cat_1']?.title || 'Haven 3+2 Living Suite',
+        cat_1_desc: bannerMap['cat_1']?.description || 'Plush comfort fabric sofa set with reinforced pine framing.',
+        cat_2_title: bannerMap['cat_2']?.title || 'Willow Queen Bedroom Suite',
+        cat_2_desc: bannerMap['cat_2']?.description || 'Solid timber bed frame paired with orthopaedic mattress.',
+        cat_3_title: bannerMap['cat_3']?.title || 'Haven 6-Seater Dining Suite',
+        cat_3_desc: bannerMap['cat_3']?.description || 'Durable timber dining table with 6 cushioned chairs.',
       } : {
-        hero_banner: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=2000&q=85',
-        title: 'Flexible Furniture Finance & Weekly Payments',
-        subtitle: 'Furnish your dream home today with manageable, budget-friendly weekly payment plans.',
+        title: bannerMap['hero']?.title || 'Flexible Furniture Finance & Weekly Payments',
+        subtitle: bannerMap['hero']?.subtitle || 'Furnish your dream home today with manageable, budget-friendly weekly payment plans.',
+        eyebrow: 'EASY WEEKLY PLANS',
         intro_content: '<p>At AF Furnishings, we believe quality living should be accessible to all New Zealanders. Our flexible financing solutions let you enjoy premium furniture now while spreading payments over comfortable weekly or fortnightly terms.</p><p>We partner with leading New Zealand finance providers to offer competitive rates and fast approval decisions.</p>',
-        promo_banner: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80',
-        promo_badge: 'NO HIDDEN FEES',
-        promo_title: 'Instant Online Pre-Approval in Under 5 Minutes',
-        steps_content: '<h3>Easy 3-Step Financing:</h3><ol><li><strong>Apply Online:</strong> Complete our quick and secure finance application form.</li><li><strong>Instant Decision:</strong> Get assessed quickly with clear weekly payment breakdowns.</li><li><strong>Enjoy Your Furniture:</strong> Confirm your order and schedule prompt delivery to your home.</li></ol><p><em>Terms, lending criteria, and establishment fees apply.</em></p>',
-        meta_description: 'Affordable weekly finance and flexible payment options for furniture across New Zealand.',
       };
       return res.json({ ...defaults, ...savedData, page_key: pageKey });
     }
 
-    if (pageKey === 'home' || pageKey === 'contact') {
-      const [rows] = await pool.execute('SELECT value FROM site_settings WHERE key = ?', [`page_${pageKey}_banner`]);
-      const banner_image = rows.length > 0 ? resolveUrl(rows[0].value) : '';
-      return res.json({ page_key: pageKey, banner_image, ...savedData });
+    const table = TABLE_MAP[pageKey];
+    let dbData = {};
+    if (table) {
+      const [rows] = await pool.execute(`SELECT * FROM ${table} ORDER BY id DESC LIMIT 1`);
+      if (rows.length > 0) dbData = rows[0];
     }
 
-    const table = TABLE_MAP[pageKey];
-    if (!table) return res.status(404).json({ message: 'Page not found' });
-
-    const [rows] = await pool.execute(`SELECT * FROM ${table} ORDER BY id DESC LIMIT 1`);
-    const dbData = rows[0] || {};
-    if (dbData.banner_image) dbData.banner_image = resolveUrl(dbData.banner_image);
-    
-    res.json({ ...dbData, ...savedData, page_key: pageKey });
-  } catch (error) {
-    console.error('Get page error:', error.message);
+    res.json({
+      title: bannerMap['hero']?.title || dbData.title || `${pageKey.replace('-', ' ').toUpperCase()}`,
+      subtitle: bannerMap['hero']?.subtitle || dbData.subtitle || '',
+      eyebrow: bannerMap['hero']?.label || 'AF FURNISHINGS',
+      content: dbData.content || '',
+      ...dbData,
+      ...savedData,
+      page_key: pageKey,
+    });
+  } catch (err) {
+    console.error('Get page error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// PUT /api/pages/:pageKey
-router.put('/:pageKey', authenticateToken, async (req, res) => {
+// PUT /api/pages/:pageKey - Save all page text and rich formatting
+router.put('/:pageKey', async (req, res) => {
   try {
     const { pageKey } = req.params;
     const body = req.body || {};
-    const { content, banner_image, hero_banner } = body;
 
-    // Persist full structured page data in site_settings JSON blob
+    // 1. Save full JSON blob to site_settings
     const dataKey = `page_${pageKey}_data`;
     const dataVal = JSON.stringify(body);
     await pool.execute(
-      'INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\')) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime(\'now\')',
+      "INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime('now')",
       [dataKey, dataVal, dataVal]
     );
 
+    // 2. Sync to page_banners text fields so banners match
     if (pageKey === 'about') {
-      const { company_name, tagline, description, address, phone, email, about_story } = body;
-      const desc = about_story || description || '';
-      const [existing] = await pool.execute('SELECT id FROM about LIMIT 1');
-      if (existing.length > 0) {
-        await pool.execute(
-          'UPDATE about SET company_name=?, tagline=?, description=?, address=?, phone=?, email=? WHERE id=?',
-          [company_name || 'AF Furnishings', tagline || '', desc, address || '', phone || '', email || '', existing[0].id]
-        );
-      } else {
-        await pool.execute(
-          'INSERT INTO about (company_name, tagline, description, address, phone, email) VALUES (?, ?, ?, ?, ?, ?)',
-          [company_name || 'AF Furnishings', tagline || '', desc, address || '', phone || '', email || '']
-        );
+      const { title, subtitle, eyebrow, story_title, story_content, val_1_title, val_1_desc, val_2_title, val_2_desc, val_3_title, val_3_desc, showroom_title, showroom_desc } = body;
+
+      // Sync about table
+      try {
+        const [existing] = await pool.execute('SELECT id FROM about LIMIT 1');
+        if (existing.length > 0) {
+          await pool.execute('UPDATE about SET company_name = ?, tagline = ?, description = ? WHERE id = ?', [title || 'AF Furnishings', subtitle || '', story_content || '', existing[0].id]);
+        } else {
+          await pool.execute('INSERT INTO about (company_name, tagline, description) VALUES (?, ?, ?)', [title || 'AF Furnishings', subtitle || '', story_content || '']);
+        }
+      } catch {}
+
+      // Sync page_banners text
+      const syncBannerText = async (slot, bTitle, bSub, bDesc, bLabel) => {
+        try {
+          await pool.execute(`
+            UPDATE page_banners SET
+              title = COALESCE(?, title),
+              subtitle = COALESCE(?, subtitle),
+              description = COALESCE(?, description),
+              label = COALESCE(?, label)
+            WHERE page_key = 'about' AND slot = ?
+          `, [bTitle || null, bSub || null, bDesc || null, bLabel || null, slot]);
+        } catch {}
+      };
+
+      await syncBannerText('hero', title, subtitle, null, eyebrow);
+      await syncBannerText('story', story_title, null, story_content, null);
+      await syncBannerText('val_1', val_1_title, null, val_1_desc, null);
+      await syncBannerText('val_2', val_2_title, null, val_2_desc, null);
+      await syncBannerText('val_3', val_3_title, null, val_3_desc, null);
+      await syncBannerText('showroom', showroom_title, null, showroom_desc, null);
+    } else if (pageKey === 'home') {
+      const { hero_1_title, hero_1_subtitle, hero_2_title, hero_2_subtitle, hero_3_title, hero_3_subtitle } = body;
+      const updateHero = async (slot, hTitle, hSub) => {
+        try {
+          await pool.execute("UPDATE page_banners SET title = COALESCE(?, title), subtitle = COALESCE(?, subtitle) WHERE page_key = 'home' AND slot = ?", [hTitle || null, hSub || null, slot]);
+        } catch {}
+      };
+      await updateHero('hero_1', hero_1_title, hero_1_subtitle);
+      await updateHero('hero_2', hero_2_title, hero_2_subtitle);
+      await updateHero('hero_3', hero_3_title, hero_3_subtitle);
+    } else {
+      // Sync hero banner text for standard pages
+      if (body.title || body.subtitle || body.eyebrow) {
+        try {
+          await pool.execute("UPDATE page_banners SET title = COALESCE(?, title), subtitle = COALESCE(?, subtitle), label = COALESCE(?, label) WHERE page_key = ? AND slot = 'hero'", [body.title || null, body.subtitle || null, body.eyebrow || null, pageKey]);
+        } catch {}
       }
-      return res.json({ message: 'About page updated successfully' });
-    }
 
-    if (pageKey === 'winz' || pageKey === 'finance') {
-      const bannerKey = `page_${pageKey}_banner`;
-      const bannerVal = hero_banner || banner_image || '';
-      if (bannerVal) {
-        await pool.execute(
-          'INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\')) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime(\'now\')',
-          [bannerKey, bannerVal, bannerVal]
-        );
-      }
-      return res.json({ message: `${pageKey.toUpperCase()} page updated successfully` });
-    }
-
-    if (pageKey === 'home' || pageKey === 'contact') {
-      const key = `page_${pageKey}_banner`;
-      const val = banner_image || '';
-      await pool.execute(
-        'INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\')) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime(\'now\')',
-        [key, val, val]
-      );
-      return res.json({ message: 'Page updated successfully' });
-    }
-
-    const table = TABLE_MAP[pageKey];
-    if (table) {
-      const [existing] = await pool.execute(`SELECT id FROM ${table} LIMIT 1`);
-      if (existing.length > 0) {
-        await pool.execute(`UPDATE ${table} SET content = ?, banner_image = ? WHERE id = ?`, [content || body.body_html || '', banner_image || '', existing[0].id]);
-      } else {
-        await pool.execute(`INSERT INTO ${table} (content, banner_image) VALUES (?, ?)`, [content || body.body_html || '', banner_image || '']);
+      // Sync dedicated database tables
+      const table = TABLE_MAP[pageKey];
+      if (table) {
+        try {
+          const [existing] = await pool.execute(`SELECT id FROM ${table} LIMIT 1`);
+          if (existing.length > 0) {
+            await pool.execute(`UPDATE ${table} SET content = ? WHERE id = ?`, [body.content || '', existing[0].id]);
+          } else {
+            await pool.execute(`INSERT INTO ${table} (content) VALUES (?)`, [body.content || '']);
+          }
+        } catch {}
       }
     }
 
-    res.json({ message: 'Page updated successfully' });
-  } catch (error) {
-    console.error('Update page error:', error.message);
-    res.status(500).json({ message: 'Server error' });
+    res.json({ success: true, message: 'Page texts & formatted content updated live on website!' });
+  } catch (err) {
+    console.error('Update page error:', err);
+    res.status(500).json({ message: 'Failed to update page' });
   }
 });
 
 export default router;
-

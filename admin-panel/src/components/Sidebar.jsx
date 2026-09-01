@@ -390,36 +390,47 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
         .p-sidebar-footer {
           padding: 12px 18px;
           border-top: 1px solid var(--border-color);
-          background: var(--sidebar-header, var(--header-bg));
+          background: var(--sidebar-bg, #2a3142);
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          gap: 10px;
+          justify-content: center;
+          gap: 12px;
         }
 
         .p-footer-icon-btn {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          width: 38px;
-          height: 38px;
-          border-radius: 8px;
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
           border: 1px solid var(--border-color);
-          background: var(--card-bg, #1f2937);
+          background: rgba(255, 255, 255, 0.05);
           color: var(--text-secondary);
           text-decoration: none;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+          outline: none;
         }
         .p-footer-icon-btn:hover {
-          color: var(--text-primary);
+          background: rgba(212, 175, 55, 0.15);
+          border-color: rgba(212, 175, 55, 0.5);
+          color: var(--accent-color, #d4af37);
+          transform: translateY(-1px);
+        }
+        .p-footer-icon-btn.active {
+          background: rgba(212, 175, 55, 0.18);
           border-color: var(--accent-color);
-          background: var(--hover-bg);
+          color: var(--accent-color, #d4af37);
+        }
+        .p-footer-icon-btn.logout-btn {
+          color: var(--text-secondary);
         }
         .p-footer-icon-btn.logout-btn:hover {
-          color: #fff;
-          background: rgba(239, 68, 68, 0.9);
-          border-color: #ef4444;
+          background: rgba(239, 68, 68, 0.18);
+          border-color: rgba(239, 68, 68, 0.6);
+          color: #ef4444;
+          transform: translateY(-1px);
         }
       `}</style>
 
