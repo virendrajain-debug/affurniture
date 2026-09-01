@@ -1,44 +1,46 @@
 // ============================================================
-// Admin Panel - Root App Component (Lazy Loaded & Code-Split)
-// ============================================================
-// Manages authentication state and defines all routes using
-// React.lazy and Suspense for optimized production performance.
+// Admin Panel - Root App Component (Secure Protected Routing)
 // ============================================================
 
-import { useState, lazy, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { lazyRetry } from './utils/lazyRetry'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { getAuthToken, clearAdminSession } from './utils/api'
+import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
 // Lazy Load Root Pages
-const Login = lazy(() => import('./pages/Login'))
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
-const OTP = lazy(() => import('./pages/OTP'))
-const NewPassword = lazy(() => import('./pages/NewPassword'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Login = lazyRetry(() => import('./pages/Login'))
+const ForgotPassword = lazyRetry(() => import('./pages/ForgotPassword'))
+const OTP = lazyRetry(() => import('./pages/OTP'))
+const NewPassword = lazyRetry(() => import('./pages/NewPassword'))
+const Dashboard = lazyRetry(() => import('./pages/Dashboard'))
 
 function App() {
-  // Initialize token from localStorage (persists across refreshes)
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem('af_admin_token') || localStorage.getItem('token') || localStorage.getItem('adminToken') || null
-  })
+  const [token, setToken] = useState(() => getAuthToken())
 
-  // Called after successful login - saves JWT token
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      setToken(null)
+    }
+    window.addEventListener('admin-logout', handleLogoutEvent)
+    return () => window.removeEventListener('admin-logout', handleLogoutEvent)
+  }, [])
+
   const handleLogin = (jwtToken) => {
     if (jwtToken) {
       localStorage.setItem('af_admin_token', jwtToken)
       localStorage.setItem('token', jwtToken)
       localStorage.setItem('adminToken', jwtToken)
+      setToken(jwtToken)
     }
-    setToken(jwtToken)
   }
 
-  // Called on logout - removes token from storage
-  const handleLogout = () => {
-    localStorage.removeItem('af_admin_token')
-    localStorage.removeItem('token')
-    localStorage.removeItem('adminToken')
-    localStorage.removeItem('af_reset_email')
-    localStorage.removeItem('af_reset_token')
+  const handleLogout = async () => {
+    try {
+      fetch('/api/admin/logout', { method: 'POST' }).catch(() => {})
+    } catch {}
+    clearAdminSession()
     setToken(null)
   }
 
@@ -66,59 +68,58 @@ function App() {
                 width: '24px',
                 height: '24px',
                 border: '3px solid rgba(255,255,255,0.1)',
-                borderTopColor: 'var(--accent-color, #ff7eb3)',
+                borderTopColor: 'var(--accent-color, #d4af37)',
                 borderRadius: '50%',
                 animation: 'spin 0.8s linear infinite',
               }}
             ></div>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            Loading application...
+            Loading admin workspace...
           </div>
         }
       >
         <Routes>
-          {/* Login - redirects to dashboard if already logged in */}
+          {/* Public Authentication Routes */}
           <Route
             path="/"
             element={token ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
           />
-
-          {/* Forgot Password - redirects to dashboard if already logged in */}
+          <Route
+            path="/login"
+            element={token ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
+          />
           <Route
             path="/forgot-password"
             element={token ? <Navigate to="/dashboard" replace /> : <ForgotPassword />}
           />
-
-          {/* OTP Verification */}
           <Route
             path="/otp"
             element={token ? <Navigate to="/dashboard" replace /> : <OTP />}
           />
-
-          {/* New Password */}
           <Route
             path="/new-password"
             element={token ? <Navigate to="/dashboard" replace /> : <NewPassword />}
           />
 
-          {/* Dashboard - requires authentication, handles all sub-routes */}
+          {/* Secure Protected Dashboard Routes */}
           <Route
             path="/dashboard/*"
             element={
-              token ? (
-                <Dashboard onLogout={handleLogout} token={token} />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              <ProtectedRoute token={token}>
+                <Dashboard token={token} onLogout={handleLogout} />
+              </ProtectedRoute>
             }
           />
 
-          {/* Catch-all route - redirect to login */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Catch-all redirect */}
+          <Route
+            path="*"
+            element={<Navigate to={token ? '/dashboard' : '/'} replace />}
+          />
         </Routes>
       </Suspense>
     </HashRouter>
   )
 }
 
-export default App
+export default App;

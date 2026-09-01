@@ -1,5 +1,5 @@
 // ============================================================
-// Centralized API & Authentication Utility
+// Centralized API & Authentication Utility with 401 Interceptor
 // ============================================================
 import { API_BASE } from '../config'
 
@@ -19,6 +19,21 @@ export const getAuthToken = (explicitToken) => {
     return cleanToken
   }
   return ''
+}
+
+export const clearAdminSession = () => {
+  localStorage.removeItem('af_admin_token')
+  localStorage.removeItem('token')
+  localStorage.removeItem('adminToken')
+  localStorage.removeItem('admin_user')
+  localStorage.removeItem('adminAvatar')
+  localStorage.removeItem('adminProfileImage')
+  localStorage.removeItem('adminName')
+  localStorage.removeItem('adminEmail')
+  localStorage.removeItem('site_logo')
+  localStorage.removeItem('af_reset_email')
+  localStorage.removeItem('af_reset_token')
+  window.dispatchEvent(new Event('admin-logout'))
 }
 
 export const getAuthHeaders = (explicitToken, isJson = true) => {
@@ -43,8 +58,16 @@ export const apiFetch = async (endpoint, options = {}, explicitToken) => {
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     headers,
   })
+
+  // Global 401 Interceptor: catch unauthorized/expired session
+  if (response.status === 401) {
+    console.warn('Session expired or unauthorized request. Logging out...')
+    clearAdminSession()
+  }
+
+  return response
 }

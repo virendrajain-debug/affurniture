@@ -12,7 +12,7 @@ const categoryData = {
     apiCategory: 'Living Room',
     heroLabel: 'SOFAS & LOUNGE',
     heroTitle: 'Find your comfort.',
-    heroDesc: 'Browse a selection of styles for relaxed everyday living.',
+    heroDesc: '',
     colors: ['Beige', 'Brown', 'Grey', 'Tan'],
     sizes: ['Small', 'Medium', 'Large', 'Extra Large'],
     subcategories: [
@@ -28,8 +28,8 @@ const categoryData = {
     image: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=2000&q=85',
     apiCategory: 'Bedroom',
     heroLabel: 'BEDROOM COLLECTION',
-    heroTitle: 'Beautiful rest begins here.',
-    heroDesc: 'Everything you need for a restful bedroom.',
+    heroTitle: 'Rest beautifully.',
+    heroDesc: '',
     colors: ['White', 'Walnut', 'Oak', 'Grey'],
     sizes: ['Single', 'Queen', 'King'],
     subcategories: [
@@ -46,7 +46,7 @@ const categoryData = {
     apiCategory: 'Dining',
     heroLabel: 'DINING COLLECTION',
     heroTitle: 'Made for gathering.',
-    heroDesc: 'Perfect dining furniture for family gatherings.',
+    heroDesc: '',
     colors: ['Natural', 'Walnut', 'Oak', 'White'],
     sizes: ['4 Seat', '6 Seat', '8 Seat'],
     subcategories: [
@@ -63,7 +63,7 @@ const categoryData = {
     apiCategory: 'Living Room',
     heroLabel: 'LIVING COLLECTION',
     heroTitle: 'Complete your space.',
-    heroDesc: 'Curated pieces for modern living rooms.',
+    heroDesc: '',
     colors: ['Beige', 'Grey', 'Brown', 'Black'],
     sizes: ['Small', 'Medium', 'Large'],
     subcategories: [
@@ -238,7 +238,7 @@ function CategoryPage() {
           <div className="catalog-hero-inner">
             <span className="catalog-hero-label">{cat.heroLabel}</span>
             <h1>{cat.heroTitle || cat.title}</h1>
-            <p>{cat.heroDesc || cat.subtitle}</p>
+            {cat.heroDesc && <p>{cat.heroDesc}</p>}
           </div>
         </section>
 

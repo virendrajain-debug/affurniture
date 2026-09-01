@@ -1,15 +1,17 @@
 // ============================================================
-// Login Page Component (Strict Authentication)
+// Executive Login Portal (Dynamic Branding & Bulletproof Auth)
 // ============================================================
-// Admin login form with email/password fields.
-// Calls POST /api/auth/login to authenticate.
-// STRICT: Validates that a non-empty token string exists 
-// before allowing any state changes or routing.
+// Features:
+//  - Zero static logo imports; 100% dynamic network branding fetch
+//  - Cache-busted live avatar resolution from GET /api/auth/branding
+//  - Instant fallback onError handling
+//  - Sleek glassmorphic card architecture
+//  - Strict JWT validation
 // ============================================================
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState('')
@@ -17,18 +19,54 @@ function Login({ onLogin }) {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
-  const [siteLogo, setSiteLogo] = useState('/serthkuyghj.png')
+  
+  // Initialize with cached avatar if present, fallback to default brand asset
+  const [logoUrl, setLogoUrl] = useState(() => {
+    const cached = localStorage.getItem('adminAvatar') || localStorage.getItem('site_logo')
+    return cached ? getAssetUrl(cached) : '/aeryp.png'
+  })
+  const [imgError, setImgError] = useState(false)
 
+  // Bulletproof live branding fetch
   useEffect(() => {
-    const loadLogo = () => {
-      const cached = localStorage.getItem('site_logo')
-      if (cached) setSiteLogo(cached)
-      fetch(`${API_BASE}/api/settings`).then(r => r.ok ? r.json() : null)
-        .then(d => { if (d?.site_logo) { setSiteLogo(d.site_logo); localStorage.setItem('site_logo', d.site_logo) } }).catch(() => {})
+    let isMounted = true
+
+    const fetchLiveBranding = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/branding`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const rawAvatar = data.avatarUrl || data.logoUrl
+          if (rawAvatar && isMounted) {
+            const liveAvatar = rawAvatar.startsWith('http') || rawAvatar.startsWith('data:')
+              ? rawAvatar
+              : `${API_BASE}${rawAvatar.startsWith('/') ? rawAvatar : `/${rawAvatar}`}`
+            
+            localStorage.setItem('adminAvatar', rawAvatar)
+            localStorage.setItem('site_logo', rawAvatar)
+            setLogoUrl(`${liveAvatar}?nocache=${Date.now()}`)
+            setImgError(false)
+          }
+        }
+      } catch (err) {
+        // Silently ignore if server is unreachable or offline
+      }
     }
-    loadLogo()
-    window.addEventListener('logo-updated', loadLogo)
-    return () => window.removeEventListener('logo-updated', loadLogo)
+
+    fetchLiveBranding()
+    window.addEventListener('logo-updated', fetchLiveBranding)
+    window.addEventListener('storage', fetchLiveBranding)
+    return () => {
+      isMounted = false
+      window.removeEventListener('logo-updated', fetchLiveBranding)
+      window.removeEventListener('storage', fetchLiveBranding)
+    }
   }, [])
 
   // Show a toast notification (auto-dismiss after 3 seconds)
@@ -65,7 +103,7 @@ function Login({ onLogin }) {
         // Catch 401s, 404s, or malformed 200s lacking a token
         showToast(data.message || 'Invalid credentials or access denied.', 'error')
       }
-    } catch (err) {
+    } catch {
       showToast('Server connection failed. Please try again.', 'error')
     } finally {
       setLoading(false)
@@ -77,8 +115,20 @@ function Login({ onLogin }) {
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
       <div className="login-card">
-        <img src={siteLogo} alt="AF Furniture" className="logo" />
+        {/* Centered Dynamic Branding Logo Wrapper */}
+        <div className="login-logo-container">
+          <div className="login-logo-wrapper">
+            <img 
+              src={imgError ? '/aeryp.png' : logoUrl} 
+              alt="Admin Brand Logo" 
+              className="login-brand-logo"
+              onError={() => setImgError(true)} 
+            />
+          </div>
+        </div>
+
         <h2>Admin Panel</h2>
+        <p className="subtitle">Executive Portal Access</p>
 
         <form onSubmit={handleLogin}>
           <div className="input-group">
@@ -129,4 +179,4 @@ function Login({ onLogin }) {
   )
 }
 
-export default Login
+export default Login

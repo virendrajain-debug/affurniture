@@ -1,345 +1,424 @@
 // ============================================================
-// Premium Ad Campaign / Promotional Showcase Manager
-// ============================================================
-// Features: Visual Editor matching the storefront Weekly Special Banner,
-// Badge/Tagline, Headline, Description/Price Subtext, CTA Button & Link,
-// Background Image Uploader with live realistic preview, and Active toggle.
-// API: /api/ad-campaigns, /api/upload
+// Premium Ad Campaign Studio (Storefront Promo Poster Control)
 // ============================================================
 
-import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import React, { useState, useEffect } from 'react'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
 function AdCampaign({ token }) {
-  const [campaigns, setCampaigns] = useState([])
+  const [form, setForm] = useState({
+    badge: 'AF WEEKLY SPECIAL',
+    title: 'Bring comfort home.',
+    subtitle: 'Explore our latest living-room arrivals, all priced at $00.',
+    button_text: 'VIEW',
+    button_link: '/category/living',
+    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
+    directUrl: '',
+  })
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [mediaGallery, setMediaGallery] = useState([])
+  const [showGallery, setShowGallery] = useState(false)
   const [toast, setToast] = useState(null)
 
   const authToken = getAuthToken(token)
 
-  // Active or selected campaign form state
-  const [activeForm, setActiveForm] = useState({
-    id: null,
-    name: 'Weekly Special Showcase',
-    badge: 'AF WEEKLY SPECIAL',
-    title: 'Bring comfort home.',
-    description: 'Explore our latest living-room arrivals, all priced at $00.',
-    cta_text: 'SHOP SOFAS',
-    cta_link: '#sofas',
-    image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
-    position: 'homepage',
-    sort_order: 0,
-    active: 1,
-  })
-
-  const showToast = (msg, type = 'success') => {
+  const showToast = (msg, type = 'info') => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 3500)
   }
 
-  const fetchCampaigns = async () => {
+  const fetchCampaign = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/ad-campaigns`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      })
+      const res = await fetch(`${API_BASE}/api/ad-campaigns`)
       if (res.ok) {
         const data = await res.json()
-        if (Array.isArray(data) && data.length > 0) {
-          setCampaigns(data)
-          const primary = data[0]
-          setActiveForm({
-            id: primary.id,
-            name: primary.name || 'Weekly Special Showcase',
-            badge: primary.badge || 'AF WEEKLY SPECIAL',
-            title: primary.title || 'Bring comfort home.',
-            description: primary.description || 'Explore our latest living-room arrivals, all priced at $00.',
-            cta_text: primary.cta_text || 'SHOP SOFAS',
-            cta_link: primary.cta_link || primary.link || '#sofas',
-            image: primary.image || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
-            position: primary.position || 'homepage',
-            sort_order: primary.sort_order || 0,
-            active: primary.active !== undefined ? primary.active : 1,
+        if (data && typeof data === 'object') {
+          setForm({
+            badge: data.badge || 'AF WEEKLY SPECIAL',
+            title: data.title || 'Bring comfort home.',
+            subtitle: data.subtitle || data.description || 'Explore our latest living-room arrivals, all priced at $00.',
+            button_text: data.button_text || data.cta_text || 'VIEW',
+            button_link: data.button_link || data.cta_link || '/category/living',
+            image: data.image || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
+            directUrl: '',
           })
-        } else {
-          setCampaigns([])
         }
       }
     } catch {
-      showToast('Failed to load ad campaigns', 'error')
+      showToast('Failed to load ad campaign from server', 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchCampaigns()
-  }, [])
-
-  const handleImageUpload = async (file) => {
-    if (!file) return
-    setUploading(true)
-    const formData = new FormData()
-    formData.append('image', file)
-
+  const fetchMediaGallery = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/upload/image`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${authToken}` },
-        body: formData,
-      })
+      const res = await fetch(`${API_BASE}/api/media-gallery`)
       if (res.ok) {
         const data = await res.json()
-        const url = data.imageUrl || data.url
-        setActiveForm((prev) => ({ ...prev, image: url }))
-        showToast('Background image uploaded successfully', 'success')
+        if (Array.isArray(data)) setMediaGallery(data)
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+    fetchCampaign()
+    fetchMediaGallery()
+  }, [])
+
+  const handleUploadImage = async (file) => {
+    if (!file) return
+    setUploading(true)
+
+    const previewUrl = URL.createObjectURL(file)
+    setForm(prev => ({ ...prev, image: previewUrl }))
+
+    const formData = new FormData()
+    formData.append('image', file)
+    formData.append('file', file)
+
+    try {
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+        body: formData,
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.url || data.imageUrl || data.image_url
+        if (url) {
+          setForm(prev => ({ ...prev, image: url }))
+          showToast('Image uploaded! Click "Publish to Website" to save.', 'success')
+          fetchMediaGallery()
+        }
       } else {
-        showToast('Image upload failed', 'error')
+        showToast('Upload failed on server. You can also paste direct URL.', 'warning')
       }
     } catch {
-      showToast('Server error uploading image', 'error')
+      showToast('Image upload connection error', 'error')
     } finally {
       setUploading(false)
     }
   }
 
-  const handleToggleActive = () => {
-    setActiveForm((prev) => ({ ...prev, active: prev.active ? 0 : 1 }))
+  const handleDeleteGalleryItem = async (e, item) => {
+    e.stopPropagation()
+    if (!window.confirm('Delete this image from the gallery?')) return
+
+    try {
+      const res = await fetch(`${API_BASE}/api/media-gallery/${encodeURIComponent(item.id || item.filename)}?url=${encodeURIComponent(item.url)}`, {
+        method: 'DELETE',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      })
+      if (res.ok) {
+        showToast('Image removed from gallery', 'info')
+        fetchMediaGallery()
+      }
+    } catch {
+      showToast('Failed to delete image', 'error')
+    }
   }
 
-  const handleResetDefaults = () => {
-    setActiveForm({
-      ...activeForm,
-      badge: 'AF WEEKLY SPECIAL',
-      title: 'Bring comfort home.',
-      description: 'Explore our latest living-room arrivals, all priced at $00.',
-      cta_text: 'SHOP SOFAS',
-      cta_link: '#sofas',
-      image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85',
-    })
-    showToast('Reset to default values', 'info')
-  }
+  const handleSave = async (e) => {
+    if (e) e.preventDefault()
+    if (!form.image?.trim()) return showToast('Please upload or set a banner graphic image', 'warning')
+    if (!form.title?.trim()) return showToast('Please enter a campaign headline', 'warning')
 
-  const handleSaveCampaign = async (e) => {
-    e.preventDefault()
     setSaving(true)
     try {
       const payload = {
-        name: activeForm.name || 'Weekly Special Showcase',
-        badge: activeForm.badge,
-        title: activeForm.title,
-        description: activeForm.description,
-        cta_text: activeForm.cta_text,
-        cta_link: activeForm.cta_link,
-        image: activeForm.image,
-        position: activeForm.position || 'homepage',
-        sort_order: activeForm.sort_order || 0,
-        active: activeForm.active ? 1 : 0,
+        badge: form.badge.trim(),
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim(),
+        description: form.subtitle.trim(),
+        button_text: form.button_text.trim(),
+        cta_text: form.button_text.trim(),
+        button_link: form.button_link.trim(),
+        cta_link: form.button_link.trim(),
+        image: form.image.trim(),
       }
 
-      let res
-      if (activeForm.id) {
-        res = await fetch(`${API_BASE}/api/ad-campaigns/${activeForm.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(payload),
-        })
-      } else {
-        res = await fetch(`${API_BASE}/api/ad-campaigns`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(payload),
-        })
-      }
+      const res = await fetch(`${API_BASE}/api/ad-campaigns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
+      })
 
       if (res.ok) {
-        showToast('Campaign published successfully', 'success')
-        fetchCampaigns()
+        showToast('Ad Campaign published live to website frontend!', 'success')
+        fetchCampaign()
+        fetchMediaGallery()
       } else {
-        showToast('Failed to save campaign', 'error')
+        const d = await res.json().catch(() => ({}))
+        showToast(d.message || 'Failed to save campaign', 'error')
       }
     } catch {
-      showToast('Server error while saving', 'error')
+      showToast('Server connection error', 'error')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="admin-page">
+    <div className="admin-page" style={{ maxWidth: '900px', margin: '0 auto' }}>
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
 
-      <div className="admin-card">
-        <div className="admin-card-header">
-          <h2 className="admin-card-title">Ad Campaign & Promotional Showcase</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: activeForm.active ? 'var(--accent-color)' : 'var(--text-secondary)' }}>
-              {activeForm.active ? 'Active on Storefront' : 'Hidden'}
-            </span>
-            <input
-              type="checkbox"
-              checked={!!activeForm.active}
-              onChange={handleToggleActive}
-              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-            />
-          </div>
+      {/* Top Header & Action Bar */}
+      <div
+        className="filter-toolbar"
+        style={{
+          background: 'var(--sidebar-bg, #111827)',
+          padding: '16px 20px',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '14px',
+          marginBottom: '20px',
+        }}
+      >
+        <div>
+          <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+            Website Ad Campaign Poster
+          </h3>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            Directly controls the mid-page promotional ad poster on the homepage
+          </span>
         </div>
 
-        {/* Live Realistic Storefront Preview */}
-        <div
-          style={{
-            position: 'relative',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            height: '240px',
-            marginBottom: '24px',
-            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-          }}
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleSave}
+          disabled={saving || uploading}
+          style={{ padding: '9px 24px', fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
         >
-          <img
-            src={activeForm.image || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85'}
-            alt={activeForm.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            loading="lazy"
-            onError={(e) => { e.target.src = 'https://placehold.co/1800x600?text=Promotional+Banner' }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(90deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              padding: '30px',
-              color: '#fff',
-            }}
-          >
-            <span style={{ display: 'inline-block', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent-color)', marginBottom: '8px' }}>
-              {activeForm.badge || 'AF WEEKLY SPECIAL'}
-            </span>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '0 0 8px', lineHeight: 1.2 }}>
-              {activeForm.title || 'Bring comfort home.'}
-            </h1>
-            <p style={{ fontSize: '0.9rem', opacity: 0.9, margin: '0 0 16px', lineHeight: 1.4, maxWidth: '420px' }}>
-              {activeForm.description || 'Explore our latest living-room arrivals.'}
-            </p>
-            <span className="btn-primary" style={{ alignSelf: 'flex-start', padding: '8px 18px', fontSize: '0.8rem', pointerEvents: 'none' }}>
-              {activeForm.cta_text || 'SHOP SOFAS'}
-            </span>
-          </div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          {saving ? 'Publishing...' : 'Publish to Website'}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="admin-card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
+          Loading active Ad Campaign...
         </div>
-
-        {/* Visual Form Editor */}
-        <form onSubmit={handleSaveCampaign}>
-          <div className="admin-grid-2">
-            <div className="form-group">
-              <label className="form-label">Badge / Eyebrow Text</label>
+      ) : (
+        <div className="admin-card" style={{ padding: '24px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Row 1: Eyebrow Badge & Headline Title */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '16px' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Campaign Eyebrow Badge</label>
               <input
                 type="text"
                 className="form-input"
-                value={activeForm.badge}
-                onChange={(e) => setActiveForm({ ...activeForm, badge: e.target.value })}
+                value={form.badge}
+                onChange={(e) => setForm({ ...form, badge: e.target.value })}
                 placeholder="e.g. AF WEEKLY SPECIAL"
-                disabled={loading}
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">Headline / Title</label>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Main Headline / Title *</label>
               <input
                 type="text"
                 className="form-input"
-                value={activeForm.title}
-                onChange={(e) => setActiveForm({ ...activeForm, title: e.target.value })}
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="e.g. Bring comfort home."
-                disabled={loading}
+                required
               />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Description / Price Subtext</label>
+          {/* Row 2: Description Subtitle */}
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Description Subtitle / Body Copy</label>
             <textarea
-              rows={2}
-              className="form-textarea"
-              value={activeForm.description}
-              onChange={(e) => setActiveForm({ ...activeForm, description: e.target.value })}
+              className="form-input"
+              rows="3"
+              value={form.subtitle}
+              onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
               placeholder="e.g. Explore our latest living-room arrivals, all priced at $00."
-              disabled={loading}
             />
           </div>
 
-          <div className="admin-grid-2">
-            <div className="form-group">
-              <label className="form-label">CTA Button Label</label>
+          {/* Row 3: Button Label & Link */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '16px' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>CTA Button Label</label>
               <input
                 type="text"
                 className="form-input"
-                value={activeForm.cta_text}
-                onChange={(e) => setActiveForm({ ...activeForm, cta_text: e.target.value })}
-                placeholder="e.g. SHOP SOFAS"
-                disabled={loading}
+                value={form.button_text}
+                onChange={(e) => setForm({ ...form, button_text: e.target.value })}
+                placeholder="e.g. VIEW"
               />
             </div>
-            <div className="form-group">
-              <label className="form-label">CTA Destination URL</label>
+
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Button Destination Link / Route</label>
               <input
                 type="text"
                 className="form-input"
-                value={activeForm.cta_link}
-                onChange={(e) => setActiveForm({ ...activeForm, cta_link: e.target.value })}
-                placeholder="e.g. #sofas or /category/living-room"
-                disabled={loading}
+                value={form.button_link}
+                onChange={(e) => setForm({ ...form, button_link: e.target.value })}
+                placeholder="e.g. /category/living or /on-sale"
               />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Background Banner Image *</label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Row 4: Background Image Graphic with Controls */}
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Campaign Background Graphic</label>
+            
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => document.getElementById('ad-campaign-upload')?.click()}
+                style={{ padding: '7px 16px', fontSize: '0.82rem', background: 'var(--accent-color, #d4af37)', color: '#000', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+              >
+                {uploading ? 'Uploading...' : '📁 Upload Image'}
+              </button>
+
               <input
                 type="text"
                 className="form-input"
-                value={activeForm.image}
-                onChange={(e) => setActiveForm({ ...activeForm, image: e.target.value })}
-                placeholder="Enter background image URL or upload..."
-                disabled={loading}
-                style={{ flex: 1, minWidth: '220px' }}
+                placeholder="Or paste direct image URL (https://...)"
+                value={form.directUrl || ''}
+                onChange={(e) => setForm({ ...form, directUrl: e.target.value })}
+                style={{ flex: 1, fontSize: '0.82rem' }}
               />
-              <label className="btn-secondary" style={{ cursor: 'pointer' }}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => handleImageUpload(e.target.files[0])}
-                  disabled={uploading}
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  if (form.directUrl?.trim()) {
+                    setForm({ ...form, image: form.directUrl.trim(), directUrl: '' })
+                    showToast('Image URL applied!', 'info')
+                  }
+                }}
+                style={{ padding: '7px 14px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+              >
+                Set URL
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowGallery(!showGallery)}
+                style={{ padding: '7px 14px', fontSize: '0.82rem', background: showGallery ? 'var(--accent-color, #d4af37)' : undefined, color: showGallery ? '#000' : undefined, whiteSpace: 'nowrap' }}
+              >
+                🖼 Gallery
+              </button>
+            </div>
+
+            <input
+              id="ad-campaign-upload"
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => { if (e.target.files[0]) handleUploadImage(e.target.files[0]); }}
+            />
+
+            {/* Thumbnail Display */}
+            {form.image && (
+              <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', height: '160px', border: '1px solid var(--border-color)', background: '#000', marginBottom: '8px' }}>
+                <img
+                  src={getAssetUrl(form.image)}
+                  alt="Active Campaign Graphic"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1800' }}
                 />
-                {uploading ? 'Uploading...' : 'Upload Image'}
-              </label>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, image: '' })}
+                  style={{ position: 'absolute', top: '6px', right: '6px', background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer', fontSize: '0.9rem' }}
+                  title="Remove image"
+                >
+                  &times;
+                </button>
+              </div>
+            )}
+
+            {/* Uploaded Gallery Grid with Cross Deletion */}
+            {showGallery && (
+              <div style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-color, #d4af37)' }}>
+                    SELECT FROM UPLOADED GALLERY ({mediaGallery.length}):
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Click image to select • &times; to delete</span>
+                </div>
+
+                {mediaGallery.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '14px', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    No uploaded images found.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                    {mediaGallery.map((item, idx) => (
+                      <div
+                        key={item.id || idx}
+                        onClick={() => {
+                          setForm(prev => ({ ...prev, image: item.url }))
+                          showToast('Selected image from gallery!', 'info')
+                        }}
+                        style={{
+                          position: 'relative',
+                          height: '60px',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          border: form.image === item.url ? '2px solid var(--accent-color, #d4af37)' : '1px solid var(--border-color)',
+                          background: '#000',
+                        }}
+                      >
+                        <img src={getAssetUrl(item.url)} alt="Gallery" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteGalleryItem(e, item)}
+                          style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(239, 68, 68, 0.9)', color: '#fff', border: 'none', borderRadius: '3px', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', cursor: 'pointer' }}
+                          title="Delete image"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-            <button type="submit" className="btn-primary" disabled={saving || uploading || loading}>
-              {saving ? 'Saving...' : 'Save & Publish Campaign'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={handleResetDefaults}>
-              Reset to Defaults
+          {/* Bottom Action Bar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSave}
+              disabled={saving || uploading}
+              style={{ padding: '10px 28px', fontSize: '0.9rem', fontWeight: 700 }}
+            >
+              {saving ? 'Publishing...' : 'Publish to Website'}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
 
-export default AdCampaign
+export default AdCampaign;

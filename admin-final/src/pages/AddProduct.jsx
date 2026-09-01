@@ -8,7 +8,7 @@
 // API: POST /api/products (multipart/form-data with Bearer token)
 // ============================================================
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../config'
 import { getAuthToken } from '../utils/api'
 
@@ -31,6 +31,102 @@ const COLOR_SWATCHES = [
   { name: 'Gold', hex: '#AA7A3E' },
 ]
 
+
+// ============================================================
+// WYSIWYG Rich Text Editor Component for Product Description
+// ============================================================
+function RichTextEditor({ value, onChange, placeholder = 'Type product description here...' }) {
+  const [mode, setMode] = useState('visual') // 'visual' | 'html'
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    if (editorRef.current && mode === 'visual') {
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value || ''
+      }
+    }
+  }, [value, mode])
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML)
+    }
+  }
+
+  const execCmd = (cmd, val = null) => {
+    if (mode !== 'visual') return
+    document.execCommand(cmd, false, val)
+    if (editorRef.current) {
+      editorRef.current.focus()
+      onChange(editorRef.current.innerHTML)
+    }
+  }
+
+  const handleInsertLink = () => {
+    if (mode !== 'visual') return
+    const url = window.prompt('Enter URL (e.g. https://...):')
+    if (url) {
+      execCmd('createLink', url)
+    }
+  }
+
+  const handleInsertImage = () => {
+    if (mode !== 'visual') return
+    const url = window.prompt('Enter Image URL:')
+    if (url) {
+      execCmd('insertImage', url)
+    }
+  }
+
+  return (
+    <div className="rte-container" style={{ borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--header-bg)', overflow: 'hidden' }}>
+      <div className="rte-toolbar" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px 10px', background: 'var(--sidebar-bg)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
+        <div style={{ display: 'inline-flex', gap: '3px' }}>
+          <button type="button" className="rte-btn" onClick={() => execCmd('bold')} title="Bold"><strong>B</strong></button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('italic')} title="Italic"><em>I</em></button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('underline')} title="Underline"><u>U</u></button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('strikeThrough')} title="Strikethrough"><s>S</s></button>
+        </div>
+
+        <div style={{ display: 'inline-flex', gap: '3px' }}>
+          <button type="button" className="rte-btn" onClick={() => execCmd('formatBlock', '<h2>')} title="Heading 2">H2</button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('formatBlock', '<h3>')} title="Heading 3">H3</button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('formatBlock', '<p>')} title="Paragraph">P</button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('formatBlock', '<blockquote>')} title="Quote">&ldquo;&rdquo;</button>
+        </div>
+
+        <div style={{ display: 'inline-flex', gap: '3px' }}>
+          <button type="button" className="rte-btn" onClick={() => execCmd('insertUnorderedList')} title="Bullet List">&bull; List</button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('insertOrderedList')} title="Numbered List">1. List</button>
+        </div>
+
+        <div style={{ display: 'inline-flex', gap: '3px' }}>
+          <button type="button" className="rte-btn" onClick={handleInsertLink} title="Insert Link">&#128279; Link</button>
+          <button type="button" className="rte-btn" onClick={handleInsertImage} title="Insert Image">&#128247; Img</button>
+          <button type="button" className="rte-btn" onClick={() => execCmd('removeFormat')} title="Clear Formatting">&#10006;</button>
+        </div>
+      </div>
+
+      <div
+        ref={editorRef}
+        className="rte-editable"
+        contentEditable
+        onInput={handleInput}
+        onBlur={handleInput}
+        data-placeholder={placeholder}
+        style={{
+          minHeight: '130px',
+          padding: '12px 14px',
+          color: 'var(--text-primary)',
+          fontSize: '0.88rem',
+          lineHeight: 1.5,
+          outline: 'none',
+        }}
+      />
+    </div>
+  )
+}
+
 function AddProduct({ token }) {
   const [form, setForm] = useState({
     name: '',
@@ -39,6 +135,7 @@ function AddProduct({ token }) {
     mrp: '',
     selling_price: '',
     discounted_price: '',
+    weekly_price: '',
     stock: '10',
     material: '',
     color: '',
@@ -216,6 +313,7 @@ function AddProduct({ token }) {
           mrp: '',
           selling_price: '',
           discounted_price: '',
+          weekly_price: '',
           stock: '10',
           material: '',
           color: '',
@@ -367,14 +465,11 @@ function AddProduct({ token }) {
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Description</label>
-              <textarea
-                name="description"
-                rows={4}
-                className="form-textarea"
-                placeholder="Detailed description of features, craft, and comfort..."
+              <label className="form-label">Product Description (WYSIWYG Rich Text)</label>
+              <RichTextEditor
                 value={form.description}
-                onChange={handleChange}
+                onChange={(val) => setForm((prev) => ({ ...prev, description: val }))}
+                placeholder="Detailed description of features, craft, materials, and comfort..."
               />
             </div>
           </div>
@@ -532,6 +627,22 @@ function AddProduct({ token }) {
                 value={form.selling_price}
                 onChange={handleChange}
               />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Weekly Price ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                name="weekly_price"
+                className="form-input"
+                placeholder="e.g. 24.50"
+                value={form.weekly_price}
+                onChange={handleChange}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                Estimated weekly payment for WINZ/Finance
+              </span>
             </div>
 
             <div className="form-group" style={{ margin: 0 }}>

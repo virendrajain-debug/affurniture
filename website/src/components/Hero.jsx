@@ -1,52 +1,65 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { API_BASE, getAssetUrl } from '../config'
+import { API_BASE } from '../config'
 
-function Hero({ slides: propSlides }) {
+const defaultSlides = [
+  {
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85',
+    alt: 'Modern green sofa in a living room',
+    tagline: 'AF FURNISHINGS',
+    title: <>Comfort made<br/>for <i>everyday living.</i></>,
+    desc: 'Furniture, beds and appliances to make your home feel complete.',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=2000&q=85',
+    alt: 'Cozy bedroom with wooden furniture',
+    tagline: 'BEDROOM COLLECTION',
+    title: <>Rest <i>beautifully.</i></>,
+    desc: 'Discover beds, mattresses and bedroom sets designed for comfort.',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=2000&q=85',
+    alt: 'Elegant dining room setup',
+    tagline: 'DINING COLLECTION',
+    title: <>Gather around<br/><i>good moments.</i></>,
+    desc: 'Tables and chairs made for family gatherings and dinner parties.',
+  },
+]
+
+function Hero() {
   const [current, setCurrent] = useState(0)
-  const [slides, setSlides] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [banners, setBanners] = useState({})
+  const [adminSlides, setAdminSlides] = useState([])
 
   useEffect(() => {
-    fetch(API_BASE + '/api/page-banners?page_key=home')
+    fetch(`${API_BASE}/api/settings`)
       .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          // Only active hero slides
-          const activeHeroSlots = data.filter(b => (b.slot?.startsWith('hero') || b.slot === 'hero') && b.active === 1 && b.image)
-          if (activeHeroSlots.length > 0) {
-            setSlides(activeHeroSlots.map(s => ({
-              image: getAssetUrl(s.image),
-              alt: s.title || s.label || 'Furniture Hero Slide',
-              tagline: s.label || 'AF FURNISHINGS',
-              title: s.title || 'Comfort made for everyday living.',
-              desc: s.subtitle || s.description || '',
-              button_link: s.cta_link || '/category/lounge-suite',
-            })))
-            setLoading(false)
-            return
-          }
-        }
-        setSlides([])
-        setLoading(false)
-      })
-      .catch(() => {
-        setSlides([])
-        setLoading(false)
-      })
-  }, [propSlides])
+      .then(setBanners)
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
-    if (slides.length <= 1) return
+    fetch(`${API_BASE}/api/hero-sliders/active`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setAdminSlides(data) })
+      .catch(() => {})
+  }, [])
+
+  const slides = adminSlides.length > 0
+    ? adminSlides.map(s => ({
+        image: s.image || defaultSlides[0].image,
+        alt: s.alt || '',
+        tagline: s.tagline || '',
+        title: s.title || '',
+        desc: s.description || '',
+      }))
+    : defaultSlides.map((s, i) => i === 0 && banners.home_hero_banner ? { ...s, image: banners.home_hero_banner } : s)
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length)
     }, 5000)
     return () => clearInterval(timer)
   }, [slides.length])
-
-  if (loading || slides.length === 0) return null
-
-  const curSlide = slides[current] || slides[0]
 
   return (
     <section className="hero" id="home">
@@ -55,33 +68,28 @@ function Hero({ slides: propSlides }) {
           key={i}
           src={slide.image}
           alt={slide.alt}
-          className={'hero-slide ' + (i === current ? 'active' : '')}
-          loading={i === 0 ? 'eager' : 'lazy'}
+          className={`hero-slide ${i === current ? 'active' : ''}`}
         />
       ))}
-      <div className="hero-content">
-        <span className="hero-tagline">{curSlide.tagline}</span>
-        <h1 className="hero-title">{curSlide.title}</h1>
-        <p className="hero-desc">{curSlide.desc}</p>
-        <Link to={curSlide.button_link || '/category/lounge-suite'} className="hero-btn">
-          Explore Collection
-        </Link>
+      <div className="hero-shade"></div>
+      <div className="hero-curve" aria-hidden="true"></div>
+      <div className="hero-copy" key={current}>
+        <span>{slides[current]?.tagline}</span>
+        <h1>{slides[current]?.title}</h1>
+        <p>{slides[current]?.desc}</p>
       </div>
-
-      {slides.length > 1 && (
-        <div className="hero-indicators">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              className={'hero-indicator ' + (i === current ? 'active' : '')}
-              onClick={() => setCurrent(i)}
-              aria-label={'Slide ' + (i + 1)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="hero-dots">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            className={`hero-dot ${i === current ? 'active' : ''}`}
+            onClick={() => setCurrent(i)}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
+      </div>
     </section>
   )
 }
 
-export default Hero;
+export default Hero

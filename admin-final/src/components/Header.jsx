@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
 // 10 Executive Luxury Themes
@@ -30,6 +30,11 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
   const navigate = useNavigate()
   const location = useLocation()
   
+  const [avatar, setAvatar] = useState(() => {
+    const cached = localStorage.getItem('adminAvatar') || localStorage.getItem('site_logo') || profileImage
+    return cached ? getAssetUrl(cached) : '/aeryp.png'
+  })
+  
   const [notifCount, setNotifCount] = useState(0)
   const [showNotif, setShowNotif] = useState(false)
   const [notifications, setNotifications] = useState([])
@@ -42,6 +47,22 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
   const [isDark, setIsDark] = useState(localStorage.getItem('admin-dark-mode') !== 'false')
 
   const headerRef = useRef(null)
+
+  // Synchronize avatar with global storage and custom update events
+  useEffect(() => {
+    const updateAvatar = () => {
+      const newAvatar = localStorage.getItem('adminAvatar') || localStorage.getItem('site_logo') || profileImage
+      setAvatar(newAvatar ? getAssetUrl(newAvatar) : '/aeryp.png')
+    }
+    window.addEventListener('logo-updated', updateAvatar)
+    window.addEventListener('avatar-updated', updateAvatar)
+    window.addEventListener('storage', updateAvatar)
+    return () => {
+      window.removeEventListener('logo-updated', updateAvatar)
+      window.removeEventListener('avatar-updated', updateAvatar)
+      window.removeEventListener('storage', updateAvatar)
+    }
+  }, [profileImage])
 
   // Listen for clicks outside dropdown menus
   useEffect(() => {
@@ -102,6 +123,8 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
   }, [theme, isDark, token])
 
   const getPageTitle = (path) => {
+    if (path.includes('banners')) return 'Banners'
+    if (path.includes('/pages') || path === '/dashboard/pages') return 'CMS Pages'
     if (path.includes('/pages/home')) return 'Home Page Media'
     if (path.includes('/pages/about') || path === '/dashboard/about') return 'About Us Page Media'
     if (path.includes('/pages/delivery-info') || path === '/dashboard/delivery-info') return 'Delivery Information'
@@ -113,7 +136,7 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
     if (path.includes('/pages/store-locations')) return 'Store Locations & Showrooms'
     if (path.includes('/pages/winz-finance') || path === '/dashboard/winz-finance') return 'WinZ & Finance Guide'
     if (path.includes('/page-banners')) return 'Pages & Media Gallery'
-    if (path.includes('categories')) return 'Categories & Navbar Slots'
+    if (path.includes('categories')) return 'Collection Structure'
     if (path.includes('subcategories')) return 'Subcategories'
     if (path.includes('add-product')) return 'Add New Product'
     if (path.includes('products')) return 'Product List'
@@ -202,7 +225,7 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
   }
 
   return (
-    <header className="premium-header">
+    <header className="premium-header" ref={headerRef}>
       <style>{`
         :root {
           --font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -350,26 +373,74 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
         }
 
         .premium-header {
-          height: 72px; box-sizing: border-box; display: flex; justify-content: space-between;
+          height: 70px; box-sizing: border-box; display: flex; justify-content: space-between;
           align-items: center; padding: 0 32px; background-color: var(--header-bg);
           color: var(--text-primary); position: sticky; top: 0; z-index: 900;
-          border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-          transition: background-color 0.4s ease;
+          border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          transition: background-color 0.4s ease, border-color 0.4s ease;
         }
 
-        .header-left { display: flex; align-items: center; gap: 20px; }
+        .header-brand-logo-wrap {
+          width: 40px; height: 40px; min-width: 40px; border-radius: 10px;
+          background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);
+          display: flex; align-items: center; justify-content: center;
+          overflow: hidden; flex-shrink: 0; padding: 3px; box-sizing: border-box;
+          cursor: pointer; transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .header-brand-logo-wrap:hover {
+          transform: scale(1.04); border-color: var(--accent-color, #d4af37);
+        }
+        .header-brand-logo-img {
+          width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 6px;
+        }
+
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
         
         .premium-menu-toggle {
-          background: transparent; border: none; color: var(--text-secondary); cursor: pointer;
-          display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 8px; transition: all 0.2s ease;
+          display: flex !important;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--border-color);
+          color: var(--text-secondary);
+          cursor: pointer;
+          align-items: center;
+          justify-content: center;
+          padding: 7px 10px;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
         }
-        .premium-menu-toggle:hover { background: var(--hover-bg); color: var(--text-primary); }
+        .premium-menu-toggle:hover {
+          background: var(--hover-bg);
+          color: var(--accent-color);
+          border-color: var(--accent-color);
+          transform: translateY(-1px);
+        }
         
-        .header-title-dynamic { font-size: 1.25rem; font-weight: 600; letter-spacing: 0.5px; margin: 0; display: flex; align-items: center; gap: 8px; }
-        .title-accent { color: var(--text-secondary); font-weight: 400; }
+        .header-title-dynamic {
+          font-size: 1.25rem;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .title-accent {
+          color: var(--text-secondary);
+          font-weight: 400;
+        }
 
-        .header-right { display: flex; align-items: center; gap: 20px; }
-        
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
         .action-btn-premium {
           background: var(--hover-bg); color: var(--text-secondary); border: 1px solid var(--border-color);
           border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
@@ -420,9 +491,9 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
         .premium-user:hover { background: var(--hover-bg); border-color: var(--border-color); }
         
         .premium-avatar {
-          width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border-color);
-          display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-          color: #ffffff; font-weight: 700; overflow: hidden; font-size: 0.95rem;
+          width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(212, 175, 55, 0.45);
+          display: flex; align-items: center; justify-content: center; background: #ffffff;
+          color: #1a2744; font-weight: 700; overflow: hidden; font-size: 0.95rem; flex-shrink: 0;
         }
         .premium-email { font-size: 0.88rem; font-weight: 500; letter-spacing: 0.3px; color: var(--text-secondary); }
 
@@ -432,9 +503,9 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
           display: flex; align-items: center; gap: 12px; background: var(--header-bg);
         }
         .p-profile-card-avatar {
-          width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--accent-color);
-          display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-          color: #ffffff; font-weight: 700; font-size: 1.1rem; overflow: hidden; flex-shrink: 0;
+          width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(212, 175, 55, 0.45);
+          display: flex; align-items: center; justify-content: center; background: #ffffff;
+          color: #1a2744; font-weight: 700; font-size: 1.1rem; overflow: hidden; flex-shrink: 0;
         }
         .p-profile-card-info { overflow: hidden; }
         .p-profile-card-name { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin: 0 0 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
@@ -506,7 +577,7 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
       `}</style>
 
       <div className="header-left">
-        <button className="premium-menu-toggle" onClick={onMenuToggle}>
+        <button className="premium-menu-toggle" onClick={onMenuToggle} title="Open / Close Sidebar (3 Horizontal Lines)" aria-label="Toggle Sidebar">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="3" y1="12" x2="21" y2="12" />
             <line x1="3" y1="6" x2="21" y2="6" />
@@ -629,11 +700,14 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
           >
             <span className="premium-email">{userEmail}</span>
             <div className="premium-avatar">
-              {profileImage ? (
-                <img src={profileImage} alt="Admin" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                userEmail.charAt(0).toUpperCase()
-              )}
+              <img 
+                src={avatar} 
+                alt="Admin" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                onError={(e) => {
+                  if (e.target.src !== '/aeryp.png') e.target.src = '/aeryp.png'
+                }}
+              />
             </div>
           </div>
 
@@ -641,11 +715,14 @@ function Header({ onMenuToggle, profileImage, token, onLogout }) {
             <div className="premium-dropdown profile-dropdown-content">
               <div className="p-profile-card-header">
                 <div className="p-profile-card-avatar">
-                  {profileImage ? (
-                    <img src={profileImage} alt="Admin" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    userEmail.charAt(0).toUpperCase()
-                  )}
+                  <img 
+                    src={avatar} 
+                    alt="Admin" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                    onError={(e) => {
+                      if (e.target.src !== '/aeryp.png') e.target.src = '/aeryp.png'
+                    }}
+                  />
                 </div>
                 <div className="p-profile-card-info">
                   <div className="p-profile-card-name">{userName}</div>

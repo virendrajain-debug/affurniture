@@ -75,7 +75,8 @@ function OnSalePage() {
                   <article key={p.id} className="catalog-card">
                     <Link to={`/product/${p.slug || p.id}`} className="catalog-card-image">
                       <img src={imgSrc} alt={p.name} loading="lazy" />
-                      {discount > 0 && <div className="catalog-card-banner"><span>{discount}% OFF</span></div>}
+                      <span className="sale-badge">SALE</span>
+                      {discount > 0 && <span className="sale-discount-badge">-{discount}%</span>}
                     </Link>
                     <div className="catalog-card-body">
                       <Link to={`/product/${p.slug || p.id}`}>

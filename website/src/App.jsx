@@ -39,16 +39,16 @@ function AdBanner({ ad }) {
   if (!ad?.image) return null
   return (
     <a href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="home-ad-banner">
-      <img src={ad.image} alt={ad.name || 'Ad'} loading="lazy" />
+      <img src={ad.image} alt={ad.name} loading="lazy" />
     </a>
   )
 }
 
-function DynamicCategories({ featuredIds }) {
+function DynamicCategories() {
   const [categories, setCategories] = useState([])
 
   useEffect(() => {
-    fetch(API_BASE + '/api/categories')
+    fetch(`${API_BASE}/api/categories`)
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setCategories(data)
@@ -56,30 +56,22 @@ function DynamicCategories({ featuredIds }) {
       .catch(() => {})
   }, [])
 
-  // Filter categories based on featured IDs if provided
-  const displayedCategories = categories.filter(cat => {
-    if (Array.isArray(featuredIds) && featuredIds.length > 0) {
-      return featuredIds.includes(String(cat.id))
-    }
-    return !['Office', 'Outdoor'].includes(cat.name)
-  })
-
   return (
     <>
-      {displayedCategories.map((cat, idx) => (
+      {categories.filter(cat => !['Office', 'Outdoor'].includes(cat.name)).map((cat, idx) => (
         <div key={cat.id}>
           <Category
-            id={'cat-' + cat.id}
+            id={`cat-${cat.id}`}
             title={cat.name}
             apiCategory={cat.name}
             image={cat.image || undefined}
-            link={'/category/' + cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}
+            link={`/category/${cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
             reverse={idx % 2 !== 0}
           />
           <ProductGrid
-            sectionId={'products-' + cat.id}
-            label={cat.name.toUpperCase() + ' COLLECTION'}
-            title={cat.name + ' for your home.'}
+            sectionId={`products-${cat.id}`}
+            label={`${cat.name.toUpperCase()} COLLECTION`}
+            title={`${cat.name} for your home.`}
             category={cat.name}
             compact={idx > 1}
           />
@@ -90,29 +82,29 @@ function DynamicCategories({ featuredIds }) {
 }
 
 function HomePage() {
-  const [homepageData, setHomepageData] = useState({})
+  const [homeAds, setHomeAds] = useState([])
 
   useEffect(() => {
-    fetch(API_BASE + '/api/homepage')
+    fetch(`${API_BASE}/api/ad-campaigns/active?position=homepage`)
       .then(r => r.json())
-      .then(data => {
-        if (data && typeof data === 'object') setHomepageData(data)
-      })
+      .then(data => { if (Array.isArray(data)) setHomeAds(data) })
       .catch(() => {})
   }, [])
+
+  const getAd = (index) => homeAds[index] || null
 
   return (
     <>
       <Header />
       <main id="home">
-        <Hero slides={homepageData.hero_slides} />
+        <Hero />
         <Deals />
-        <DynamicCategories featuredIds={homepageData.featured_categories} />
-        <PromoPoster promo={homepageData.promo_banner_1} />
+        <DynamicCategories />
+        {getAd(0) && <AdBanner ad={getAd(0)} />}
+        <PromoPoster ad={getAd(1)} />
+        {getAd(1) && <AdBanner ad={getAd(1)} />}
         <Stores />
-        {homepageData.promo_banner_2 && (
-          <PromoPoster promo={homepageData.promo_banner_2} />
-        )}
+        {getAd(2) && <AdBanner ad={getAd(2)} />}
         <AboutSection />
         <Testimonials />
       </main>
@@ -148,4 +140,4 @@ function App() {
   )
 }
 
-export default App;
+export default App

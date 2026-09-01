@@ -27,6 +27,7 @@ import heroSliderRoutes from './routes/hero-sliders.js';
 import discountCodeRoutes from './routes/discount-codes.js';
 import aboutSectionsRoutes from './routes/about-sections.js';
 import uploadRoutes from './routes/upload.js';
+import mediaGalleryRoutes from './routes/media-gallery.js';
 import pageBannerRoutes from './routes/page-banners.js';
 import subcategoryRoutes from './routes/subcategories.js';
 import adCampaignRoutes from './routes/ad-campaigns.js';
@@ -35,6 +36,8 @@ import testimonialRoutes from './routes/testimonials.js';
 import pagesRoutes from './routes/pages.js';
 import contactRoutes from './routes/contact.js';
 import notificationRoutes from './routes/notifications.js';
+import homepageRoutes from './routes/homepage.js';
+import winzProductsRoutes from './routes/winz-products.js';
 
 dotenv.config();
 
@@ -42,7 +45,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || process.env.NODE_PORT || 5000;
+const PORT = process.env.PORT || process.env.NODE_PORT || 4001;
 
 app.use(cors({
   origin: function(origin, callback) {
@@ -50,7 +53,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'X-Requested-With', 'Accept', 'Origin'],
 }));
 
 app.options('*', cors());
@@ -60,6 +63,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/about', aboutRoutes);
@@ -80,6 +84,7 @@ app.use('/api/hero-sliders', heroSliderRoutes);
 app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/about-sections', aboutSectionsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/media-gallery', mediaGalleryRoutes);
 app.use('/api/page-banners', pageBannerRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/ad-campaigns', adCampaignRoutes);
@@ -88,6 +93,8 @@ app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/pages', pagesRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/homepage', homepageRoutes);
+app.use('/api/winz-products', winzProductsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -346,10 +353,19 @@ async function autoSetup() {
   pool.execute(`
     CREATE TABLE IF NOT EXISTS page_banners (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      page_key TEXT NOT NULL UNIQUE,
+      page_key TEXT NOT NULL,
+      slot TEXT DEFAULT 'hero',
       label TEXT DEFAULT '',
+      title TEXT DEFAULT NULL,
+      subtitle TEXT DEFAULT NULL,
+      description TEXT DEFAULT NULL,
       image TEXT DEFAULT '',
-      created_at TEXT DEFAULT (datetime('now'))
+      cta_text TEXT DEFAULT NULL,
+      cta_link TEXT DEFAULT NULL,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(page_key, slot)
     )
   `);
 
@@ -402,6 +418,22 @@ async function autoSetup() {
       avatar TEXT DEFAULT '',
       location TEXT DEFAULT '',
       rating INTEGER DEFAULT 5,
+      sort_order INTEGER DEFAULT 0,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  pool.execute(`
+    CREATE TABLE IF NOT EXISTS winz_products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category TEXT DEFAULT 'Living Room',
+      item_code TEXT DEFAULT '',
+      price REAL DEFAULT 0,
+      image TEXT DEFAULT '',
+      description TEXT DEFAULT '',
       sort_order INTEGER DEFAULT 0,
       active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now')),

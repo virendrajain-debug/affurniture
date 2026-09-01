@@ -74,3 +74,66 @@ body {
   }
 }
 
+/* ============================================================
+   UNIFIED AVATAR CONSISTENCY SUITE (SIDEBAR & HEADER)
+   ============================================================ */
+.sidebar-profile-img,
+.header-profile-img,
+.header-avatar,
+.user-avatar,
+.p-profile-avatar,
+.p-profile-avatar-wrap,
+.p-profile-avatar img,
+.premium-avatar,
+.premium-avatar img,
+.p-profile-card-avatar,
+.p-profile-card-avatar img {
+  background-color: #ffffff !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+.p-profile-avatar-wrap {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 10px;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  padding: 2px;
+  border: 2px solid rgba(212, 175, 55, 0.45) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.premium-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 2px solid rgba(212, 175, 55, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.p-profile-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 2px solid rgba(212, 175, 55, 0.45) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+

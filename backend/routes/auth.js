@@ -297,14 +297,4 @@ router.put('/change-password', authenticateToken, async (req, res) => {
   }
 });
 
-
-// -----------------------------------------------------------
-// POST /logout & /api/admin/logout
-// -----------------------------------------------------------
-router.post('/logout', (req, res) => {
-  res.clearCookie('token');
-  res.clearCookie('admin_session');
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
 export default router;

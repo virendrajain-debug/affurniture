@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { API_BASE } from '../config'
 import Header from '../components/Header'
@@ -9,24 +9,11 @@ function WinzQuote() {
   const prefillProduct = searchParams.get('product') || ''
 
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    product_name: prefillProduct,
-    message: '',
+    name: '', email: '', phone: '', product_name: prefillProduct, message: '',
   })
-
-  const [winzProducts, setWinzProducts] = useState([])
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-
-  useEffect(() => {
-    fetch(API_BASE + '/api/winz-products?active_only=true')
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setWinzProducts(data) })
-      .catch(() => {})
-  }, [])
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
@@ -67,9 +54,9 @@ function WinzQuote() {
       <main className="about-page">
         <section className="winz-quote-banner">
           <div className="winz-quote-banner-inner">
-            <span>GET AN OFFICIAL QUOTE</span>
-            <h1>WINZ Furniture Quotation</h1>
-            <p>Select your required furniture items and our team will generate your formal Work and Income quote.</p>
+            <span>GET A QUOTE</span>
+            <h1>WinZ Furniture Quote</h1>
+            <p>Tell us what you need and we'll get back to you with the best options.</p>
           </div>
         </section>
 
@@ -83,9 +70,9 @@ function WinzQuote() {
                 </svg>
               </div>
               <h2>Quote Request Submitted!</h2>
-              <p>Thank you, <strong>{form.name}</strong>. We've received your quote request{form.product_name ? ` for ${form.product_name}` : ''}.</p>
-              <p>Our team will review your request and send the official WINZ quotation within 24 hours.</p>
-              <p className="enquiry-success-note">Confirmation sent to <strong>{form.email}</strong></p>
+              <p>Thank you, <strong>{form.name}</strong>. We've received your quote request{form.product_name ? ` for <strong>{form.product_name}</strong>` : ''}.</p>
+              <p>Our team will review your request and get back to you within 1-2 business days.</p>
+              <p className="enquiry-success-note">You'll receive a confirmation at <strong>{form.email}</strong></p>
               <button className="enquiry-success-btn" onClick={() => { setSubmitted(false); setForm({ name: '', email: '', phone: '', product_name: '', message: '' }) }}>
                 Submit Another Quote
               </button>
@@ -95,7 +82,7 @@ function WinzQuote() {
               <div className="section-title">
                 <span>AF FURNISHINGS</span>
                 <h2>Fill in your details</h2>
-                <p>We'll help you get approved with an official WINZ supplier quote.</p>
+                <p>We'll help you find the right furniture for your home.</p>
               </div>
 
               <form className="winz-quote-form" onSubmit={handleSubmit}>
@@ -114,36 +101,22 @@ function WinzQuote() {
 
                 <div className="form-row">
                   <div className="input-group">
-                    <label>Phone Number</label>
-                    <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="e.g. 021 123 4567" />
+                    <label>Phone</label>
+                    <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="Enter your phone number" />
                   </div>
-
                   <div className="input-group">
-                    <label>Requested WinZ Product / Package</label>
-                    <select
-                      name="product_name"
-                      value={form.product_name}
-                      onChange={handleChange}
-                      style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '0.9rem' }}
-                    >
-                      <option value="">-- Select a WinZ Catalogue Product --</option>
-                      {winzProducts.map(p => (
-                        <option key={p.id} value={p.name}>
-                          {p.name} ({p.category} {p.price ? `- $${p.price}` : ''})
-                        </option>
-                      ))}
-                      <option value="Custom Furniture Package">Custom Furniture Package / Multiple Items</option>
-                    </select>
+                    <label>Product Interested In</label>
+                    <input type="text" name="product_name" value={form.product_name} onChange={handleChange} placeholder="e.g. Haven Sofa" />
                   </div>
                 </div>
 
                 <div className="input-group">
-                  <label>Additional Notes / WinZ Case Manager Details</label>
-                  <textarea name="message" value={form.message} onChange={handleChange} rows="4" placeholder="Tell us if you need delivery, specific room dimensions, or Case Manager contact information..." />
+                  <label>Message</label>
+                  <textarea name="message" rows="4" value={form.message} onChange={handleChange} placeholder="Tell us about your furniture needs, preferred colors, budget, etc." />
                 </div>
 
-                <button type="submit" className="winz-submit-btn" disabled={submitting}>
-                  {submitting ? 'Submitting Quote Request...' : 'Submit WinZ Quote Request'}
+                <button type="submit" className="primary" disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit Quote Request'}
                 </button>
               </form>
             </div>
@@ -155,4 +128,4 @@ function WinzQuote() {
   )
 }
 
-export default WinzQuote;
+export default WinzQuote

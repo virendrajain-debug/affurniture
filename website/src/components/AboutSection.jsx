@@ -1,27 +1,15 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { API_BASE } from '../config'
 
 function AboutSection() {
   const [about, setAbout] = useState(null)
-  const [banners, setBanners] = useState([])
 
   useEffect(() => {
     fetch(`${API_BASE}/api/about`)
       .then(r => r.json())
       .then(setAbout)
       .catch(() => {})
-
-    fetch(`${API_BASE}/api/page-banners?page_key=about`)
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setBanners(data) })
-      .catch(() => {})
   }, [])
-
-  const storyBanner = banners.find(b => b.slot === 'story' && b.active === 1)
-  const showroomBanner = banners.find(b => b.slot === 'showroom' && b.active === 1)
-
-  const imgMain = storyBanner?.image ? getAssetUrl(storyBanner.image) : (about?.slot2_feature_img || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=85')
-  const imgSec = showroomBanner?.image ? getAssetUrl(showroomBanner.image) : (about?.slot3_img_a || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=600&q=85')
 
   return (
     <section className="about-section" id="about">
@@ -31,8 +19,8 @@ function AboutSection() {
       </div>
       <div className="about-grid">
         <div className="about-image-col">
-          <img src={imgMain} alt="Our showroom" className="about-img-main" />
-          <img src={imgSec} alt="Quality furniture" className="about-img-secondary" />
+          <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=85" alt="Our showroom" className="about-img-main" />
+          <img src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=600&q=85" alt="Quality furniture" className="about-img-secondary" />
         </div>
         <div className="about-text-col">
           {about?.tagline && <h3>{about.tagline}</h3>}
@@ -72,4 +60,4 @@ function AboutSection() {
   )
 }
 
-export default AboutSection;
+export default AboutSection

@@ -49,15 +49,6 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } }); // 5M
 
 const router = Router();
 
-// Ensure weekly_price column exists in products table
-(async () => {
-  try {
-    await pool.execute('ALTER TABLE products ADD COLUMN weekly_price REAL DEFAULT NULL');
-  } catch (err) {
-    // Column already exists or schema already up to date
-  }
-})();
-
 // -----------------------------------------------------------
 // GET /api/products
 // -----------------------------------------------------------
@@ -267,7 +258,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', authenticateToken, upload.array('images', 10), async (req, res) => {
   try {
     const {
-      name, category_id, subcategory_id, mrp, selling_price, discounted_price, weekly_price, description,
+      name, category_id, subcategory_id, mrp, selling_price, discounted_price, description,
       stock, material, color, size, dimensions, weight, warranty, delivery_info,
       featured, new_arrival, brand
     } = req.body;
@@ -302,13 +293,11 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
     // Convert uploaded files to URL paths
     const images = req.files ? req.files.map(f => `${BACKEND_URL}/uploads/${f.filename}`) : [];
 
-    const parsedWeeklyPrice = weekly_price && !isNaN(parseFloat(weekly_price)) ? parseFloat(weekly_price) : null;
-
     // Insert product into database
     const [result] = await pool.execute(
-      `INSERT INTO products (name, category_id, subcategory_id, mrp, selling_price, discounted_price, weekly_price, description, stock, material, color, size, dimensions, weight, warranty, delivery_info, featured, new_arrival, images, slug, brand) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, parsedWeeklyPrice, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null]
+      `INSERT INTO products (name, category_id, subcategory_id, mrp, selling_price, discounted_price, description, stock, material, color, size, dimensions, weight, warranty, delivery_info, featured, new_arrival, images, slug, brand) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null]
     );
 
     res.status(201).json({ message: 'Product created successfully', id: result.insertId, slug });
@@ -326,7 +315,7 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
 router.put('/:id', authenticateToken, upload.array('images', 10), async (req, res) => {
   try {
     const {
-      name, category_id, subcategory_id, mrp, selling_price, discounted_price, weekly_price, description,
+      name, category_id, subcategory_id, mrp, selling_price, discounted_price, description,
       stock, material, color, size, dimensions, weight, warranty, delivery_info,
       featured, new_arrival, existing_images, brand
     } = req.body;
@@ -358,11 +347,9 @@ router.put('/:id', authenticateToken, upload.array('images', 10), async (req, re
       }
     }
 
-    const parsedWeeklyPrice = weekly_price && !isNaN(parseFloat(weekly_price)) ? parseFloat(weekly_price) : null;
-
     await pool.execute(
-      `UPDATE products SET name=?, category_id=?, subcategory_id=?, mrp=?, selling_price=?, discounted_price=?, weekly_price=?, description=?, stock=?, material=?, color=?, size=?, dimensions=?, weight=?, warranty=?, delivery_info=?, featured=?, new_arrival=?, images=?, slug=?, brand=? WHERE id=?`,
-      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, parsedWeeklyPrice, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null, req.params.id]
+      `UPDATE products SET name=?, category_id=?, subcategory_id=?, mrp=?, selling_price=?, discounted_price=?, description=?, stock=?, material=?, color=?, size=?, dimensions=?, weight=?, warranty=?, delivery_info=?, featured=?, new_arrival=?, images=?, slug=?, brand=? WHERE id=?`,
+      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null, req.params.id]
     );
 
     res.json({ message: 'Product updated successfully', slug });

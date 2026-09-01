@@ -5,30 +5,11 @@ import { API_BASE } from '../config'
 function SocialIcon({ platform }) {
   const key = (platform || '').toLowerCase().trim()
   const icons = {
-    instagram: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-      </svg>
-    ),
-    facebook: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
-      </svg>
-    ),
+    instagram: <img src="/instagram.png" alt="Instagram" width="20" height="20" style={{borderRadius:'5px'}} />,
+    facebook: <img src="/facebook.png" alt="Facebook" width="20" height="20" style={{borderRadius:'5px'}} />,
     twitter: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-      </svg>
-    ),
-    youtube: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19.13C5.12 19.56 12 19.56 12 19.56s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.43z"/>
-        <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
-      </svg>
-    ),
-    linkedin: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
       </svg>
     ),
   }
@@ -43,7 +24,6 @@ function SocialIcon({ platform }) {
 function Footer() {
   const [socialLinks, setSocialLinks] = useState([])
   const [about, setAbout] = useState({})
-  const [settings, setSettings] = useState({})
   const [logoUrl, setLogoUrl] = useState('/logo.png')
 
   useEffect(() => {
@@ -59,13 +39,10 @@ function Footer() {
       fetch(`${API_BASE}/api/settings`)
         .then(r => r.json())
         .then(data => {
-          if (data && typeof data === 'object') {
-            setSettings(data)
-            if (data.site_logo) {
-              const logo = data.site_logo.startsWith('http') ? data.site_logo : `${API_BASE}${data.site_logo}`
-              setLogoUrl(logo)
-              localStorage.setItem('site_logo', logo)
-            }
+          if (data?.site_logo) {
+            const logo = data.site_logo.startsWith('http') ? data.site_logo : `${API_BASE}${data.site_logo}`
+            setLogoUrl(logo)
+            localStorage.setItem('site_logo', logo)
           }
         })
         .catch(() => {})
@@ -78,14 +55,11 @@ function Footer() {
     }
     const logoInterval = setInterval(() => {
       fetch(`${API_BASE}/api/settings`).then(r => r.json()).then(d => {
-        if (d && typeof d === 'object') {
-          setSettings(d)
-          if (d.site_logo) {
-            const logo = d.site_logo.startsWith('http') ? d.site_logo : `${API_BASE}${d.site_logo}`
-            if (logo !== localStorage.getItem('site_logo')) {
-              localStorage.setItem('site_logo', logo)
-              setLogoUrl(logo)
-            }
+        if (d?.site_logo) {
+          const logo = d.site_logo.startsWith('http') ? d.site_logo : `${API_BASE}${d.site_logo}`
+          if (logo !== localStorage.getItem('site_logo')) {
+            localStorage.setItem('site_logo', logo)
+            setLogoUrl(logo)
           }
         }
       }).catch(() => {})
@@ -99,16 +73,10 @@ function Footer() {
     }
   }, [])
 
-  const phone = settings?.phone || about.phone || '0800 234 333'
-  const email = settings?.support_email || about.email || 'sales@affurnishings.co.nz'
-  const siteName = settings?.site_name || 'AF Furnishings'
-  const copyright = settings?.copyright_text || '© 2026 AF Furnishings. All rights reserved.'
-  const tagline = settings?.footer_tagline || 'Secure payments • Friendly service • Home delivery'
-
   return (
     <footer>
       <div className="footer-logo">
-        <Link to="/"><img src={logoUrl} alt={siteName} /></Link>
+        <Link to="/"><img src={logoUrl} alt="AF Furnishings" /></Link>
       </div>
 
       <nav className="footer-nav">
@@ -117,17 +85,15 @@ function Footer() {
         <Link to="/category/bedroom">Bedroom</Link>
         <Link to="/category/dining">Dining</Link>
         <Link to="/category/living">Living</Link>
-        <Link to="/winz">WINZ Quotes</Link>
         <Link to="/about">About</Link>
       </nav>
 
       <div className="footer-columns">
         <div>
-          <h3>{siteName}</h3>
+          <h3>AF Furnishings</h3>
           <Link to="/store-locations">Store Locations</Link>
           <Link to="/contact">Contact us</Link>
           <Link to="/apply-for-finance">Apply for Finance</Link>
-          <Link to="/winz">WINZ Quotes</Link>
         </div>
         <div>
           <h3>Customer care</h3>
@@ -138,10 +104,10 @@ function Footer() {
         </div>
         <div>
           <h3>Get in touch</h3>
-          {phone && <a href={`tel:${phone}`}>{phone}</a>}
-          {email && <a href={`mailto:${email}`}>{email}</a>}
+          {about.phone && <a href={`tel:${about.phone}`}>{about.phone}</a>}
+          {about.email && <a href={`mailto:${about.email}`}>{about.email}</a>}
           {socialLinks.length > 0 && (
-            <div className="footer-social">
+            <div className="footer-social-row">
               {socialLinks.map((link) => (
                 <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="footer-social-icon" title={link.platform}>
                   <SocialIcon platform={link.platform} />
@@ -153,8 +119,8 @@ function Footer() {
       </div>
 
       <div className="footer-bottom">
-        <span>{copyright}</span>
-        <span>{tagline}</span>
+        <span>&copy; 2026 AF Furnishings. All rights reserved.</span>
+        <span>Secure payments &bull; Friendly service &bull; Home delivery</span>
       </div>
     </footer>
   )

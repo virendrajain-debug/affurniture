@@ -1,119 +1,91 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { API_BASE } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function AboutPage() {
-  const [pageData, setPageData] = useState({})
-  const [banners, setBanners] = useState([])
+  const [about, setAbout] = useState(null)
+  const [banners, setBanners] = useState({})
 
   useEffect(() => {
-    fetch(API_BASE + '/api/pages/about')
+    fetch(`${API_BASE}/api/about`)
       .then(r => r.json())
-      .then(d => { if (d) setPageData(d) })
+      .then(setAbout)
       .catch(() => {})
-
-    fetch(API_BASE + '/api/page-banners?page_key=about')
+    fetch(`${API_BASE}/api/settings`)
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setBanners(data) })
+      .then(setBanners)
       .catch(() => {})
   }, [])
-
-  const heroBanner = banners.find(b => b.slot === 'hero' && b.active === 1)
-  const storyBanner = banners.find(b => b.slot === 'story' && b.active === 1)
-  const val1 = banners.find(b => b.slot === 'val_1' && b.active === 1)
-  const val2 = banners.find(b => b.slot === 'val_2' && b.active === 1)
-  const val3 = banners.find(b => b.slot === 'val_3' && b.active === 1)
-  const showroomBanner = banners.find(b => b.slot === 'showroom' && b.active === 1)
-
-  const activeValues = [val1, val2, val3].filter(Boolean)
 
   return (
     <>
       <Header />
       <main className="about-page">
-        {/* 1. Top Hero Banner (1) */}
-        {heroBanner && (
-          <section className="about-hero-banner">
-            <img src={getAssetUrl(heroBanner.image)} alt={heroBanner.title || pageData.title || 'About Us'} />
-            <div className="about-hero-overlay">
-              <span>{heroBanner.label || pageData.eyebrow || 'OUR STORY'}</span>
-              <h1>{heroBanner.title || pageData.title || 'About AF Furnishings'}</h1>
-              <p>{heroBanner.subtitle || pageData.subtitle || 'Quality furniture for every New Zealand home'}</p>
-            </div>
-          </section>
-        )}
+        <section className="about-hero-banner">
+          <img src={banners.about_banner || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85'} alt="AF Furnishings showroom" />
+          <div className="about-hero-overlay">
+            <span>OUR STORY</span>
+            <h1>About AF Furnishings</h1>
+            <p>Quality furniture for every New Zealand home</p>
+          </div>
+        </section>
 
-        {/* 2. Story Grid with Feature Image & Formatted Description (1) */}
         <section className="about-full-story">
           <div className="about-story-grid">
-            {storyBanner && (
-              <div className="about-story-img">
-                <img src={getAssetUrl(storyBanner.image)} alt={storyBanner.title || 'Our story'} />
-              </div>
-            )}
-            <div className="about-story-text" style={{ gridColumn: storyBanner ? undefined : '1 / -1' }}>
-              <span>{pageData.callout_badge || 'WHO WE ARE'}</span>
-              <h2>{storyBanner?.title || pageData.callout_title || pageData.company_name || 'AF Furnishings'}</h2>
-              {storyBanner?.description ? (
-                <div dangerouslySetInnerHTML={{ __html: storyBanner.description }} />
-              ) : pageData.content ? (
-                <div dangerouslySetInnerHTML={{ __html: pageData.content }} />
-              ) : (
-                <>
-                  <p>{pageData.description || 'AF Furnishings provides quality furniture, beds and appliances to make your home feel complete. We believe everyone deserves a comfortable home, which is why we offer flexible weekly payment options.'}</p>
-                  <p>Founded in New Zealand, we have been serving families across the country with beautiful, durable furniture at honest prices.</p>
-                </>
-              )}
+            <div className="about-story-img">
+              <img src="https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85" alt="Our team" />
+            </div>
+            <div className="about-story-text">
+              <span>WHO WE ARE</span>
+              <h2>{about?.company_name || 'AF Furnishings'}</h2>
+              <p>{about?.description || 'AF Furnishings provides quality furniture, beds and appliances to make your home feel complete. We believe everyone deserves a comfortable home, which is why we offer flexible weekly payment options.'}</p>
+              <p>Founded in New Zealand, we have been serving families across the country with beautiful, durable furniture at honest prices. Our showrooms in Auckland and Wellington showcase our carefully curated collections.</p>
             </div>
           </div>
         </section>
 
-        {/* 3. Values Grid (3) - Title & Description Only */}
-        {activeValues.length > 0 && (
-          <section className="about-values">
-            <div className="section-title">
-              <span>OUR VALUES</span>
-              <h2>{pageData.about_mission || 'What we stand for.'}</h2>
+        <section className="about-values">
+          <div className="section-title">
+            <span>OUR VALUES</span>
+            <h2>What we stand for.</h2>
+          </div>
+          <div className="about-values-grid">
+            <div className="about-value-card">
+              <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80" alt="Quality" />
+              <h3>Quality First</h3>
+              <p>Every piece of furniture is crafted from premium materials, built to last for years of daily use.</p>
             </div>
-            <div className="about-values-grid" style={{ gridTemplateColumns: `repeat(${activeValues.length}, 1fr)` }}>
-              {activeValues.map((v, i) => (
-                <div key={v.id || i} className="about-value-card">
-                  <img src={getAssetUrl(v.image)} alt={v.title || 'Value'} />
-                  <h3>{v.title || 'Quality'}</h3>
-                  {v.description ? (
-                    <div className="about-value-desc" dangerouslySetInnerHTML={{ __html: v.description }} />
-                  ) : (
-                    <p>{v.subtitle || 'Every piece is crafted from premium materials.'}</p>
-                  )}
-                </div>
-              ))}
+            <div className="about-value-card">
+              <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80" alt="Comfort" />
+              <h3>Comfort Always</h3>
+              <p>We test every sofa, chair and bed to ensure it meets our comfort standards before it reaches you.</p>
             </div>
-          </section>
-        )}
+            <div className="about-value-card">
+              <img src="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=600&q=80" alt="Community" />
+              <h3>For Every Home</h3>
+              <p>With flexible weekly payments, we make quality furniture accessible to every New Zealand family.</p>
+            </div>
+          </div>
+        </section>
 
-        {/* 4. Showroom Showcase (1) */}
-        {showroomBanner && (
-          <section className="about-showroom-banner" style={{ padding: '0 20px 60px', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ borderRadius: '12px', overflow: 'hidden', minHeight: '280px', position: 'relative' }}>
-              <img src={getAssetUrl(showroomBanner.image)} alt={showroomBanner.title || 'Showroom'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              {(showroomBanner.title || showroomBanner.description || showroomBanner.subtitle) && (
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', padding: '30px 24px 24px', color: '#fff' }}>
-                  {showroomBanner.title && <h3 style={{ margin: 0, fontSize: '1.3rem' }}>{showroomBanner.title}</h3>}
-                  {showroomBanner.description ? (
-                    <div style={{ margin: '6px 0 0', fontSize: '0.92rem', opacity: 0.95 }} dangerouslySetInnerHTML={{ __html: showroomBanner.description }} />
-                  ) : showroomBanner.subtitle ? (
-                    <p style={{ margin: '4px 0 0', fontSize: '0.9rem', opacity: 0.9 }}>{showroomBanner.subtitle}</p>
-                  ) : null}
-                </div>
-              )}
+        <section className="about-team">
+          <div className="about-team-grid">
+            <div className="about-team-text">
+              <span>OUR TEAM</span>
+              <h2>Meet the people behind AF Furnishings.</h2>
+              <p>Our team of friendly furniture experts is here to help you find the perfect pieces for your home. From selecting the right sofa to planning your dream bedroom, we guide you every step of the way.</p>
+              <p>Visit our showrooms in Auckland or Wellington, or contact us online for a virtual consultation.</p>
             </div>
-          </section>
-        )}
+            <div className="about-team-img">
+              <img src="https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=900&q=85" alt="Our showroom" />
+            </div>
+          </div>
+        </section>
       </main>
       <Footer />
     </>
   )
 }
 
-export default AboutPage;
+export default AboutPage

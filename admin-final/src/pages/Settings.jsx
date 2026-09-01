@@ -1,427 +1,751 @@
 // ============================================================
-// Store Operations & Functional Settings Module
+// Phase 1: Dynamic Global Settings Management Module
 // ============================================================
-// Features: Operational Store Contact Details, Business Registration & GST,
-// Showroom Operating Hours, Checkout & Financing Options, and Storefront Palette.
+// Single-column, vertical layout form (No tabs, No live preview, No split-screens).
+// Manages: Brand Identity, Logo, Support Phone/Email, Address, Hours, Social Media, Footer.
+// API: GET /api/settings/global & PUT /api/settings/global, POST /api/upload
 // ============================================================
 
-import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { useState, useEffect, useRef } from 'react'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
-const COLOR_FIELDS = [
-  { key: 'primary_color', label: 'Primary Color', desc: 'Main brand headings & borders' },
-  { key: 'accent_color', label: 'Accent / Gold', desc: 'Prices, links, highlight badges' },
-  { key: 'bg_color', label: 'Background Color', desc: 'Storefront main page background' },
-  { key: 'text_color', label: 'Text Color', desc: 'Body text and paragraph copy' },
-  { key: 'button_color', label: 'Button Color', desc: 'Call to Action & Add to Cart' },
-  { key: 'header_bg', label: 'Header Bar BG', desc: 'Top navigation background' },
-]
-
-function Settings({ token }) {
-  const [settings, setSettings] = useState({
+function GlobalSettings({ token }) {
+  const [form, setForm] = useState({
+    // 1. Brand & Header Identity
     site_name: 'AF Furnishings',
     site_tagline: 'Quality furniture for every New Zealand home',
-    business_nzbn: '9429051234567',
-    gst_number: '123-456-789',
+    site_logo: '',
+    announcement_bar_text: 'Welcome to AF Furnishings • Quality pieces for every home',
+
+    // 2. Contact & Customer Support
     contact_phone: '0800 222 548',
     contact_email: 'affurniture@gmail.com',
     contact_address: 'Auckland, New Zealand',
-    contact_hours: 'Mon - Sat: 9:00 AM - 5:00 PM | Sun: 10:00 AM - 4:00 PM',
-    contact_map: '',
-    admin_notification_email: '',
-    enable_winz_quotes: '1',
-    enable_finance_applications: '1',
-    payment_methods_note: 'Visa, Mastercard, EFTPOS, Bank Transfer, WINZ Quotes & Easy Finance',
-    delivery_policy_note: 'Standard 2-5 business day delivery across Auckland metropolitan area.',
-    primary_color: '#28241f',
-    accent_color: '#aa7a3e',
-    bg_color: '#fffdf9',
-    text_color: '#28241f',
-    button_color: '#29251f',
-    header_bg: '#29251f',
+    operating_hours: 'Mon - Sat: 9:00 AM - 5:30 PM | Sun: 10:00 AM - 4:00 PM',
+
+    // 3. Social Media Channels
+    facebook_url: 'https://facebook.com/affurnishings',
+    instagram_url: 'https://instagram.com/affurnishings',
+    twitter_url: '',
+    youtube_url: '',
+    tiktok_url: '',
+    linkedin_url: '',
+
+    // 4. Footer & Legal
+    footer_text: '© 2026 AF Furnishings. All rights reserved.',
+    footer_tagline: 'Secure payments • Friendly service • Home delivery',
   })
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [toast, setToast] = useState(null)
+  const fileInputRef = useRef(null)
 
   const authToken = getAuthToken(token)
-  const [uploadingLogo, setUploadingLogo] = useState(false)
 
-  const showToast = (msg, type) => {
+  const showToast = (msg, type = 'info') => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 3500)
   }
 
+  // Fetch current global settings on mount
   useEffect(() => {
     const fetchSettings = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/settings/all`, {
+        const res = await fetch(`${API_BASE}/api/settings/global`, {
           headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
         })
         if (res.ok) {
           const data = await res.json()
           if (data && typeof data === 'object') {
-            setSettings((prev) => ({
+            const incoming = data.settings || data
+            setForm((prev) => ({
               ...prev,
-              ...data,
-              site_name: data.site_name || prev.site_name || 'AF Furnishings',
+              site_name: incoming.site_name || incoming.store_name || prev.site_name,
+              site_tagline: incoming.site_tagline || prev.site_tagline,
+              site_logo: incoming.site_logo || prev.site_logo,
+              announcement_bar_text: incoming.announcement_bar_text || prev.announcement_bar_text,
+              contact_phone: incoming.contact_phone || incoming.phone || prev.contact_phone,
+              contact_email: incoming.contact_email || incoming.customer_service_email || incoming.email || prev.contact_email,
+              contact_address: incoming.contact_address || incoming.address || prev.contact_address,
+              operating_hours: incoming.operating_hours || incoming.business_hours || prev.operating_hours,
+              facebook_url: incoming.facebook_url || incoming.facebook || prev.facebook_url,
+              instagram_url: incoming.instagram_url || incoming.instagram || prev.instagram_url,
+              twitter_url: incoming.twitter_url || incoming.twitter || prev.twitter_url,
+              youtube_url: incoming.youtube_url || incoming.youtube || prev.youtube_url,
+              tiktok_url: incoming.tiktok_url || incoming.tiktok || prev.tiktok_url,
+              linkedin_url: incoming.linkedin_url || incoming.linkedin || prev.linkedin_url,
+              footer_text: incoming.footer_text || incoming.footer_copyright || prev.footer_text,
+              footer_tagline: incoming.footer_tagline || prev.footer_tagline,
             }))
           }
         }
       } catch {
-        showToast('Failed to load settings', 'error')
+        showToast('Failed to connect to backend server', 'error')
       } finally {
         setLoading(false)
       }
     }
+
     fetchSettings()
   }, [token])
 
-  const handleSave = async () => {
-    setSaving(true)
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  // Handle Logo Upload
+  const handleLogoUpload = async (file) => {
+    if (!file) return
+    setUploadingLogo(true)
+    const formData = new FormData()
+    formData.append('image', file)
+    formData.append('file', file)
+
     try {
-      const res = await fetch(`${API_BASE}/api/settings`, {
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.url || data.imageUrl || data.image_url || data.secure_url
+        if (url) {
+          setForm((prev) => ({ ...prev, site_logo: url }))
+          localStorage.setItem('site_logo', url)
+          window.dispatchEvent(new Event('logo-updated'))
+          showToast('Brand logo uploaded successfully!', 'success')
+        }
+      } else {
+        showToast('Failed to upload image file', 'error')
+      }
+    } catch {
+      showToast('Error uploading logo image', 'error')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  // Save Settings to Backend API
+  const handleSave = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+
+    const payload = {
+      ...form,
+      store_name: form.site_name,
+      phone: form.contact_phone,
+      email: form.contact_email,
+      customer_service_email: form.contact_email,
+      address: form.contact_address,
+      business_hours: form.operating_hours,
+      facebook: form.facebook_url,
+      instagram: form.instagram_url,
+      twitter: form.twitter_url,
+      youtube: form.youtube_url,
+      tiktok: form.tiktok_url,
+      linkedin: form.linkedin_url,
+      footer_copyright: form.footer_text,
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/settings/global`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       })
+
       if (res.ok) {
-        showToast('Operational settings saved successfully', 'success')
-        localStorage.setItem('site_name', settings.site_name || 'AF Furnishings')
+        // Persist to local cache for instant UI reflection
+        localStorage.setItem('site_name', form.site_name)
+        if (form.site_logo) localStorage.setItem('site_logo', form.site_logo)
+        
         window.dispatchEvent(new Event('settings-updated'))
+        window.dispatchEvent(new Event('logo-updated'))
+        showToast('Global settings saved and published successfully!', 'success')
       } else {
         const err = await res.json().catch(() => ({}))
         showToast(err.message || 'Failed to save settings', 'error')
       }
     } catch {
-      showToast('Server error while saving settings', 'error')
+      showToast('Server error while saving global settings', 'error')
     } finally {
       setSaving(false)
     }
   }
 
-  const handleColorChange = (key, value) => {
-    setSettings((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploadingLogo(true)
-    try {
-      const fd = new FormData()
-      fd.append('image', file)
-      const res = await fetch(`${API_BASE}/api/upload/image`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${authToken}` },
-        body: fd,
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const url = data.url || data.imageUrl || ''
-        setSettings((prev) => ({ ...prev, site_logo: url }))
-        showToast('Logo uploaded successfully', 'success')
-      } else {
-        showToast('Logo upload failed', 'error')
-      }
-    } catch {
-      showToast('Server error uploading logo', 'error')
-    }
-    setUploadingLogo(false)
-  }
-
   return (
-    <div className="admin-page">
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+    <div className="global-settings-container">
+      <style>{`
+        .global-settings-container {
+          max-width: 900px;
+          margin: 0 auto;
+          padding: 24px 20px 80px;
+          color: var(--text-primary);
+        }
 
-      <div className="admin-header" style={{ justifyContent: 'flex-end', marginBottom: '16px' }}>
-        <button className="btn-primary" onClick={handleSave} disabled={saving || loading}>
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
+        .gs-header-box {
+          margin-bottom: 28px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid var(--border-color);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+
+        .gs-title {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: var(--text-primary);
+          margin: 0 0 4px;
+          letter-spacing: -0.02em;
+        }
+
+        .gs-subtitle {
+          font-size: 0.88rem;
+          color: var(--text-secondary);
+          margin: 0;
+        }
+
+        .gs-form-vertical {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .gs-card {
+          background: var(--card-bg, rgba(255, 255, 255, 0.03));
+          border: 1px solid var(--border-color);
+          border-radius: 14px;
+          padding: 24px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+
+        .gs-card-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 20px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        .gs-card-header h3 {
+          font-size: 1.1rem;
+          font-weight: 700;
+          margin: 0;
+          color: var(--text-primary);
+        }
+
+        .gs-card-header span {
+          font-size: 0.78rem;
+          color: var(--accent-color, #d4af37);
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .gs-field-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 18px;
+        }
+
+        .gs-field-group {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .gs-field-group.full-width {
+          grid-column: 1 / -1;
+        }
+
+        .gs-label {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--text-primary);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .gs-hint {
+          font-size: 0.75rem;
+          color: var(--text-secondary);
+          font-weight: 400;
+        }
+
+        .gs-input,
+        .gs-textarea {
+          width: 100%;
+          padding: 12px 14px;
+          background: var(--input-bg, rgba(255, 255, 255, 0.05));
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          color: var(--text-primary);
+          font-size: 0.92rem;
+          font-family: inherit;
+          box-sizing: border-box;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .gs-input:focus,
+        .gs-textarea:focus {
+          outline: none;
+          border-color: var(--accent-color, #d4af37);
+          box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .gs-textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+
+        .gs-logo-uploader-row {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          flex-wrap: wrap;
+        }
+
+        .gs-logo-preview-box {
+          width: 80px;
+          height: 80px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--border-color);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          padding: 6px;
+          flex-shrink: 0;
+        }
+
+        .gs-logo-preview-box img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+
+        .gs-logo-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          flex: 1;
+          min-width: 240px;
+        }
+
+        .gs-upload-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 18px;
+          background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          color: var(--text-primary);
+          font-size: 0.88rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          width: fit-content;
+        }
+
+        .gs-upload-btn:hover {
+          background: var(--border-color);
+          border-color: var(--accent-color, #d4af37);
+        }
+
+        .gs-submit-bar {
+          position: sticky;
+          bottom: 20px;
+          background: var(--header-bg, #1a2238);
+          border: 1px solid var(--border-color);
+          border-radius: 12px;
+          padding: 14px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+          z-index: 50;
+        }
+
+        .gs-save-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 28px;
+          background: var(--accent-color, #d4af37);
+          color: #000;
+          font-weight: 700;
+          font-size: 0.95rem;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .gs-save-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          filter: brightness(1.1);
+          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
+        }
+
+        .gs-save-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .gs-toast {
+          position: fixed;
+          bottom: 90px;
+          right: 24px;
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.9rem;
+          z-index: 1000;
+          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+          animation: toastIn 0.25s ease;
+        }
+        .gs-toast.success { background: #10b981; color: #fff; }
+        .gs-toast.error { background: #ef4444; color: #fff; }
+        .gs-toast.info { background: #3b82f6; color: #fff; }
+
+        @keyframes toastIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {toast && <div className={`gs-toast ${toast.type}`}>{toast.msg}</div>}
+
+      <div className="gs-header-box">
+        <div>
+          <h2 className="gs-title">Global Store Settings</h2>
+          <p className="gs-subtitle">Manage store-wide brand identity, contact channels, social profiles, and footer copy.</p>
+        </div>
       </div>
 
       {loading ? (
-        <div className="admin-card" style={{ textAlign: 'center', padding: '50px', color: 'var(--text-secondary)' }}>
-          Loading operational settings...
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading store settings...
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* 1. Business Registration & Legal Entity */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <h3 className="admin-card-title">Business Information & Legal Registration</h3>
+        <form className="gs-form-vertical" onSubmit={handleSave}>
+          
+          {/* Section 1: Brand & Header Identity */}
+          <div className="gs-card">
+            <div className="gs-card-header">
+              <span>01</span>
+              <h3>Brand Identity &amp; Header</h3>
             </div>
-
-            <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div>
-                <label className="form-label">Website Logo</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-                  {settings.site_logo && (
-                    <img src={settings.site_logo} alt="Logo" style={{ height: '48px', borderRadius: '6px', border: '1px solid var(--border-color)', objectFit: 'contain', background: '#fff', padding: '4px' }} />
-                  )}
-                  <label style={{ cursor: 'pointer', padding: '8px 16px', background: 'var(--accent-color, #aa7a3e)', color: '#fff', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, display: 'inline-block' }}>
-                    {uploadingLogo ? 'Uploading...' : 'Change Logo'}
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} disabled={uploadingLogo} />
-                  </label>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                  This logo appears in the website header and footer.
-                </span>
-              </div>
-            </div>
-
-            <div className="admin-grid-2">
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Storefront Display Name *</label>
+            <div className="gs-field-grid">
+              <div className="gs-field-group">
+                <label className="gs-label">
+                  Brand / Store Name
+                  <span className="gs-hint">Displayed in header &amp; titles</span>
+                </label>
                 <input
                   type="text"
-                  className="form-input"
-                  value={settings.site_name}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, site_name: e.target.value }))}
-                  placeholder="AF Furnishings"
+                  name="site_name"
+                  value={form.site_name}
+                  onChange={handleChange}
+                  placeholder="e.g. AF Furnishings"
+                  className="gs-input"
+                  required
                 />
               </div>
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Brand Tagline / Slogan</label>
+              <div className="gs-field-group">
+                <label className="gs-label">
+                  Brand Tagline
+                  <span className="gs-hint">Subtitle in header &amp; metadata</span>
+                </label>
                 <input
                   type="text"
-                  className="form-input"
-                  value={settings.site_tagline || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, site_tagline: e.target.value }))}
-                  placeholder="Comfort made for everyday living"
+                  name="site_tagline"
+                  value={form.site_tagline}
+                  onChange={handleChange}
+                  placeholder="e.g. Quality furniture for every NZ home"
+                  className="gs-input"
                 />
               </div>
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">NZ Business Number (NZBN)</label>
+              <div className="gs-field-group full-width">
+                <label className="gs-label">
+                  Top Announcement Bar Message
+                  <span className="gs-hint">Notice pinned at the very top of storefront</span>
+                </label>
                 <input
                   type="text"
-                  className="form-input"
-                  value={settings.business_nzbn || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, business_nzbn: e.target.value }))}
-                  placeholder="e.g. 9429051234567"
+                  name="announcement_bar_text"
+                  value={form.announcement_bar_text}
+                  onChange={handleChange}
+                  placeholder="e.g. Welcome to AF Furnishings • Free Auckland Delivery on orders over $1,000"
+                  className="gs-input"
                 />
               </div>
 
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">GST / Tax Registration Number</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.gst_number || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, gst_number: e.target.value }))}
-                  placeholder="e.g. 123-456-789"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. Customer Contact & Showroom Hours */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <h3 className="admin-card-title">Primary Contact & Operating Hours</h3>
-            </div>
-
-            <div className="admin-grid-2">
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Toll-Free / Support Phone</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.contact_phone || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, contact_phone: e.target.value }))}
-                  placeholder="0800 222 548"
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Customer Support Email</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={settings.contact_email || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, contact_email: e.target.value }))}
-                  placeholder="affurniture@gmail.com"
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Admin Notification Email *</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={settings.admin_notification_email || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, admin_notification_email: e.target.value }))}
-                  placeholder="Where to receive enquiry/finance/quote notifications"
-                />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                  All customer enquiries, finance applications, and WINZ quotes will be sent here.
-                </span>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Showroom Physical Address</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.contact_address || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, contact_address: e.target.value }))}
-                  placeholder="Auckland, New Zealand"
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Showroom Operating Hours</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.contact_hours || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, contact_hours: e.target.value }))}
-                  placeholder="Mon - Sat: 9am - 5pm, Sun: 10am - 4pm"
-                />
-              </div>
-
-              <div className="form-group" style={{ gridColumn: 'span 2', margin: 0 }}>
-                <label className="form-label">Google Maps Embed URL</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.contact_map || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, contact_map: e.target.value }))}
-                  placeholder="https://www.google.com/maps/embed?pb=..."
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Checkout & Customer Financing Options */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <h3 className="admin-card-title">Checkout & Financing Policies</h3>
-            </div>
-
-            <div className="admin-grid-2">
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">WINZ Quotes Submission Form</label>
-                <select
-                  className="form-select"
-                  value={settings.enable_winz_quotes || '1'}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, enable_winz_quotes: e.target.value }))}
-                >
-                  <option value="1">Enabled (Accept Online WINZ Quote Requests)</option>
-                  <option value="0">Disabled (Hide WINZ Quote Forms)</option>
-                </select>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Finance Applications Workflow</label>
-                <select
-                  className="form-select"
-                  value={settings.enable_finance_applications || '1'}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, enable_finance_applications: e.target.value }))}
-                >
-                  <option value="1">Enabled (Accept Customer Finance Applications)</option>
-                  <option value="0">Disabled (Hide Finance Application Form)</option>
-                </select>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Payment Methods Banner Text</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.payment_methods_note || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, payment_methods_note: e.target.value }))}
-                  placeholder="Visa, Mastercard, EFTPOS, Bank Transfer, WINZ Quotes"
-                />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Delivery Note / Dispatch Terms</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={settings.delivery_policy_note || ''}
-                  onChange={(e) => setSettings((prev) => ({ ...prev, delivery_policy_note: e.target.value }))}
-                  placeholder="Standard 2-5 business day delivery across Auckland"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Brand Color Palette */}
-          <div className="admin-card">
-            <div className="admin-card-header">
-              <h3 className="admin-card-title">Brand Color Palette</h3>
-            </div>
-
-            <div className="admin-grid-3" style={{ marginBottom: '20px' }}>
-              {COLOR_FIELDS.map((cf) => (
-                <div key={cf.key} style={{ background: 'var(--header-bg)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <label className="form-label" style={{ display: 'block', marginBottom: '4px' }}>{cf.label}</label>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '10px' }}>{cf.desc}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="gs-field-group full-width">
+                <label className="gs-label">Brand Logo</label>
+                <div className="gs-logo-uploader-row">
+                  <div className="gs-logo-preview-box">
+                    {form.site_logo ? (
+                      <img
+                        src={getAssetUrl(form.site_logo)}
+                        alt="Store Logo"
+                        onError={(e) => { e.target.src = '/logo.png' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>No Logo</span>
+                    )}
+                  </div>
+                  <div className="gs-logo-actions">
+                    <button
+                      type="button"
+                      className="gs-upload-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingLogo}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      {uploadingLogo ? 'Uploading...' : 'Upload New Logo'}
+                    </button>
                     <input
-                      type="color"
-                      value={settings[cf.key] || '#000000'}
-                      onChange={(e) => handleColorChange(cf.key, e.target.value)}
-                      style={{ width: '40px', height: '36px', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', padding: '2px', background: 'none' }}
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleLogoUpload(e.target.files[0])
+                        }
+                      }}
                     />
                     <input
                       type="text"
-                      className="form-input"
-                      value={settings[cf.key] || ''}
-                      onChange={(e) => handleColorChange(cf.key, e.target.value)}
-                      style={{ fontSize: '0.85rem' }}
+                      name="site_logo"
+                      value={form.site_logo}
+                      onChange={handleChange}
+                      placeholder="Or enter direct image URL (https://...)"
+                      className="gs-input"
                     />
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Live Component Preview */}
-            <div style={{ background: settings.bg_color || '#fffdf9', borderRadius: '8px', padding: '20px', border: '1px solid var(--border-color)', color: settings.text_color || '#28241f' }}>
-              <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800, color: settings.accent_color || '#aa7a3e', letterSpacing: '1px', display: 'block', marginBottom: '4px' }}>
-                Storefront Component Preview
-              </span>
-              <h4 style={{ margin: '0 0 8px 0', color: settings.primary_color || '#28241f', fontSize: '1.2rem', fontWeight: 800 }}>
-                {settings.site_name || 'AF Furnishings'}
-              </h4>
-              <p style={{ margin: '0 0 16px 0', fontSize: '0.88rem', color: settings.text_color || '#28241f', opacity: 0.85 }}>
-                {settings.site_tagline || 'Comfort made for everyday living.'}
-              </p>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  style={{
-                    backgroundColor: settings.button_color || '#29251f',
-                    color: '#ffffff',
-                    padding: '8px 20px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Shop Now
-                </button>
-                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: settings.accent_color || '#aa7a3e' }}>
-                  $1,299 NZD
-                </span>
               </div>
             </div>
           </div>
-        </div>
+
+          {/* Section 2: Contact & Customer Support */}
+          <div className="gs-card">
+            <div className="gs-card-header">
+              <span>02</span>
+              <h3>Customer Support &amp; Store Contact</h3>
+            </div>
+            <div className="gs-field-grid">
+              <div className="gs-field-group">
+                <label className="gs-label">Support Phone Number</label>
+                <input
+                  type="text"
+                  name="contact_phone"
+                  value={form.contact_phone}
+                  onChange={handleChange}
+                  placeholder="e.g. 0800 222 548"
+                  className="gs-input"
+                  required
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">Customer Support Email</label>
+                <input
+                  type="email"
+                  name="contact_email"
+                  value={form.contact_email}
+                  onChange={handleChange}
+                  placeholder="e.g. affurniture@gmail.com"
+                  className="gs-input"
+                  required
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">Physical Store / Showroom Address</label>
+                <input
+                  type="text"
+                  name="contact_address"
+                  value={form.contact_address}
+                  onChange={handleChange}
+                  placeholder="e.g. Auckland, New Zealand"
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">Operating / Showroom Hours</label>
+                <input
+                  type="text"
+                  name="operating_hours"
+                  value={form.operating_hours}
+                  onChange={handleChange}
+                  placeholder="e.g. Mon - Sat: 9:00 AM - 5:30 PM"
+                  className="gs-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Social Media Channels */}
+          <div className="gs-card">
+            <div className="gs-card-header">
+              <span>03</span>
+              <h3>Social Media Profiles</h3>
+            </div>
+            <div className="gs-field-grid">
+              <div className="gs-field-group">
+                <label className="gs-label">Facebook Profile URL</label>
+                <input
+                  type="url"
+                  name="facebook_url"
+                  value={form.facebook_url}
+                  onChange={handleChange}
+                  placeholder="https://facebook.com/..."
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">Instagram Profile URL</label>
+                <input
+                  type="url"
+                  name="instagram_url"
+                  value={form.instagram_url}
+                  onChange={handleChange}
+                  placeholder="https://instagram.com/..."
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">Twitter / X Profile URL</label>
+                <input
+                  type="url"
+                  name="twitter_url"
+                  value={form.twitter_url}
+                  onChange={handleChange}
+                  placeholder="https://x.com/..."
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">YouTube Channel URL</label>
+                <input
+                  type="url"
+                  name="youtube_url"
+                  value={form.youtube_url}
+                  onChange={handleChange}
+                  placeholder="https://youtube.com/..."
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">TikTok Profile URL</label>
+                <input
+                  type="url"
+                  name="tiktok_url"
+                  value={form.tiktok_url}
+                  onChange={handleChange}
+                  placeholder="https://tiktok.com/@..."
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group">
+                <label className="gs-label">LinkedIn Profile URL</label>
+                <input
+                  type="url"
+                  name="linkedin_url"
+                  value={form.linkedin_url}
+                  onChange={handleChange}
+                  placeholder="https://linkedin.com/company/..."
+                  className="gs-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Footer & Legal Information */}
+          <div className="gs-card">
+            <div className="gs-card-header">
+              <span>04</span>
+              <h3>Footer &amp; Legal Notices</h3>
+            </div>
+            <div className="gs-field-grid">
+              <div className="gs-field-group full-width">
+                <label className="gs-label">Footer Copyright Notice</label>
+                <input
+                  type="text"
+                  name="footer_text"
+                  value={form.footer_text}
+                  onChange={handleChange}
+                  placeholder="e.g. © 2026 AF Furnishings. All rights reserved."
+                  className="gs-input"
+                />
+              </div>
+
+              <div className="gs-field-group full-width">
+                <label className="gs-label">Footer Bottom Sub-Tagline / Badges Note</label>
+                <input
+                  type="text"
+                  name="footer_tagline"
+                  value={form.footer_tagline}
+                  onChange={handleChange}
+                  placeholder="e.g. Secure payments • Friendly service • Home delivery"
+                  className="gs-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Bottom Action Bar */}
+          <div className="gs-submit-bar">
+            <div>
+              <strong style={{ fontSize: '0.9rem', display: 'block' }}>Ready to Publish?</strong>
+              <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Changes take effect on the storefront immediately.</span>
+            </div>
+            <button type="submit" className="gs-save-btn" disabled={saving}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              {saving ? 'Saving Settings...' : 'Save Global Settings'}
+            </button>
+          </div>
+
+        </form>
       )}
     </div>
   )
 }
 
-export default Settings
+export default GlobalSettings;

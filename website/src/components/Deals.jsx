@@ -1,31 +1,9 @@
-import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
-
 function Deals() {
-  const [data, setData] = useState({
-    title: 'Limited-Time Weekly Deals',
-    subtitle: 'Comfortable furniture at straightforward prices. Flexible weekly payments available.',
-  })
-
-  useEffect(() => {
-    fetch(`${API_BASE}/api/homepage`)
-      .then(r => r.json())
-      .then(d => {
-        if (d && (d.deals_title || d.deals_subtitle)) {
-          setData({
-            title: d.deals_title || 'Limited-Time Weekly Deals',
-            subtitle: d.deals_subtitle || 'Comfortable furniture at straightforward prices. Flexible weekly payments available.',
-          })
-        }
-      })
-      .catch(() => {})
-  }, [])
-
   return (
     <section className="deals" id="deals">
       <div className="fade-in">
-        <h2>{data.title}</h2>
-        <p>{data.subtitle}</p>
+        <h2>Limited-Time Weekly Deals</h2>
+        <p>Comfortable furniture at straightforward prices. Flexible weekly payments available.</p>
       </div>
       <div className="deal-grid">
         <div className="deal-card fade-in stagger-1">
@@ -63,4 +41,4 @@ function Deals() {
   )
 }
 
-export default Deals;
+export default Deals
