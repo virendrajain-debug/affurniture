@@ -19,9 +19,9 @@ function ContactSection() {
   const [settings, setSettings] = useState({})
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/store-locations`).then(r => r.json()).then(d => { if (Array.isArray(d)) setStoreLocations(d) }).catch(() => {})
-    fetch(`${API_BASE}/api/social`).then(r => r.json()).then(d => { if (Array.isArray(d)) setSocialLinks(d) }).catch(() => {})
-    fetch(`${API_BASE}/api/settings`).then(r => r.json()).then(d => { if (d) setSettings(d) }).catch(() => {})
+    fetch(`${API_BASE}/api/store-locations`, { cache: 'no-store' }).then(r => r.json()).then(d => { if (Array.isArray(d)) setStoreLocations(d) }).catch(() => {})
+    fetch(`${API_BASE}/api/social`, { cache: 'no-store' }).then(r => r.json()).then(d => { if (Array.isArray(d)) setSocialLinks(d) }).catch(() => {})
+    fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).then(d => { if (d) setSettings(d) }).catch(() => {})
   }, [])
 
   const showToast = (msg, type) => {

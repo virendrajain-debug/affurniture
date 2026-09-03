@@ -11,6 +11,7 @@ export const STOREFRONT_URL = import.meta.env.VITE_STOREFRONT_URL || (isLocal ? 
 
 export const getAssetUrl = (path) => {
   if (!path) return '/aeryp.png';
+  if (/^https?:\/\/localhost:\d+/.test(path)) return path.replace(/^https?:\/\/localhost:\d+/, API_BASE);
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${API_BASE}${cleanPath}`;

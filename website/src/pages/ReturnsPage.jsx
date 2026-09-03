@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function ReturnsPage() {
   const [data, setData] = useState(null)
   const [banners, setBanners] = useState({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/returns`)
-      .then(r => r.json())
-      .then(setData)
-      .catch(() => {})
-    fetch(`${API_BASE}/api/settings`)
-      .then(r => r.json())
-      .then(setBanners)
-      .catch(() => {})
+    Promise.all([
+      fetch(`${API_BASE}/api/page-content/returns`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+    ]).then(([returnsData, settingsData]) => {
+      if (returnsData) setData(returnsData)
+      if (settingsData) setBanners(settingsData)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   return (
@@ -23,7 +24,7 @@ function ReturnsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={banners.returns_banner || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85'} alt="Returns" />
+          <img src={getAssetUrl(banners.returns_banner) || 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85'} alt="Returns" />
           <div className="terms-hero-overlay">
             <span>EASY RETURNS</span>
             <h1>Returns &amp; Refunds</h1>
@@ -33,9 +34,14 @@ function ReturnsPage() {
 
         <section className="terms-section" style={{ paddingTop: '60px' }}>
           <div className="terms-content">
-            <div className="terms-text">
-              {data?.content || 'Returns information is being updated. Please check back later.'}
-            </div>
+            {loading ? (
+              <div className="category-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading...</p>
+              </div>
+            ) : (
+              <div className="terms-text" dangerouslySetInnerHTML={{ __html: data?.content || 'Returns information is being updated. Please check back later.' }} />
+            )}
           </div>
         </section>
       </main>

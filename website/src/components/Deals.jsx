@@ -17,9 +17,10 @@ function Deals() {
   const [title, setTitle] = useState('Limited-Time Weekly Deals')
   const [subtitle, setSubtitle] = useState('Comfortable furniture at straightforward prices. Flexible weekly payments available.')
   const [cards, setCards] = useState(DEFAULT_CARDS)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/deals`)
+    fetch(`${API_BASE}/api/deals`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         if (data && data.cards && Array.isArray(data.cards) && data.cards.length > 0) {
@@ -27,8 +28,9 @@ function Deals() {
           if (data.title) setTitle(data.title)
           if (data.subtitle) setSubtitle(data.subtitle)
         }
+        setLoading(false)
       })
-      .catch(() => {})
+      .catch(() => setLoading(false))
   }, [])
 
   return (

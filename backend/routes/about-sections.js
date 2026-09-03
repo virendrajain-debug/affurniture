@@ -2,7 +2,7 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+import BACKEND_URL from '../helpers/backendUrl.js';
 function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
 
 const router = Router();

@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { API_BASE } from './config'
+import { API_BASE, getAssetUrl } from './config'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Deals from './components/Deals'
@@ -34,35 +34,28 @@ function ScrollToTop() {
   return null
 }
 
-function AdBanner({ ad }) {
-  if (!ad?.image) return null
-  return (
-    <a href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="home-ad-banner">
-      <img src={ad.image} alt={ad.name} loading="lazy" />
-    </a>
-  )
-}
-
 function DynamicCategories() {
   const [categories, setCategories] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/categories`)
+    fetch(`${API_BASE}/api/categories`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) setCategories(data)
+        setLoading(false)
       })
-      .catch(() => {})
+      .catch(() => setLoading(false))
   }, [])
+
+  if (loading) return null
 
   return (
     <>
       {categories.filter(cat => !['Office', 'Outdoor'].includes(cat.name)).map((cat, idx) => (
         <div key={cat.id}>
           <Category
-            id={`cat-${cat.id}`}
             title={cat.name}
-            apiCategory={cat.name}
             image={cat.image || undefined}
             link={`/category/${cat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
             reverse={idx % 2 !== 0}
@@ -81,16 +74,22 @@ function DynamicCategories() {
 }
 
 function HomePage() {
-  const [homeAds, setHomeAds] = useState([])
+  const [promoBanners, setPromoBanners] = useState({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/ad-campaigns/active?position=homepage`)
+    fetch(`${API_BASE}/api/homepage`, { cache: 'no-store' })
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setHomeAds(data) })
-      .catch(() => {})
+      .then(data => {
+        if (data && typeof data === 'object') {
+          setPromoBanners({
+            banner1: data.promo_banner_1 || null,
+          })
+        }
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [])
-
-  const getAd = (index) => homeAds[index] || null
 
   return (
     <>
@@ -99,11 +98,8 @@ function HomePage() {
         <Hero />
         <Deals />
         <DynamicCategories />
-        {getAd(0) && <AdBanner ad={getAd(0)} />}
-        <PromoPoster ad={getAd(1)} />
-        {getAd(1) && <AdBanner ad={getAd(1)} />}
+        {promoBanners.banner1 && <PromoPoster ad={promoBanners.banner1} />}
         <Stores />
-        {getAd(2) && <AdBanner ad={getAd(2)} />}
         <AboutSection />
         <Testimonials />
       </main>

@@ -62,7 +62,7 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
     } else if (p.includes('/home-manager') || p.includes('/pages') || p.includes('/store-locations') || p.includes('/testimonials')) {
       setOpen('content')
     } else if (p.includes('/ad-campaign') || p.includes('/deals')) {
-      setOpen('promotions')
+      setOpen('')
     } else if (p.includes('/winz-quotes') || p.includes('/finance-applications')) {
       setOpen('requests')
     } else if (p.includes('/customer-enquiries') || p.includes('/contact-enquiries')) {
@@ -513,22 +513,6 @@ function Sidebar({ isOpen, onClose, profileImage, userName = 'Admin', userEmail 
               <SubLink to="/dashboard/pages">Pages & Content</SubLink>
               <SubLink to="/dashboard/store-locations">Store Locations</SubLink>
               <SubLink to="/dashboard/testimonials">Testimonials</SubLink>
-            </div>
-          )}
-
-          <div
-            className={`p-sidebar-link ${open === 'promotions' ? 'active' : ''}`}
-            onClick={() => toggle('promotions')}
-          >
-            <div className="p-link-content">
-              <Icon path="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-              <span>Promotions</span>
-            </div>
-            <Arrow section="promotions" />
-          </div>
-          {open === 'promotions' && (
-            <div className="p-submenu">
-              <SubLink to="/dashboard/ad-campaign">Ad Campaigns</SubLink>
             </div>
           )}
 

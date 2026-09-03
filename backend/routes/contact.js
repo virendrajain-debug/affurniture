@@ -1,18 +1,23 @@
-// Contact Info API Route
-// Simple key-value store for contact information (email, phone, address, whatsapp)
-// Used by the admin Contact.jsx page
-
 import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+function upsertSetting(key, value) {
+  const [existing] = pool.execute('SELECT key FROM site_settings WHERE key = ?', [key]);
+  if (existing.length > 0) {
+    pool.execute('UPDATE site_settings SET value = ?, updated_at = datetime(\'now\') WHERE key = ?', [value, key]);
+  } else {
+    pool.execute('INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\'))', [key, value]);
+  }
+}
+
 const router = Router();
 
-// GET /api/contact - public
-router.get('/', async (req, res) => {
+router.get('/', (req, res) => {
   try {
     const keys = ['contact_email', 'contact_phone', 'contact_address', 'contact_whatsapp'];
-    const [rows] = await pool.execute('SELECT key, value FROM site_settings WHERE key IN (' + keys.map(() => '?').join(',') + ')', keys);
+    const placeholders = keys.map(() => '?').join(',');
+    const [rows] = pool.execute(`SELECT key, value FROM site_settings WHERE key IN (${placeholders})`, keys);
     const data = {};
     rows.forEach(r => { data[r.key.replace('contact_', '')] = r.value; });
     res.json(data);
@@ -22,8 +27,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/contact - protected
-router.put('/', authenticateToken, async (req, res) => {
+router.put('/', authenticateToken, (req, res) => {
   try {
     const { email, phone, address, whatsapp } = req.body;
     const entries = [
@@ -34,10 +38,7 @@ router.put('/', authenticateToken, async (req, res) => {
     ];
     for (const [key, value] of entries) {
       if (value !== undefined) {
-        await pool.execute(
-          'INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\')) ON CONFLICT(key) DO UPDATE SET value = ?, updated_at = datetime(\'now\')',
-          [key, value || '', value || '']
-        );
+        upsertSetting(key, value || '');
       }
     }
     res.json({ message: 'Contact info updated' });

@@ -7,7 +7,7 @@
 // ============================================================
 
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
 function Profile({ profileImage, onProfileImageChange, token }) {
@@ -193,6 +193,17 @@ function Profile({ profileImage, onProfileImageChange, token }) {
             twitter 
           }),
         })
+
+        // Sync profile photo as site logo for website header/footer
+        await fetch(`${API_BASE}/api/settings/global`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ site_logo: url }),
+        })
+
         showToast('Profile photo updated!', 'success')
       } else {
         showToast('Failed to upload image', 'error')
@@ -228,6 +239,17 @@ function Profile({ profileImage, onProfileImageChange, token }) {
           twitter 
         }),
       })
+
+      // Clear site logo in global settings too
+      await fetch(`${API_BASE}/api/settings/global`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ site_logo: '' }),
+      })
+
       showToast('Profile photo removed', 'info')
     } catch {
       showToast('Error saving changes', 'error')
@@ -262,7 +284,7 @@ function Profile({ profileImage, onProfileImageChange, token }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ width: '70px', height: '70px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border-color)', background: 'var(--header-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexShrink: 0 }}>
               {profileImage ? (
-                <img src={profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getAssetUrl(profileImage)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />

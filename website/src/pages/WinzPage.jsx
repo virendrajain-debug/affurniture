@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -12,7 +12,7 @@ function WinzPage() {
     const fetchProducts = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/winz-products?active_only=true`)
+        const res = await fetch(`${API_BASE}/api/winz-products?active_only=true`, { cache: 'no-store' })
         const data = await res.json()
         if (Array.isArray(data)) setProducts(data)
       } catch {
@@ -24,7 +24,7 @@ function WinzPage() {
   }, [])
 
   const getImg = (p) => {
-    if (p.image) return p.image
+    if (p.image) return getAssetUrl(p.image)
     return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
   }
 

@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+import BACKEND_URL from '../helpers/backendUrl.js';
 
 const router = Router();
 
@@ -26,7 +26,7 @@ router.post('/', upload.array('documents', 5), async (req, res) => {
     if (!first_name || !email || !phone) {
       return res.status(400).json({ message: 'First name, email and phone are required' });
     }
-    const documents = req.files ? req.files.map(f => `${BACKEND_URL}/uploads/${f.filename}`) : [];
+    const documents = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
     const [result] = await pool.execute(
       'INSERT INTO finance_applications (first_name, last_name, email, phone, address, city, state, income_source, products, documents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [first_name, last_name || null, email, phone, address || null, city || null, state || null, income_source || null, products || null, JSON.stringify(documents)]
@@ -39,7 +39,7 @@ router.post('/', upload.array('documents', 5), async (req, res) => {
   }
 });
 
-const BACKEND_URL_APP = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+const BACKEND_URL_APP = BACKEND_URL;
 function resolveUrlApp(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL_APP}${u}`; }
 
 // Protected: get all finance applications

@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function TermsPage() {
   const [terms, setTerms] = useState(null)
   const [banners, setBanners] = useState({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/terms`)
-      .then(r => r.json())
-      .then(setTerms)
-      .catch(() => {})
-    fetch(`${API_BASE}/api/settings`)
-      .then(r => r.json())
-      .then(setBanners)
-      .catch(() => {})
+    Promise.all([
+      fetch(`${API_BASE}/api/page-content/terms`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+    ]).then(([termsData, settingsData]) => {
+      if (termsData) setTerms(termsData)
+      if (settingsData) setBanners(settingsData)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   return (
@@ -23,7 +24,7 @@ function TermsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={banners.terms_banner || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85'} alt="Terms and Conditions" />
+          <img src={getAssetUrl(banners.terms_banner) || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85'} alt="Terms and Conditions" />
           <div className="terms-hero-overlay">
             <span>LEGAL</span>
             <h1>Terms &amp; Conditions</h1>
@@ -33,9 +34,14 @@ function TermsPage() {
 
         <section className="terms-section" style={{ paddingTop: '60px' }}>
           <div className="terms-content">
-            <div className="terms-text">
-              {terms?.content || 'Terms & Conditions content is being updated. Please check back later.'}
-            </div>
+            {loading ? (
+              <div className="category-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading...</p>
+              </div>
+            ) : (
+              <div className="terms-text" dangerouslySetInnerHTML={{ __html: terms?.content || 'Terms & Conditions content is being updated. Please check back later.' }} />
+            )}
           </div>
         </section>
       </main>

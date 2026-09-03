@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,7 +11,7 @@ function StoreLocationPage() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/store-locations`)
+        const res = await fetch(`${API_BASE}/api/store-locations`, { cache: 'no-store' })
         const data = await res.json()
         if (Array.isArray(data) && data.length > 0) {
           setLocations(data)
@@ -56,7 +56,10 @@ function StoreLocationPage() {
             <div className="store-locations-sidebar">
               <h2>Our Stores</h2>
               {loading ? (
-                <p className="store-loading-text">Loading locations...</p>
+                <div className="category-loading">
+                  <div className="loading-spinner"></div>
+                  <p>Loading locations...</p>
+                </div>
               ) : locations.length === 0 ? (
                 <p className="store-loading-text">No store locations available yet.</p>
               ) : (
@@ -67,6 +70,11 @@ function StoreLocationPage() {
                       className={`store-location-card ${selected?.id === loc.id ? 'active' : ''}`}
                       onClick={() => setSelected(loc)}
                     >
+                      {loc.image && (
+                        <div className="store-location-img">
+                          <img src={getAssetUrl(loc.image)} alt={loc.name} />
+                        </div>
+                      )}
                       <h3>{loc.name}</h3>
                       {loc.address && <p className="store-loc-address">{loc.address}{loc.city ? `, ${loc.city}` : ''}</p>}
                       {loc.phone && <p className="store-loc-phone">Phone: {loc.phone}</p>}

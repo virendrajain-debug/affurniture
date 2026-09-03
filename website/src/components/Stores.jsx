@@ -22,9 +22,10 @@ const DEFAULT_STORES = [
 
 function Stores() {
   const [stores, setStores] = useState(DEFAULT_STORES)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/store-locations`)
+    fetch(`${API_BASE}/api/store-locations`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
@@ -35,8 +36,9 @@ function Stores() {
             id: s.id,
           })))
         }
+        setLoading(false)
       })
-      .catch(() => {})
+      .catch(() => setLoading(false))
   }, [])
 
   return (

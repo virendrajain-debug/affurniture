@@ -151,6 +151,8 @@ function GlobalSettings({ token }) {
         body: JSON.stringify(payload),
       })
 
+      const data = await res.json().catch(() => ({}))
+
       if (res.ok) {
         // Persist to local cache for instant UI reflection
         localStorage.setItem('site_name', form.site_name)
@@ -158,12 +160,12 @@ function GlobalSettings({ token }) {
         
         window.dispatchEvent(new Event('settings-updated'))
         window.dispatchEvent(new Event('logo-updated'))
-        showToast('Global settings saved and published successfully!', 'success')
+        showToast(data.message || 'Global settings saved and published successfully!', 'success')
       } else {
-        const err = await res.json().catch(() => ({}))
-        showToast(err.message || 'Failed to save settings', 'error')
+        showToast(data.message || 'Failed to save settings', 'error')
       }
-    } catch {
+    } catch (err) {
+      console.error('Settings save error:', err)
       showToast('Server error while saving global settings', 'error')
     } finally {
       setSaving(false)

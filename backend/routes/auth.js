@@ -14,7 +14,7 @@
 //   1. Login with email/password -> get JWT token
 //   2. Send token in header: Authorization: Bearer <token>
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+import BACKEND_URL from '../helpers/backendUrl.js';
 function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
 //   3. Protected routes check token via authenticateToken middleware
 // ============================================================

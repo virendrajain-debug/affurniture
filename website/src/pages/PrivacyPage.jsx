@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function PrivacyPage() {
   const [privacy, setPrivacy] = useState(null)
   const [banners, setBanners] = useState({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/privacy`)
-      .then(r => r.json())
-      .then(setPrivacy)
-      .catch(() => {})
-    fetch(`${API_BASE}/api/settings`)
-      .then(r => r.json())
-      .then(setBanners)
-      .catch(() => {})
+    Promise.all([
+      fetch(`${API_BASE}/api/page-content/privacy-policy`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+    ]).then(([privacyData, settingsData]) => {
+      if (privacyData) setPrivacy(privacyData)
+      if (settingsData) setBanners(settingsData)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   return (
@@ -23,7 +24,7 @@ function PrivacyPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={banners.privacy_banner || 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=2000&q=85'} alt="Privacy & Security" />
+          <img src={getAssetUrl(banners.privacy_banner) || 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=2000&q=85'} alt="Privacy & Security" />
           <div className="terms-hero-overlay">
             <span>YOUR PRIVACY</span>
             <h1>Privacy Policy</h1>
@@ -33,9 +34,14 @@ function PrivacyPage() {
 
         <section className="terms-section" style={{ paddingTop: '60px' }}>
           <div className="terms-content">
-            <div className="terms-text">
-              {privacy?.content || 'Privacy Policy content is being updated. Please check back later.'}
-            </div>
+            {loading ? (
+              <div className="category-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading...</p>
+              </div>
+            ) : (
+              <div className="terms-text" dangerouslySetInnerHTML={{ __html: privacy?.content || 'Privacy Policy content is being updated. Please check back later.' }} />
+            )}
           </div>
         </section>
       </main>

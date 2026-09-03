@@ -1,541 +1,804 @@
-// ============================================================
-// Premium CMS Page Content & Text Studio
-// ============================================================
-// Features:
-//   - Dropdown page selector (About Us, Home, WinZ, Finance, Delivery, Returns, Terms, Privacy, Shop Furniture, Contact, Store Locations)
-//   - For About Us Page:
-//     - 1. Top Hero Eyebrow, Title, Subtitle
-//     - 2. Our Story Section: Title + Rich Text Formatted Story Content
-//     - 3. Our Values 3-Grid: Title + Rich Text Formatted Description (NO subtitle!)
-//     - 4. Showroom Showcase: Headline + Rich Text Formatted Description
-//   - For Home Page: Hero Carousel Titles/Subtitles & Deals Text
-//   - For Standard CMS Pages: Eyebrow, Title, Subtitle & Full Rich Text WYSIWYG Content
-//   - Sticky top and bottom publish buttons with instant toast feedback
-// ============================================================
-
-import React, { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
-// Rich Text Editor Component
 function RichTextEditor({ value, onChange, placeholder = 'Enter formatted text content...' }) {
   const editorRef = useRef(null)
+  const lastValue = useRef('')
+  const initialized = useRef(false)
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== (value || '')) {
+    if (editorRef.current && value !== lastValue.current) {
       editorRef.current.innerHTML = value || ''
+      lastValue.current = value || ''
+      if (!initialized.current) initialized.current = true
     }
-  }, [value])
+  }, [value, initialized])
 
   const execCmd = (cmd, arg = null) => {
     document.execCommand(cmd, false, arg)
-    if (editorRef.current) onChange(editorRef.current.innerHTML)
+    if (editorRef.current) { lastValue.current = editorRef.current.innerHTML; onChange(lastValue.current) }
   }
 
   const handleInput = () => {
-    if (editorRef.current) onChange(editorRef.current.innerHTML)
+    if (editorRef.current) { lastValue.current = editorRef.current.innerHTML; onChange(lastValue.current) }
   }
 
   return (
-    <div style={{ borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--card-bg, #1f2937)', overflow: 'hidden' }}>
-      {/* Formatting Toolbar */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 10px', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color)', alignItems: 'center' }}>
-        <button type="button" onClick={() => execCmd('bold')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Bold"><strong>B</strong></button>
-        <button type="button" onClick={() => execCmd('italic')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Italic"><em>I</em></button>
-        <button type="button" onClick={() => execCmd('underline')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Underline"><u>U</u></button>
-        <button type="button" onClick={() => execCmd('formatBlock', '<h2>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Heading 2">H2</button>
-        <button type="button" onClick={() => execCmd('formatBlock', '<h3>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Heading 3">H3</button>
-        <button type="button" onClick={() => execCmd('formatBlock', '<p>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Paragraph">P</button>
-        <button type="button" onClick={() => execCmd('insertUnorderedList')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Bullet List">• List</button>
-        <button type="button" onClick={() => execCmd('insertOrderedList')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }} title="Numbered List">1. List</button>
-        <button type="button" onClick={() => execCmd('removeFormat')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'var(--hover-bg)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', cursor: 'pointer', marginLeft: 'auto' }} title="Clear Formatting">✕</button>
+    <div style={{ borderRadius: '8px', border: '1px solid var(--border-color, #e5e1d8)', background: 'rgba(255,255,255,0.03)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 10px', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid var(--border-color, #e5e1d8)', alignItems: 'center' }}>
+        <button type="button" onClick={() => execCmd('bold')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}><strong>B</strong></button>
+        <button type="button" onClick={() => execCmd('italic')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}><em>I</em></button>
+        <button type="button" onClick={() => execCmd('underline')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}><u>U</u></button>
+        <button type="button" onClick={() => execCmd('formatBlock', '<h2>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}>H2</button>
+        <button type="button" onClick={() => execCmd('formatBlock', '<h3>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}>H3</button>
+        <button type="button" onClick={() => execCmd('formatBlock', '<p>')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}>P</button>
+        <button type="button" onClick={() => execCmd('insertUnorderedList')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}>• List</button>
+        <button type="button" onClick={() => execCmd('insertOrderedList')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-primary, #e8e4dd)', cursor: 'pointer' }}>1. List</button>
+        <button type="button" onClick={() => execCmd('removeFormat')} style={{ padding: '3px 8px', fontSize: '0.8rem', borderRadius: '4px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--border-color, #e5e1d8)', color: 'var(--text-secondary, #888)', cursor: 'pointer', marginLeft: 'auto' }}>✕</button>
       </div>
-
-      {/* Content Area */}
       <div
         ref={editorRef}
         contentEditable
         onInput={handleInput}
         onBlur={handleInput}
         data-placeholder={placeholder}
-        style={{
-          minHeight: '120px',
-          maxHeight: '260px',
-          overflowY: 'auto',
-          padding: '12px 14px',
-          color: 'var(--text-primary)',
-          fontSize: '0.85rem',
-          lineHeight: 1.5,
-          outline: 'none',
-        }}
+        style={{ minHeight: '200px', maxHeight: '400px', overflowY: 'auto', padding: '12px 14px', color: 'var(--text-primary, #e8e4dd)', fontSize: '0.85rem', lineHeight: 1.6, outline: 'none' }}
       />
     </div>
   )
 }
 
-const PAGES_LIST = [
-  { key: 'about', label: 'About Us Page' },
-  { key: 'home', label: 'Home Page CMS Text' },
-  { key: 'winz', label: 'WinZ Quotes Page' },
-  { key: 'finance', label: 'Finance Guide Page' },
-  { key: 'delivery-info', label: 'Delivery Information Page' },
-  { key: 'returns', label: 'Returns & Refund Policy Page' },
-  { key: 'terms', label: 'Terms & Conditions Page' },
-  { key: 'privacy-policy', label: 'Privacy Policy Page' },
-  { key: 'contact', label: 'Contact Us Page' },
-  { key: 'store-locations', label: 'Store Locations Page' },
+const FIXED_PAGES = [
+  { slug: 'about', title: 'About Us' },
+  { slug: 'terms', title: 'Terms & Conditions' },
+  { slug: 'privacy-policy', title: 'Privacy Policy' },
+  { slug: 'delivery-info', title: 'Delivery Information' },
+  { slug: 'returns', title: 'Returns & Refund Policy' },
+  { slug: 'contact', title: 'Contact Us' },
 ]
 
-function PageEditor({ token }) {
-  const { pageKey: routeKey } = useParams()
-  const navigate = useNavigate()
+const BANNER_KEY_MAP = {
+  about: 'about_banner',
+  terms: 'terms_banner',
+  'privacy-policy': 'privacy_banner',
+  'delivery-info': 'delivery_info_banner',
+  returns: 'returns_banner',
+  contact: 'contact_banner',
+}
 
-  const [activePageKey, setActivePageKey] = useState(
-    routeKey ? (routeKey === 'winz-quotes' ? 'winz' : routeKey === 'finance-guide' ? 'finance' : routeKey) : 'about'
-  )
+const STANDARD_SLUGS = ['terms', 'privacy-policy', 'delivery-info', 'returns']
 
-  const [form, setForm] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState(null)
+const SECTION_TYPES = ['primary_section', 'value_1', 'value_2', 'value_3', 'features', 'conclusion']
 
-  const authToken = getAuthToken(token)
+const CARD_STYLE = {
+  padding: '20px',
+  borderRadius: '12px',
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid var(--border-color, #e5e1d8)',
+  marginBottom: '16px',
+}
 
-  const showToast = (msg, type = 'info') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3500)
-  }
+const LABEL_STYLE = {
+  fontSize: '0.78rem',
+  color: 'var(--text-secondary, #888)',
+  fontWeight: 600,
+  display: 'block',
+  marginBottom: '6px',
+}
 
-  const loadPageData = async (pageKey) => {
-    setLoading(true)
+const INPUT_STYLE = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid var(--border-color, #e5e1d8)',
+  borderRadius: '8px',
+  color: 'var(--text-primary, #e8e4dd)',
+  fontSize: '0.85rem',
+  fontFamily: 'inherit',
+  boxSizing: 'border-box',
+  outline: 'none',
+}
+
+const SECTION_HEADER = {
+  fontSize: '1.05rem',
+  fontWeight: 700,
+  color: 'var(--text-primary, #e8e4dd)',
+  marginBottom: '16px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+}
+
+const SECTION_NUM = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: '50%',
+  background: 'var(--accent-color, #aa7a3e)',
+  color: '#000',
+  fontSize: '0.75rem',
+  fontWeight: 800,
+  flexShrink: 0,
+}
+
+function BannerUpload({ value, onChange, authToken, fallback }) {
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef(null)
+  const displayValue = value || fallback || ''
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/pages/${pageKey}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data && typeof data === 'object') {
-          setForm(data)
-        }
-      }
-    } catch {
-      showToast('Failed to load page text from server', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadPageData(activePageKey)
-  }, [activePageKey])
-
-  const handleFieldChange = (key, val) => {
-    setForm(prev => ({ ...prev, [key]: val }))
-  }
-
-  const handleSave = async (e) => {
-    if (e) e.preventDefault()
-    setSaving(true)
-
-    try {
-      const res = await fetch(`${API_BASE}/api/pages/${activePageKey}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify(form),
-      })
-
-      if (res.ok) {
-        showToast('Page text & formatted descriptions published live!', 'success')
-        loadPageData(activePageKey)
+      const formData = new FormData()
+      formData.append('image', file)
+      const headers = {}
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+      const res = await fetch(`${API_BASE}/api/upload`, { method: 'POST', headers, body: formData })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        onChange(data.url)
       } else {
-        const d = await res.json().catch(() => ({}))
-        showToast(d.message || 'Failed to save page', 'error')
+        alert(data.message || 'Upload failed')
       }
     } catch {
-      showToast('Server connection error', 'error')
+      alert('Upload failed')
     } finally {
-      setSaving(false)
+      setUploading(false)
     }
   }
 
   return (
-    <div className="admin-page" style={{ maxWidth: '1100px', margin: '0 auto' }}>
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
-
-      {/* Top Filter Toolbar */}
-      <div
-        className="filter-toolbar"
-        style={{
-          background: 'var(--sidebar-bg, #111827)',
-          padding: '14px 18px',
-          borderRadius: '12px',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginBottom: '20px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
-            Select Page to Edit Texts:
-          </label>
-          <select
-            className="filter-select"
-            value={activePageKey}
-            onChange={(e) => {
-              setActivePageKey(e.target.value)
-              navigate(`/dashboard/pages/${e.target.value}`)
-            }}
-            style={{ minWidth: '300px', fontWeight: 600 }}
-          >
-            {PAGES_LIST.map(p => (
-              <option key={p.key} value={p.key}>{p.label}</option>
-            ))}
-          </select>
+    <div>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} />
+      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}>
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={fallback || 'https://example.com/banner.jpg'}
+            style={INPUT_STYLE}
+          />
+          {value && value !== fallback && fallback && (
+            <button type="button" onClick={() => onChange('')} style={{ marginTop: 4, fontSize: '0.72rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Clear custom image</button>
+          )}
         </div>
-
         <button
           type="button"
-          className="btn-primary"
-          onClick={handleSave}
-          disabled={saving || loading}
-          style={{ padding: '8px 22px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          style={{
+            padding: '10px 16px',
+            background: 'var(--accent-color, #aa7a3e)',
+            color: '#000',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '0.82rem',
+            whiteSpace: 'nowrap',
+            opacity: uploading ? 0.6 : 1,
+          }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          {saving ? 'Publishing...' : 'Publish Page Texts'}
+          {uploading ? 'Uploading...' : 'Upload Image'}
         </button>
       </div>
-
-      {loading ? (
-        <div className="admin-card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-          Loading page content...
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          {/* ============================================================
-              1. ABOUT US PAGE TEXT STUDIO
-          ============================================================ */}
-          {activePageKey === 'about' && (
-            <>
-              {/* Section 1: Top Hero Header */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  1. Top Hero Header Text
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '14px', marginBottom: '12px' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Eyebrow / Tagline</label>
-                    <input type="text" className="form-input" value={form.eyebrow || ''} onChange={(e) => handleFieldChange('eyebrow', e.target.value)} placeholder="e.g. OUR STORY" />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Page Main Title</label>
-                    <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="e.g. About AF Furnishings" />
-                  </div>
-                </div>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Hero Subtitle</label>
-                  <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="e.g. Quality furniture for every New Zealand home" />
-                </div>
-              </div>
-
-              {/* Section 2: Our Story Feature Section */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  2. Our Story Feature Text &amp; Rich Description
-                </h4>
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Story Section Title</label>
-                  <input type="text" className="form-input" value={form.story_title || ''} onChange={(e) => handleFieldChange('story_title', e.target.value)} placeholder="e.g. Who We Are" />
-                </div>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Formatted Story Description *</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--accent-color, #d4af37)' }}>Rich Text Formatting Enabled</span>
-                  </label>
-                  <RichTextEditor value={form.story_content || ''} onChange={(val) => handleFieldChange('story_content', val)} placeholder="Enter company background and story..." />
-                </div>
-              </div>
-
-              {/* Section 3: Our Values 3-Grid (Title & Description Only, NO Subtitle) */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  3. Our Values 3-Grid (Title &amp; Description Only)
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-                  {/* Card 1 */}
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 1 Title</label>
-                      <input type="text" className="form-input" value={form.val_1_title || ''} onChange={(e) => handleFieldChange('val_1_title', e.target.value)} placeholder="e.g. Quality First" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 1 Description</label>
-                      <RichTextEditor value={form.val_1_desc || ''} onChange={(val) => handleFieldChange('val_1_desc', val)} placeholder="Enter description..." />
-                    </div>
-                  </div>
-
-                  {/* Card 2 */}
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 2 Title</label>
-                      <input type="text" className="form-input" value={form.val_2_title || ''} onChange={(e) => handleFieldChange('val_2_title', e.target.value)} placeholder="e.g. Comfort Always" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 2 Description</label>
-                      <RichTextEditor value={form.val_2_desc || ''} onChange={(val) => handleFieldChange('val_2_desc', val)} placeholder="Enter description..." />
-                    </div>
-                  </div>
-
-                  {/* Card 3 */}
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <div className="form-group" style={{ marginBottom: '10px' }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 3 Title</label>
-                      <input type="text" className="form-input" value={form.val_3_title || ''} onChange={(e) => handleFieldChange('val_3_title', e.target.value)} placeholder="e.g. For Every Home" />
-                    </div>
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>Value Card 3 Description</label>
-                      <RichTextEditor value={form.val_3_desc || ''} onChange={(val) => handleFieldChange('val_3_desc', val)} placeholder="Enter description..." />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 4: Showroom Showcase Text */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  4. Showroom Showcase Text &amp; Description
-                </h4>
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Showroom Section Headline</label>
-                  <input type="text" className="form-input" value={form.showroom_title || ''} onChange={(e) => handleFieldChange('showroom_title', e.target.value)} placeholder="e.g. Experience Comfort in Person" />
-                </div>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Showroom Formatted Description</label>
-                  <RichTextEditor value={form.showroom_desc || ''} onChange={(val) => handleFieldChange('showroom_desc', val)} placeholder="Enter showroom description..." />
-                </div>
-              </div>
-            </>
+      {displayValue && (
+        <div style={{ marginTop: '10px', position: 'relative' }}>
+          <img src={getAssetUrl(displayValue)} alt="Preview" style={{ width: '100%', maxHeight: '180px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border-color, #e5e1d8)' }}
+            onError={(e) => { e.target.style.display = 'none' }} />
+          {!value && fallback && (
+            <span style={{ position: 'absolute', bottom: 6, right: 6, fontSize: '0.65rem', background: 'rgba(0,0,0,0.7)', color: '#aaa', padding: '2px 8px', borderRadius: 4 }}>Current website image</span>
           )}
-
-          {/* ============================================================
-              2. HOME PAGE CMS TEXT
-          ============================================================ */}
-          {activePageKey === 'home' && (
-            <div className="admin-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                Homepage Hero Slides Text &amp; Deals
-              </h4>
-
-              {/* Slide 1 */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Hero Slide 1 Text</strong>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <input type="text" className="form-input" value={form.hero_1_title || ''} onChange={(e) => handleFieldChange('hero_1_title', e.target.value)} placeholder="Slide 1 Title" />
-                  <input type="text" className="form-input" value={form.hero_1_subtitle || ''} onChange={(e) => handleFieldChange('hero_1_subtitle', e.target.value)} placeholder="Slide 1 Subtitle" />
-                </div>
-              </div>
-
-              {/* Slide 2 */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Hero Slide 2 Text</strong>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <input type="text" className="form-input" value={form.hero_2_title || ''} onChange={(e) => handleFieldChange('hero_2_title', e.target.value)} placeholder="Slide 2 Title" />
-                  <input type="text" className="form-input" value={form.hero_2_subtitle || ''} onChange={(e) => handleFieldChange('hero_2_subtitle', e.target.value)} placeholder="Slide 2 Subtitle" />
-                </div>
-              </div>
-
-              {/* Slide 3 */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Hero Slide 3 Text</strong>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <input type="text" className="form-input" value={form.hero_3_title || ''} onChange={(e) => handleFieldChange('hero_3_title', e.target.value)} placeholder="Slide 3 Title" />
-                  <input type="text" className="form-input" value={form.hero_3_subtitle || ''} onChange={(e) => handleFieldChange('hero_3_subtitle', e.target.value)} placeholder="Slide 3 Subtitle" />
-                </div>
-              </div>
-
-              {/* Deals Text */}
-              <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ fontSize: '0.85rem', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '8px' }}>Deals Section Text</strong>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <input type="text" className="form-input" value={form.deals_headline || ''} onChange={(e) => handleFieldChange('deals_headline', e.target.value)} placeholder="Deals Headline" />
-                  <input type="text" className="form-input" value={form.deals_subtitle || ''} onChange={(e) => handleFieldChange('deals_subtitle', e.target.value)} placeholder="Deals Subtitle" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ============================================================
-              3. CONTACT US PAGE (Special Handling)
-          ============================================================ */}
-          {activePageKey === 'contact' && (
-            <>
-              {/* Hero Banner Section */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  Hero Banner
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '12px' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Small Label Above Heading</label>
-                    <input type="text" className="form-input" value={form.eyebrow || ''} onChange={(e) => handleFieldChange('eyebrow', e.target.value)} placeholder="e.g. GET IN TOUCH" />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Main Heading</label>
-                    <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="e.g. Contact Us" />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '12px' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Subtitle</label>
-                    <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="e.g. We'd love to hear from you" />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.78rem' }}>Hero Image URL</label>
-                    <input type="text" className="form-input" value={form.hero_image || ''} onChange={(e) => handleFieldChange('hero_image', e.target.value)} placeholder="https://example.com/hero.jpg" />
-                  </div>
-                </div>
-                {form.hero_image && (
-                  <div style={{ marginTop: '10px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                    <img
-                      src={getAssetUrl(form.hero_image)}
-                      alt="Hero Banner Preview"
-                      style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }}
-                      onError={(e) => { e.target.style.display = 'none' }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Store Location & Contact Info */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  Store Location &amp; Contact Info
-                </h4>
-                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
-                  Manage your store addresses, phone numbers and opening hours from the dedicated Store Locations manager.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard/store-locations')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 18px',
-                    borderRadius: '8px',
-                    background: 'var(--hover-bg)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--accent-color, #d4af37)',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  Manage Store Locations
-                </button>
-              </div>
-
-              {/* Social Media Links */}
-              <div className="admin-card" style={{ padding: '20px', borderRadius: '12px' }}>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  Social Media Links
-                </h4>
-                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', margin: '0 0 12px 0' }}>
-                  Manage your social media profile links (Facebook, Instagram, etc.) from Site Settings.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard/settings')}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 18px',
-                    borderRadius: '8px',
-                    background: 'var(--hover-bg)',
-                    border: '1px solid var(--border-color)',
-                    color: 'var(--accent-color, #d4af37)',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-                  </svg>
-                  Manage Social Links
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ============================================================
-              4. STANDARD CMS PAGES (WinZ, Delivery, Returns, Terms, Privacy, Shop Furniture, Store Locations)
-          ============================================================ */}
-          {activePageKey !== 'about' && activePageKey !== 'home' && activePageKey !== 'contact' && (
-            <div className="admin-card" style={{ padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.92rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                {PAGES_LIST.find(p => p.key === activePageKey)?.label} Content
-              </h4>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '14px' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Eyebrow / Badge</label>
-                  <input type="text" className="form-input" value={form.eyebrow || ''} onChange={(e) => handleFieldChange('eyebrow', e.target.value)} placeholder="e.g. LEGAL / INFO" />
-                </div>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label" style={{ fontSize: '0.78rem' }}>Main Page Title</label>
-                  <input type="text" className="form-input" value={form.title || ''} onChange={(e) => handleFieldChange('title', e.target.value)} placeholder="Page Title" />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.78rem' }}>Page Subtitle</label>
-                <input type="text" className="form-input" value={form.subtitle || ''} onChange={(e) => handleFieldChange('subtitle', e.target.value)} placeholder="Page Subtitle" />
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Main Body Content (Rich Text Formatted)</span>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--accent-color, #d4af37)' }}>Toolbar Formatting</span>
-                </label>
-                <RichTextEditor value={form.content || form.intro_content || ''} onChange={(val) => handleFieldChange('content', val)} placeholder="Enter full page content..." />
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Action Bar */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={handleSave}
-              disabled={saving || loading}
-              style={{ padding: '10px 28px', fontSize: '0.9rem', fontWeight: 700 }}
-            >
-              {saving ? 'Publishing...' : 'Publish Page Texts'}
-            </button>
-          </div>
         </div>
       )}
     </div>
   )
 }
 
-export default PageEditor;
+function PageEditor({ token }) {
+  const [pages, setPages] = useState([])
+  const [activeSlug, setActiveSlug] = useState('about')
+  const [form, setForm] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [toasts, setToasts] = useState([])
+  const authToken = getAuthToken(token)
+
+  const addToast = useCallback((msg, type = 'info') => {
+    const id = Date.now() + Math.random()
+    setToasts(prev => [...prev, { id, msg, type }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500)
+  }, [])
+
+  const authHeaders = useCallback(() => {
+    const h = { 'Content-Type': 'application/json' }
+    if (authToken) h['Authorization'] = `Bearer ${authToken}`
+    return h
+  }, [authToken])
+
+  const loadAllPages = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/page-content`, { headers: authHeaders() })
+      if (!res.ok) throw new Error('Failed to fetch pages')
+      const data = await res.json()
+      setPages(Array.isArray(data) ? data : [])
+    } catch {
+      addToast('Failed to load pages list', 'error')
+    }
+  }, [authHeaders, addToast])
+
+  const loadPageData = useCallback(async (slug) => {
+    setLoading(true)
+    try {
+      if (slug === 'about') {
+        const [aboutRes, sectionsRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/about`, { headers: authHeaders() }),
+          fetch(`${API_BASE}/api/about-sections`, { headers: authHeaders() }),
+          fetch(`${API_BASE}/api/settings`, { headers: authHeaders() }),
+        ])
+        const about = aboutRes.ok ? await aboutRes.json() : {}
+        const sectionsRaw = sectionsRes.ok ? await sectionsRes.json() : []
+        const settings = settingsRes.ok ? await settingsRes.json() : {}
+
+        const sections = {}
+        if (Array.isArray(sectionsRaw)) {
+          sectionsRaw.forEach(s => { sections[s.type] = s })
+        }
+
+        setForm({
+          about_banner: settings.about_banner || '',
+          primary_title: sections.primary_section?.title || '',
+          company_name: about.company_name || '',
+          tagline: about.tagline || '',
+          story_description: about.description || '',
+          story_image: about.image_1 || '',
+          features_title: sections.features?.title || '',
+          features_description: sections.features?.description || '',
+          val_1_title: sections.value_1?.title || '',
+          val_1_desc: sections.value_1?.description || '',
+          val_1_image: sections.value_1?.image || '',
+          val_2_title: sections.value_2?.title || '',
+          val_2_desc: sections.value_2?.description || '',
+          val_2_image: sections.value_2?.image || '',
+          val_3_title: sections.value_3?.title || '',
+          val_3_desc: sections.value_3?.description || '',
+          val_3_image: sections.value_3?.image || '',
+          conclusion_title: sections.conclusion?.title || '',
+          conclusion_desc: sections.conclusion?.description || '',
+          conclusion_image: about.image_2 || '',
+          address: about.address || '',
+          phone: about.phone || '',
+          email: about.email || '',
+        })
+      } else if (slug === 'contact') {
+        const [pageRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/page-content/contact`, { headers: authHeaders() }),
+          fetch(`${API_BASE}/api/settings`, { headers: authHeaders() }),
+        ])
+        const page = pageRes.ok ? await pageRes.json() : {}
+        const settings = settingsRes.ok ? await settingsRes.json() : {}
+        const content = (() => {
+          if (!page.content) return {}
+          if (typeof page.content === 'string') { try { return JSON.parse(page.content) } catch { return {} } }
+          return page.content
+        })()
+
+        setForm({
+          contact_banner: settings.contact_banner || '',
+          contact_phone: settings.phone || content.phone || '',
+          contact_email: settings.email || content.email || '',
+          address: content.address || '',
+          business_hours: content.business_hours || '',
+        })
+      } else if (STANDARD_SLUGS.includes(slug)) {
+        const bannerKey = BANNER_KEY_MAP[slug]
+        const [pageRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/page-content/${slug}`, { headers: authHeaders() }),
+          fetch(`${API_BASE}/api/settings`, { headers: authHeaders() }),
+        ])
+        const page = pageRes.ok ? await pageRes.json() : null
+        const settings = settingsRes.ok ? await settingsRes.json() : {}
+        const content = page ? (() => {
+          if (!page.content) return ''
+          if (typeof page.content === 'string') {
+            try { const parsed = JSON.parse(page.content); return parsed.content || page.content } catch { return page.content }
+          }
+          if (typeof page.content === 'object' && page.content !== null) {
+            return page.content.content || JSON.stringify(page.content)
+          }
+          return ''
+        })() : ''
+
+        setForm({
+          title: page?.title || '',
+          banner_image: settings[bannerKey] || '',
+          content,
+        })
+      } else {
+        const res = await fetch(`${API_BASE}/api/page-content/${slug}`, { headers: authHeaders() })
+        if (res.ok) {
+          const data = await res.json()
+          const content = (() => {
+            if (!data.content) return ''
+            if (typeof data.content === 'string') {
+              try { const parsed = JSON.parse(data.content); return parsed.content || data.content } catch { return data.content }
+            }
+            if (typeof data.content === 'object' && data.content !== null) {
+              return data.content.content || JSON.stringify(data.content)
+            }
+            return ''
+          })()
+          setForm({
+            title: data.title || '',
+            slug: data.slug || slug,
+            meta_description: data.meta_description || '',
+            banner_image: data.banner_image || '',
+            content,
+            page_type: data.page_type || '',
+          })
+        } else {
+          setForm({ title: '', slug, meta_description: '', banner_image: '', content: '', page_type: 'dynamic' })
+        }
+      }
+    } catch {
+      addToast('Failed to load page content', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }, [authHeaders, addToast])
+
+  useEffect(() => { loadAllPages() }, [loadAllPages])
+  useEffect(() => { loadPageData(activeSlug) }, [activeSlug, loadPageData])
+
+  const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
+
+  const isAbout = activeSlug === 'about'
+  const isContact = activeSlug === 'contact'
+  const isStandard = STANDARD_SLUGS.includes(activeSlug)
+  const isDynamic = !isAbout && !isContact && !isStandard
+
+  const handleSave = async (e) => {
+    if (e) e.preventDefault()
+    setSaving(true)
+    try {
+      if (isAbout) {
+        const [aboutRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/about`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              company_name: form.company_name || '',
+              tagline: form.tagline || '',
+              description: form.story_description || '',
+              image_1: form.story_image || '',
+              image_2: form.conclusion_image || '',
+              address: form.address || '',
+              phone: form.phone || '',
+              email: form.email || '',
+            }),
+          }),
+          fetch(`${API_BASE}/api/settings`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ about_banner: form.about_banner || '' }),
+          }),
+        ])
+
+        const sectionTypes = [
+          { type: 'primary_section', title: form.primary_title || '', description: '', image: '' },
+          { type: 'features', title: form.features_title || '', description: form.features_description || '', image: '' },
+          { type: 'value_1', title: form.val_1_title || '', description: form.val_1_desc || '', image: form.val_1_image || '' },
+          { type: 'value_2', title: form.val_2_title || '', description: form.val_2_desc || '', image: form.val_2_image || '' },
+          { type: 'value_3', title: form.val_3_title || '', description: form.val_3_desc || '', image: form.val_3_image || '' },
+          { type: 'conclusion', title: form.conclusion_title || '', description: form.conclusion_desc || '', image: '' },
+        ]
+
+        const sectionResults = await Promise.all(
+          sectionTypes.map(s =>
+            fetch(`${API_BASE}/api/about-sections/${s.type}`, {
+              method: 'PUT',
+              headers: authHeaders(),
+              body: JSON.stringify(s),
+            })
+          )
+        )
+
+        const allOk = aboutRes.ok && settingsRes.ok && sectionResults.every(r => r.ok)
+        if (allOk) {
+          addToast('About page saved successfully!', 'success')
+        } else {
+          addToast('Some parts failed to save. Please try again.', 'error')
+        }
+      } else if (isContact) {
+        const [pageRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/page-content/contact`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              title: 'Contact Us',
+              content: {
+                phone: form.contact_phone || '',
+                email: form.contact_email || '',
+                address: form.address || '',
+                business_hours: form.business_hours || '',
+              },
+            }),
+          }),
+          fetch(`${API_BASE}/api/settings`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              contact_banner: form.contact_banner || '',
+              phone: form.contact_phone || '',
+              email: form.contact_email || '',
+            }),
+          }),
+        ])
+        if (pageRes.ok && settingsRes.ok) {
+          addToast('Contact page saved successfully!', 'success')
+        } else {
+          addToast('Failed to save contact page', 'error')
+        }
+      } else if (isStandard) {
+        const bannerKey = BANNER_KEY_MAP[activeSlug]
+        const [pageRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/page-content/${activeSlug}`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              title: form.title || '',
+              content: { content: form.content || '' },
+            }),
+          }),
+          fetch(`${API_BASE}/api/settings`, {
+            method: 'PUT',
+            headers: authHeaders(),
+            body: JSON.stringify({ [bannerKey]: form.banner_image || '' }),
+          }),
+        ])
+        if (pageRes.ok && settingsRes.ok) {
+          addToast('Page saved successfully!', 'success')
+        } else {
+          addToast('Failed to save page', 'error')
+        }
+      } else {
+        const res = await fetch(`${API_BASE}/api/page-content/${activeSlug}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            title: form.title || '',
+            content: { content: form.content || '' },
+            page_type: form.page_type || 'dynamic',
+            banner_image: form.banner_image || '',
+            meta_description: form.meta_description || '',
+          }),
+        })
+        if (res.ok) {
+          addToast('Page saved successfully!', 'success')
+        } else {
+          addToast('Failed to save page', 'error')
+        }
+      }
+
+      loadAllPages()
+      setTimeout(() => loadPageData(activeSlug), 200)
+    } catch {
+      addToast('Server connection error', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const renderInput = (label, fieldKey, placeholder, type = 'text') => (
+    <div style={{ marginBottom: '14px' }}>
+      <label style={LABEL_STYLE}>{label}</label>
+      <input
+        type={type}
+        value={form[fieldKey] || ''}
+        onChange={(e) => setField(fieldKey, e.target.value)}
+        placeholder={placeholder}
+        style={INPUT_STYLE}
+      />
+    </div>
+  )
+
+  const renderBanner = (bannerKey, fallback) => (
+    <div style={CARD_STYLE}>
+      <div style={SECTION_HEADER}>
+        <span style={SECTION_NUM}>B</span>
+        Banner Image
+      </div>
+      <BannerUpload value={form[bannerKey] || ''} onChange={(val) => setField(bannerKey, val)} authToken={authToken} fallback={fallback} />
+    </div>
+  )
+
+  const renderRichText = (label, fieldKey, placeholder) => (
+    <div style={{ marginBottom: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+        <label style={{ ...LABEL_STYLE, marginBottom: 0 }}>{label}</label>
+        <span style={{ fontSize: '0.7rem', color: 'var(--accent-color, #aa7a3e)' }}>Rich Text</span>
+      </div>
+      <RichTextEditor value={form[fieldKey] || ''} onChange={(val) => setField(fieldKey, val)} placeholder={placeholder} />
+    </div>
+  )
+
+  const renderImageUpload = (label, fieldKey, fallback) => (
+    <div style={{ marginBottom: '14px' }}>
+      <label style={LABEL_STYLE}>{label}</label>
+      <BannerUpload value={form[fieldKey] || ''} onChange={(val) => setField(fieldKey, val)} authToken={authToken} fallback={fallback} />
+    </div>
+  )
+
+  const FB = {
+    about_banner: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85',
+    story_image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85',
+    val_1_image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80',
+    val_2_image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80',
+    val_3_image: 'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=600&q=80',
+    conclusion_image: 'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=900&q=85',
+    terms_banner: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85',
+    privacy_banner: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=2000&q=85',
+    delivery_info_banner: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=2000&q=85',
+    returns_banner: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85',
+    contact_banner: 'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?auto=format&fit=crop&w=2000&q=85',
+  }
+
+  const renderAboutPage = () => (
+    <>
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>01</span>
+          Hero Banner
+        </div>
+        {renderBanner('about_banner', FB.about_banner)}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>02</span>
+          Hero Header Text
+        </div>
+        {renderInput('Eyebrow Text (e.g. "OUR STORY")', 'primary_title', 'Used as hero eyebrow')}
+        {renderInput('Page Title (e.g. "About AF Furnishings")', 'company_name', 'Main heading')}
+        {renderInput('Subtitle', 'tagline', 'Brief tagline or subtitle')}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>03</span>
+          Our Story
+        </div>
+        {renderRichText('Story Description', 'story_description', 'Write your story here...')}
+        {renderImageUpload('Story Image', 'story_image', FB.story_image)}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>04</span>
+          Our Values
+        </div>
+        {renderInput('Values Section Title (e.g. "OUR VALUES")', 'features_title', 'Section eyebrow')}
+        {renderInput('Values Section Subtitle', 'features_description', 'e.g., What we stand for.')}
+
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-color, #aa7a3e)', marginBottom: '10px' }}>Value Card 1</div>
+          {renderInput('Title', 'val_1_title', 'e.g., Quality Craftsmanship')}
+          {renderRichText('Description', 'val_1_desc', 'Describe this value...')}
+          {renderImageUpload('Image', 'val_1_image', FB.val_1_image)}
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-color, #aa7a3e)', marginBottom: '10px' }}>Value Card 2</div>
+          {renderInput('Title', 'val_2_title', 'e.g., Customer Focus')}
+          {renderRichText('Description', 'val_2_desc', 'Describe this value...')}
+          {renderImageUpload('Image', 'val_2_image', FB.val_2_image)}
+        </div>
+
+        <div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--accent-color, #aa7a3e)', marginBottom: '10px' }}>Value Card 3</div>
+          {renderInput('Title', 'val_3_title', 'e.g., Innovation')}
+          {renderRichText('Description', 'val_3_desc', 'Describe this value...')}
+          {renderImageUpload('Image', 'val_3_image', FB.val_3_image)}
+        </div>
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>05</span>
+          Visit Our Showroom / Conclusion
+        </div>
+        {renderInput('Headline (e.g. "Visit Our Showroom")', 'conclusion_title', 'Section eyebrow')}
+        {renderRichText('Description', 'conclusion_desc', 'Showroom details...')}
+        {renderImageUpload('Team / Showroom Image', 'conclusion_image', FB.conclusion_image)}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>06</span>
+          Contact Info
+        </div>
+        {renderInput('Address', 'address', 'Full business address')}
+        {renderInput('Phone', 'phone', 'e.g., 0800 222 548')}
+        {renderInput('Email', 'email', 'e.g., affurniture@gmail.com', 'email')}
+      </div>
+    </>
+  )
+
+  const renderContactPage = () => (
+    <>
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>01</span>
+          Banner Image
+        </div>
+        {renderBanner('contact_banner', FB.contact_banner)}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>02</span>
+          Contact Information
+        </div>
+        {renderInput('Phone', 'contact_phone', 'e.g., 0800 222 548')}
+        {renderInput('Email', 'contact_email', 'e.g., affurniture@gmail.com', 'email')}
+        {renderInput('Address', 'address', 'Full business address')}
+        {renderInput('Business Hours', 'business_hours', 'e.g., Mon-Fri 9am-6pm')}
+      </div>
+    </>
+  )
+
+  const renderStandardPage = () => {
+    const bannerKey = BANNER_KEY_MAP[activeSlug] || activeSlug + '_banner'
+    const bannerFallback = FB[bannerKey] || ''
+    return (
+    <>
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>01</span>
+          Banner Image
+        </div>
+        {renderBanner('banner_image', bannerFallback)}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>02</span>
+          Page Content
+        </div>
+        {renderInput('Title', 'title', 'Enter page title')}
+        {renderRichText('Main Body Content', 'content', 'Write your page content here...')}
+      </div>
+    </>
+    )
+  }
+
+  const renderDynamicPage = () => (
+    <>
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>01</span>
+          Page Details
+        </div>
+        {renderInput('Title', 'title', 'Enter page title')}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={LABEL_STYLE}>Slug (URL)</label>
+          <input type="text" value={form.slug || activeSlug} style={{ ...INPUT_STYLE, opacity: 0.6 }} disabled />
+        </div>
+        {renderInput('Meta Description', 'meta_description', 'Brief description for search engines')}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>02</span>
+          Banner Image
+        </div>
+        {renderBanner('banner_image')}
+      </div>
+
+      <div style={CARD_STYLE}>
+        <div style={SECTION_HEADER}>
+          <span style={SECTION_NUM}>03</span>
+          Page Content
+        </div>
+        {renderRichText('Main Body Content', 'content', 'Write your page content here...')}
+      </div>
+    </>
+  )
+
+  const renderForm = () => {
+    if (isAbout) return renderAboutPage()
+    if (isContact) return renderContactPage()
+    if (isStandard) return renderStandardPage()
+    if (isDynamic) return renderDynamicPage()
+    return renderStandardPage()
+  }
+
+  const pageTitle = FIXED_PAGES.find(p => p.slug === activeSlug)?.title || form.title || activeSlug
+
+  return (
+    <div style={{ minHeight: '100vh', paddingBottom: '80px', maxWidth: '900px', margin: '0 auto' }}>
+      <style>{`@keyframes toastSlideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+
+      <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{ padding: '12px 20px', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', color: '#fff', background: t.type === 'success' ? '#10b981' : t.type === 'error' ? '#ef4444' : '#3b82f6', boxShadow: '0 6px 24px rgba(0,0,0,0.3)', animation: 'toastSlideIn 0.25s ease' }}>
+            {t.msg}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, padding: '20px 0', marginBottom: '8px', borderBottom: '1px solid var(--border-color, #e5e1d8)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-secondary, #888)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Select Page to Edit:</label>
+          <select
+            value={activeSlug}
+            onChange={(e) => setActiveSlug(e.target.value)}
+            style={{
+              padding: '10px 14px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border-color, #e5e1d8)',
+              borderRadius: '8px',
+              color: 'var(--text-primary, #e8e4dd)',
+              fontSize: '0.85rem',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              minWidth: '220px',
+              outline: 'none',
+            }}
+          >
+            {FIXED_PAGES.map(p => (
+              <option key={p.slug} value={p.slug} style={{ background: '#28241f', color: '#e8e4dd' }}>{p.title}</option>
+            ))}
+            {pages.filter(p => !FIXED_PAGES.some(f => f.slug === p.slug)).length > 0 && (
+              <optgroup label="Dynamic Pages" style={{ background: '#28241f', color: '#888' }}>
+                {pages.filter(p => !FIXED_PAGES.some(f => f.slug === p.slug)).map(p => (
+                  <option key={p.slug} value={p.slug} style={{ background: '#28241f', color: '#e8e4dd' }}>{p.title || p.slug}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving || loading}
+          style={{
+            padding: '10px 24px',
+            background: 'var(--accent-color, #aa7a3e)',
+            color: '#000',
+            fontWeight: 700,
+            fontSize: '0.88rem',
+            border: 'none',
+            borderRadius: 8,
+            cursor: saving || loading ? 'not-allowed' : 'pointer',
+            opacity: saving || loading ? 0.6 : 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          {saving ? 'Publishing...' : 'Publish'}
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ ...CARD_STYLE, textAlign: 'center', padding: 60, color: 'var(--text-secondary, #888)' }}>Loading page content...</div>
+      ) : (
+        <>
+          <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-color, #aa7a3e)', marginBottom: '16px', marginTop: '20px' }}>
+            Editing: {pageTitle}
+          </div>
+          {renderForm()}
+        </>
+      )}
+    </div>
+  )
+}
+
+export default PageEditor

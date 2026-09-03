@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,7 +11,7 @@ function OnSalePage() {
   useEffect(() => {
     const fetchSaleProducts = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/products?on_sale=true`)
+        const res = await fetch(`${API_BASE}/api/products?on_sale=true`, { cache: 'no-store' })
         const data = await res.json()
         setProducts(Array.isArray(data) ? data : (data.products || []))
       } catch { setProducts([]) }
@@ -21,11 +21,9 @@ function OnSalePage() {
   }, [])
 
   const getImg = (p) => {
-    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images[0]
+    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return getAssetUrl(p.images[0])
     return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
   }
-
-  const getWeekly = (price) => price ? Math.ceil(Number(price) / 52) : null
 
   const getDiscount = (mrp, price) => {
     if (!mrp || !price) return 0

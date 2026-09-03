@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import EnquiryModal from '../components/EnquiryModal'
@@ -50,10 +50,8 @@ function ProductDetail() {
   const [zoomOpen, setZoomOpen] = useState(false)
   const [zoomScale, setZoomScale] = useState(1)
   const [selectedImg, setSelectedImg] = useState(0)
-  const [selectedConfig, setSelectedConfig] = useState('')
-  const [selectedColor, setSelectedColor] = useState('')
-  const [adCampaigns, setAdCampaigns] = useState([])
   const [recentlyViewed, setRecentlyViewed] = useState(getRecentlyViewed())
+  const [settings, setSettings] = useState({})
 
   useEffect(() => {
     setLoading(true)
@@ -63,7 +61,7 @@ function ProductDetail() {
     setRelated([])
     setAllCategoryProducts([])
     const controller = new AbortController()
-    fetch(`${API_BASE}/api/products/by-slug/${slug}`, { signal: controller.signal })
+    fetch(`${API_BASE}/api/products/by-slug/${slug}`, { signal: controller.signal, cache: 'no-store' })
       .then(r => {
         if (!r.ok) throw new Error('Product not found')
         return r.json()
@@ -74,7 +72,7 @@ function ProductDetail() {
         addToRecentlyViewed(data)
         setRecentlyViewed(getRecentlyViewed())
         if (data.category_name) {
-          fetch(`${API_BASE}/api/products?category=${encodeURIComponent(data.category_name)}&limit=50`)
+          fetch(`${API_BASE}/api/products?category=${encodeURIComponent(data.category_name)}&limit=50`, { cache: 'no-store' })
             .then(r => r.json())
             .then(items => {
               const list = Array.isArray(items) ? items : (items.products || [])
@@ -90,19 +88,22 @@ function ProductDetail() {
           setLoading(false)
         }
       })
-    fetch(`${API_BASE}/api/ad-campaigns/active?position=product_detail`)
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
-      .catch(() => {})
     return () => controller.abort()
   }, [slug])
 
+  useEffect(() => {
+    fetch(`${API_BASE}/api/settings`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(setSettings)
+      .catch(() => {})
+  }, [])
+
   const getImages = (p) => {
-    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images
+    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images.map(img => getAssetUrl(img))
     return [fallbackImg]
   }
 
-  if (loading) return <><Header /><main className="product-detail-page" style={{ textAlign: 'center', padding: '200px 20px' }}><p>Loading...</p></main><Footer /></>
+  if (loading) return <><Header /><main className="product-detail-page" style={{ textAlign: 'center', padding: '200px 20px' }}><div className="loading-spinner"></div><p>Loading product...</p></main><Footer /></>
   if (error || !product) return <><Header /><main className="product-detail-page" style={{ textAlign: 'center', padding: '200px 20px' }}><h2>Product not found</h2><Link to="/" className="primary" style={{ marginTop: 20, display: 'inline-block' }}>Back to Home</Link></main><Footer /></>
 
   const images = getImages(product)
@@ -153,6 +154,7 @@ function ProductDetail() {
             <h1>{product.name}</h1>
 
             {product.brand && <p className="pd-brand">Brand: {product.brand}</p>}
+            {product.sku && <p className="pd-brand" style={{ marginTop: '-6px' }}>SKU: {product.sku}</p>}
 
             {/* Pay Weekly */}
             {weeklyPrice && (
@@ -193,10 +195,13 @@ function ProductDetail() {
             )}
 
             {/* Materials & Details */}
-            {(product.material || product.color || product.warranty) && (
+            {(product.material || product.color || product.warranty || product.dimensions || product.weight || product.size) && (
               <div className="pd-details-list">
                 {product.material && <div className="pd-detail-item"><strong>Material:</strong> {product.material}</div>}
                 {product.color && <div className="pd-detail-item"><strong>Colour:</strong> {product.color}</div>}
+                {product.size && <div className="pd-detail-item"><strong>Size:</strong> {product.size}</div>}
+                {product.dimensions && <div className="pd-detail-item"><strong>Dimensions:</strong> {product.dimensions}</div>}
+                {product.weight && <div className="pd-detail-item"><strong>Weight:</strong> {product.weight} kg</div>}
                 {product.warranty && <div className="pd-detail-item"><strong>Warranty:</strong> {product.warranty}</div>}
                 {product.delivery_info && <div className="pd-detail-item"><strong>Delivery:</strong> {product.delivery_info}</div>}
               </div>
@@ -207,7 +212,7 @@ function ProductDetail() {
               ENQUIRE NOW
             </button>
 
-            <p className="pd-or-call">or call us at <strong>0800 222 548</strong></p>
+            <p className="pd-or-call">or call us at <strong>{settings.phone || '0800 222 548'}</strong></p>
 
             <Link to="/apply-for-finance" className="pd-finance-btn">APPLY FOR FINANCE</Link>
 
@@ -224,18 +229,9 @@ function ProductDetail() {
         {product.description && (
           <div className="pd-desc-full">
             <h2 className="pd-desc-heading">Description</h2>
-            {product.description.split('\n').filter(Boolean).map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
+            <div dangerouslySetInnerHTML={{ __html: product.description }} />
           </div>
         )}
-
-        {/* Ad Campaign Banners */}
-        {adCampaigns.length > 0 && adCampaigns.map(ad => (
-          <a key={ad.id} href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="pd-ad-banner">
-            <img src={ad.image} alt={ad.name} />
-          </a>
-        ))}
 
         {/* Related Products */}
         {related.length > 0 && (
@@ -307,7 +303,7 @@ function ProductDetail() {
             <h2>You might also like.</h2>
             <div className="pd-rv-grid">
               {recentlyViewed.filter(p => p.id !== product.id).slice(0, 4).map(p => {
-                const img = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? p.images[0] : fallbackImg
+                const img = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? getAssetUrl(p.images[0]) : fallbackImg
                 const pHasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
                 return (
                   <Link key={p.id} to={`/product/${p.slug || p.id}`} className="pd-rv-card">

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 
 function ProductGrid({ sectionId, label, title, category, compact }) {
   const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
   const [currentSlide, setCurrentSlide] = useState(0)
   const sliderRef = useRef(null)
   const [slidesPerView, setSlidesPerView] = useState(4)
@@ -21,14 +22,19 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
 
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true)
       try {
         const url = category
           ? `${API_BASE}/api/products?category=${encodeURIComponent(category)}&limit=8`
           : `${API_BASE}/api/products?limit=8`
-        const res = await fetch(url)
+        const res = await fetch(url, { cache: 'no-store' })
         const data = await res.json()
-        const items = Array.isArray(data) ? data : (data.products || []); if (items.length > 0) setProducts(items)
-      } catch {}
+        const items = Array.isArray(data) ? data : (data.products || [])
+        setProducts(items)
+      } catch {
+        setProducts([])
+      }
+      setLoading(false)
     }
     fetchProducts()
   }, [category])
@@ -68,18 +74,25 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
   }
 
   const getImg = (p) => {
-    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images[0]
+    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return getAssetUrl(p.images[0])
     return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
   }
 
-  const getColorHex = (name) => {
-    const map = {
-      'White': '#FFFFFF', 'Black': '#1a1a1a', 'Grey': '#808080', 'Charcoal': '#36454F',
-      'Beige': '#F5F5DC', 'Cream': '#FFFDD0', 'Brown': '#6B4226', 'Walnut': '#5B4332',
-      'Oak': '#C19A6B', 'Tan': '#D2B48C', 'Red': '#C0392B', 'Navy Blue': '#1B2A4A',
-      'Blue': '#2E86C1', 'Green': '#27AE60', 'Teal': '#1ABC9C', 'Gold': '#AA7A3E',
-    }
-    return map[name] || '#ccc'
+  if (loading) {
+    return (
+      <section className={`products ${compact ? 'compact' : ''}`} id={sectionId}>
+        {label && (
+          <div className="section-title">
+            <span>{label}</span>
+            {title && <h2>{title}</h2>}
+          </div>
+        )}
+        <div className="category-loading">
+          <div className="loading-spinner"></div>
+          <p>Loading products...</p>
+        </div>
+      </section>
+    )
   }
 
   return (

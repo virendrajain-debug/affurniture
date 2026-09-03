@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function DeliveryInfoPage() {
   const [data, setData] = useState(null)
   const [banners, setBanners] = useState({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/delivery-info`)
-      .then(r => r.json())
-      .then(setData)
-      .catch(() => {})
-    fetch(`${API_BASE}/api/settings`)
-      .then(r => r.json())
-      .then(setBanners)
-      .catch(() => {})
+    Promise.all([
+      fetch(`${API_BASE}/api/page-content/delivery-info`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+    ]).then(([deliveryData, settingsData]) => {
+      if (deliveryData) setData(deliveryData)
+      if (settingsData) setBanners(settingsData)
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   return (
@@ -23,7 +24,7 @@ function DeliveryInfoPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={banners.delivery_info_banner || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=2000&q=85'} alt="Delivery Information" />
+          <img src={getAssetUrl(banners.delivery_info_banner) || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=2000&q=85'} alt="Delivery Information" />
           <div className="terms-hero-overlay">
             <span>SHIPPING</span>
             <h1>Delivery Information</h1>
@@ -33,9 +34,14 @@ function DeliveryInfoPage() {
 
         <section className="terms-section" style={{ paddingTop: '60px' }}>
           <div className="terms-content">
-            <div className="terms-text">
-              {data?.content || 'Delivery information is being updated. Please check back later.'}
-            </div>
+            {loading ? (
+              <div className="category-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading...</p>
+              </div>
+            ) : (
+              <div className="terms-text" dangerouslySetInnerHTML={{ __html: data?.content || 'Delivery information is being updated. Please check back later.' }} />
+            )}
           </div>
         </section>
       </main>

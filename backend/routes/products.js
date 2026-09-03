@@ -26,7 +26,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+import BACKEND_URL from '../helpers/backendUrl.js';
 
 function resolveImageUrl(img) {
   if (!img) return img;
@@ -291,7 +291,7 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
     }
 
     // Convert uploaded files to URL paths
-    const images = req.files ? req.files.map(f => `${BACKEND_URL}/uploads/${f.filename}`) : [];
+    const images = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
 
     // Insert product into database
     const [result] = await pool.execute(
@@ -323,7 +323,7 @@ router.put('/:id', authenticateToken, upload.array('images', 10), async (req, re
     // Combine existing images with newly uploaded ones
     let images = existing_images ? JSON.parse(existing_images) : [];
     if (req.files && req.files.length > 0) {
-      images = [...images, ...req.files.map(f => `${BACKEND_URL}/uploads/${f.filename}`)];
+      images = [...images, ...req.files.map(f => `/uploads/${f.filename}`)];
     }
 
     // Generate slug if name or category changed

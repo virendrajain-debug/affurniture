@@ -1,92 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
-const categoryData = {
-  'lounge-suite': {
-    title: 'Lounge Suite',
-    subtitle: 'Comfort for every day',
-    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2000&q=85',
-    apiCategory: 'Living Room',
-    heroLabel: 'SOFAS & LOUNGE',
-    heroTitle: 'Find your comfort.',
-    heroDesc: '',
-    colors: ['Beige', 'Brown', 'Grey', 'Tan'],
-    sizes: ['Small', 'Medium', 'Large', 'Extra Large'],
-    subcategories: [
-      { label: 'All Lounge Suite', slug: '' },
-      { label: 'Sofas', slug: 'sofas' },
-      { label: 'Armchairs', slug: 'armchairs' },
-      { label: 'Coffee Tables', slug: 'coffee-tables' },
-    ],
-  },
-  'bedroom': {
-    title: 'Bedroom',
-    subtitle: 'Rest beautifully',
-    image: 'https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=2000&q=85',
-    apiCategory: 'Bedroom',
-    heroLabel: 'BEDROOM COLLECTION',
-    heroTitle: 'Rest beautifully.',
-    heroDesc: '',
-    colors: ['White', 'Walnut', 'Oak', 'Grey'],
-    sizes: ['Single', 'Queen', 'King'],
-    subcategories: [
-      { label: 'All Bedroom', slug: '' },
-      { label: 'Bed Frames', slug: 'bed-frames' },
-      { label: 'Mattresses', slug: 'mattresses' },
-      { label: 'Bedroom Sets', slug: 'bedroom-sets' },
-    ],
-  },
-  'dining': {
-    title: 'Dining',
-    subtitle: 'Gather around good moments',
-    image: 'https://images.unsplash.com/photo-1556912172-45b7abe8b7e1?auto=format&fit=crop&w=2000&q=85',
-    apiCategory: 'Dining',
-    heroLabel: 'DINING COLLECTION',
-    heroTitle: 'Made for gathering.',
-    heroDesc: '',
-    colors: ['Natural', 'Walnut', 'Oak', 'White'],
-    sizes: ['4 Seat', '6 Seat', '8 Seat'],
-    subcategories: [
-      { label: 'All Dining', slug: '' },
-      { label: 'Dining Suites', slug: 'dining-suites' },
-      { label: 'Dining Tables', slug: 'dining-tables' },
-      { label: 'Dining Chairs', slug: 'dining-chairs' },
-    ],
-  },
-  'living': {
-    title: 'Living',
-    subtitle: 'Style meets comfort',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=2000&q=85',
-    apiCategory: 'Living Room',
-    heroLabel: 'LIVING COLLECTION',
-    heroTitle: 'Complete your space.',
-    heroDesc: '',
-    colors: ['Beige', 'Grey', 'Brown', 'Black'],
-    sizes: ['Small', 'Medium', 'Large'],
-    subcategories: [
-      { label: 'All Living', slug: '' },
-      { label: 'Coffee Tables', slug: 'coffee-tables' },
-      { label: 'Console Tables', slug: 'console-tables' },
-      { label: 'Bar Stools', slug: 'bar-stools' },
-    ],
-  },
-}
-
-const defaultCategory = {
-  title: 'Our Collection',
-  subtitle: 'Quality furniture for every home',
-  image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85',
-  apiCategory: 'Living Room',
-  heroLabel: 'OUR COLLECTION',
-  heroTitle: 'Find your comfort.',
-  heroDesc: 'Browse our curated range of quality furniture.',
-  colors: [],
-  sizes: [],
-  subcategories: [],
-}
+const defaultColors = ['Beige', 'Brown', 'Grey', 'Tan', 'White', 'Black', 'Cream', 'Walnut', 'Oak']
+const defaultSizes = ['Small', 'Medium', 'Large', 'Extra Large']
 
 function CategoryPage() {
   const { slug } = useParams()
@@ -105,18 +24,17 @@ function CategoryPage() {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
   const [adCampaigns, setAdCampaigns] = useState([])
   const [apiSubcategories, setApiSubcategories] = useState([])
-  const [catImage, setCatImage] = useState('')
   const [dbCategory, setDbCategory] = useState(null)
 
-  const cat = categoryData[slug] || { ...defaultCategory, title: slug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), apiCategory: slug, heroLabel: '', heroTitle: '', heroDesc: '', colors: [], sizes: [], subcategories: [] }
-
-  const displayImage = dbCategory?.image || cat.image
-  const apiCategory = dbCategory?.name || cat.apiCategory
+  const displayTitle = dbCategory?.name || slug?.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Our Collection'
+  const displaySubtitle = dbCategory?.description || 'Quality furniture for your home'
+  const displayImage = dbCategory?.image
+  const apiCategory = dbCategory?.name || slug
 
   const PER_PAGE = 12
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/categories`)
+    fetch(`${API_BASE}/api/categories`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -140,7 +58,7 @@ function CategoryPage() {
         let url = `${API_BASE}/api/products?category=${encodeURIComponent(apiCategory)}&page=${currentPage}&per_page=${PER_PAGE}`
         if (subId) url += `&subcategory_id=${subId}`
         else if (subSlug) url += `&subcategory=${subSlug}`
-        const res = await fetch(url)
+        const res = await fetch(url, { cache: 'no-store' })
         const data = await res.json()
         if (data.products) {
           setProducts(data.products)
@@ -152,7 +70,7 @@ function CategoryPage() {
       setLoading(false)
     }
     fetchProducts()
-    fetch(`${API_BASE}/api/ad-campaigns/active?position=category_detail`)
+    fetch(`${API_BASE}/api/ad-campaigns/active?position=category_detail`, { cache: 'no-store' })
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
       .catch(() => {})
@@ -175,11 +93,9 @@ function CategoryPage() {
   else if (sortBy === 'name') filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name))
 
   const getImg = (p) => {
-    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return p.images[0]
+    if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return getAssetUrl(p.images[0])
     return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80'
   }
-
-  const getWeekly = (price) => price ? Math.ceil(Number(price) / 52) : null
 
   const getColorHex = (raw) => {
     if (!raw) return '#ccc'
@@ -234,18 +150,18 @@ function CategoryPage() {
   }
 
   const subcategories = apiSubcategories.length > 0
-    ? [{ name: `All ${cat.title}`, id: null, slug: '' }, ...apiSubcategories.map(s => ({ name: s.name, id: s.id, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))]
-    : (cat.subcategories || [])
+    ? [{ name: `All ${displayTitle}`, id: null, slug: '' }, ...apiSubcategories.map(s => ({ name: s.name, id: s.id, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))]
+    : []
 
   return (
     <>
       <Header />
       <main className="about-page">
-        <section className="catalog-hero" style={displayImage ? { backgroundImage: `url(${displayImage})` } : undefined}>
+        <section className="catalog-hero" style={displayImage ? { backgroundImage: `url(${getAssetUrl(displayImage)})` } : undefined}>
           <div className="catalog-hero-inner">
-            <span className="catalog-hero-label">{cat.heroLabel}</span>
-            <h1>{cat.heroTitle || cat.title}</h1>
-            {cat.heroDesc && <p>{cat.heroDesc}</p>}
+            <span className="catalog-hero-label">{displayTitle.toUpperCase()}</span>
+            <h1>{displayTitle}</h1>
+            {displaySubtitle && <p>{displaySubtitle}</p>}
           </div>
         </section>
 
@@ -297,11 +213,11 @@ function CategoryPage() {
                           className={`filter-option${isActive ? ' active' : ''}`}
                           onClick={() => handleSubcatClick(sub.slug, sub.id)}
                         >
-                          {sub.label || sub.name}
+                          {sub.name}
                         </label>
                       )
                     }) : (
-                      <label className="filter-option active">{cat.title}</label>
+                      <label className="filter-option active">{displayTitle}</label>
                     )}
                   </div>
                 )}
@@ -322,44 +238,40 @@ function CategoryPage() {
                 )}
               </div>
 
-              {cat.colors.length > 0 && (
-                <div className="filter-section">
-                  <h3 className="filter-title" onClick={() => setShowFilters(s => ({...s, color: !s.color}))}>
-                    COLOUR
-                    <span>{showFilters.color ? '−' : '+'}</span>
-                  </h3>
-                  {showFilters.color && (
-                    <div className="filter-content">
-                      {cat.colors.map(color => (
-                        <label key={color} className="filter-checkbox">
-                          <input type="checkbox" checked={selectedColors.includes(color)} onChange={() => toggleColor(color)} />
-                          <span className="color-dot" style={{ background: getColorHex(color) }}></span>
-                          {getColorName(color)}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="filter-section">
+                <h3 className="filter-title" onClick={() => setShowFilters(s => ({...s, color: !s.color}))}>
+                  COLOUR
+                  <span>{showFilters.color ? '−' : '+'}</span>
+                </h3>
+                {showFilters.color && (
+                  <div className="filter-content">
+                    {defaultColors.map(color => (
+                      <label key={color} className="filter-checkbox">
+                        <input type="checkbox" checked={selectedColors.includes(color)} onChange={() => toggleColor(color)} />
+                        <span className="color-dot" style={{ background: getColorHex(color) }}></span>
+                        {getColorName(color)}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-              {cat.sizes.length > 0 && (
-                <div className="filter-section">
-                  <h3 className="filter-title" onClick={() => setShowFilters(s => ({...s, size: !s.size}))}>
-                    SIZE
-                    <span>{showFilters.size ? '−' : '+'}</span>
-                  </h3>
-                  {showFilters.size && (
-                    <div className="filter-content">
-                      {cat.sizes.map(size => (
-                        <label key={size} className="filter-checkbox">
-                          <input type="checkbox" checked={selectedColors.includes(size)} onChange={() => {}} />
-                          {size}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              <div className="filter-section">
+                <h3 className="filter-title" onClick={() => setShowFilters(s => ({...s, size: !s.size}))}>
+                  SIZE
+                  <span>{showFilters.size ? '−' : '+'}</span>
+                </h3>
+                {showFilters.size && (
+                  <div className="filter-content">
+                    {defaultSizes.map(size => (
+                      <label key={size} className="filter-checkbox">
+                        <input type="checkbox" checked={false} onChange={() => {}} />
+                        {size}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button className="filter-clear-btn" onClick={clearFilters}>Clear Filters</button>
             </aside>
@@ -414,7 +326,7 @@ function CategoryPage() {
                     <div className="category-ad-banners">
                       {adCampaigns.map(ad => (
                         <a key={ad.id} href={ad.link || '#'} target="_blank" rel="noopener noreferrer" className="home-ad-banner">
-                          <img src={ad.image} alt={ad.name} />
+                          <img src={getAssetUrl(ad.image)} alt={ad.name} />
                         </a>
                       ))}
                     </div>

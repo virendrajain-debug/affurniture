@@ -1,4 +1,3 @@
-import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -31,6 +30,6 @@ sessionStorage.removeItem('global_chunk_reload')
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ErrorBoundary><App /></ErrorBoundary>
+    <App />
   </StrictMode>,
 )

@@ -32,6 +32,8 @@ import contactRoutes from './routes/contact.js';
 import notificationRoutes from './routes/notifications.js';
 import dealsRoutes from './routes/deals.js';
 import homepageRoutes from './routes/homepage.js';
+import winzProductsRoutes from './routes/winz-products.js';
+import pageContentRoutes from './routes/page-content.js';
 
 dotenv.config();
 
@@ -51,6 +53,17 @@ app.use(cors({
 }));
 
 app.options('*', cors());
+
+app.set('etag', false); // Disable ETags for API freshness
+
+// Disable caching for API routes - always return fresh data
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -82,6 +95,8 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/deals', dealsRoutes);
 app.use('/api/homepage', homepageRoutes);
+app.use('/api/winz-products', winzProductsRoutes);
+app.use('/api/page-content', pageContentRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
@@ -199,11 +214,17 @@ async function autoSetup() {
     company_name TEXT,
     tagline TEXT,
     description TEXT,
+    image_1 TEXT,
+    image_2 TEXT,
     address TEXT,
     phone TEXT,
     email TEXT,
     updated_at TEXT DEFAULT (datetime('now'))
   )`);
+
+  // Add image columns to about table if missing
+  pool.run(`ALTER TABLE about ADD COLUMN image_1 TEXT`);
+  pool.run(`ALTER TABLE about ADD COLUMN image_2 TEXT`);
 
   pool.execute(`CREATE TABLE IF NOT EXISTS terms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -345,20 +366,50 @@ async function autoSetup() {
     updated_at TEXT DEFAULT (datetime('now'))
   )`);
 
+  pool.execute(`CREATE TABLE IF NOT EXISTS winz_products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT DEFAULT '',
+    item_code TEXT DEFAULT '',
+    price REAL DEFAULT 0,
+    image TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    active INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`);
+
+  pool.execute(`CREATE TABLE IF NOT EXISTS page_content (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    content TEXT DEFAULT '{}',
+    page_type TEXT DEFAULT 'dynamic',
+    banner_image TEXT DEFAULT '',
+    meta_description TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`);
+
   console.log('Tables ready.');
 
-  try { pool.execute("ALTER TABLE products ADD COLUMN subcategory_id INTEGER"); } catch {}
-  try { pool.execute("ALTER TABLE products ADD COLUMN slug TEXT"); } catch {}
-  try { pool.execute("ALTER TABLE products ADD COLUMN brand TEXT"); } catch {}
-  try { pool.execute("ALTER TABLE products ADD COLUMN on_sale INTEGER DEFAULT 0"); } catch {}
-  try { pool.execute("ALTER TABLE products ADD COLUMN weekly_price REAL"); } catch {}
-  try { pool.execute("ALTER TABLE categories ADD COLUMN image TEXT DEFAULT ''"); } catch {}
-  try { pool.execute("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch {}
-  try { pool.execute("ALTER TABLE subcategories ADD COLUMN sort_order INTEGER DEFAULT 0"); } catch {}
-  try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL"); } catch {}
-  try { pool.execute("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL"); } catch {}
-  try { pool.execute("ALTER TABLE enquiries ADD COLUMN reply_read INTEGER DEFAULT 0"); } catch {}
-  try { pool.execute("ALTER TABLE store_locations ADD COLUMN image TEXT DEFAULT ''"); } catch {}
+  pool.run("ALTER TABLE products ADD COLUMN subcategory_id INTEGER");
+  pool.run("ALTER TABLE products ADD COLUMN slug TEXT");
+  pool.run("ALTER TABLE products ADD COLUMN brand TEXT");
+  pool.run("ALTER TABLE products ADD COLUMN on_sale INTEGER DEFAULT 0");
+  pool.run("ALTER TABLE products ADD COLUMN weekly_price REAL");
+  pool.run("ALTER TABLE categories ADD COLUMN image TEXT DEFAULT ''");
+  pool.run("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0");
+  pool.run("ALTER TABLE subcategories ADD COLUMN sort_order INTEGER DEFAULT 0");
+  pool.run("ALTER TABLE enquiries ADD COLUMN reply TEXT DEFAULT NULL");
+  pool.run("ALTER TABLE enquiries ADD COLUMN replied_at TEXT DEFAULT NULL");
+  pool.run("ALTER TABLE enquiries ADD COLUMN reply_read INTEGER DEFAULT 0");
+  pool.run("ALTER TABLE store_locations ADD COLUMN image TEXT DEFAULT ''");
+  pool.run("ALTER TABLE products ADD COLUMN slug TEXT");
+  pool.run("ALTER TABLE products ADD COLUMN brand TEXT");
 
   const [socialExists] = pool.execute('SELECT id FROM social_links LIMIT 1');
   if (socialExists.length === 0) {
@@ -395,19 +446,46 @@ async function autoSetup() {
           { icon: 'shield', title: 'Interest-Free Available', description: 'Enjoy flexible finance options with interest-free payment plans.' }
         ]
       })],
+      ['homepage', JSON.stringify({
+        hero_slides: [
+          { image: IMG.hero1, tagline: 'AF FURNISHINGS', title: 'Comfort made for everyday living.', description: 'Furniture, beds and appliances to make your home feel complete.', button_link: '/category/living-room', active: true },
+          { image: IMG.hero2, tagline: 'BEDROOM COLLECTION', title: 'Rest beautifully.', description: 'Discover beds, mattresses and bedroom sets designed for comfort.', button_link: '/category/bedroom', active: true },
+          { image: IMG.hero3, tagline: 'DINING COLLECTION', title: 'Gather around good moments.', description: 'Tables and chairs made for family gatherings and dinner parties.', button_link: '/category/dining', active: true },
+        ],
+        promo_banner_1: { image: IMG.ad1, badge: 'AF WEEKLY SPECIAL', title: 'Bring comfort home.', subtitle: 'Explore our latest living-room arrivals with flexible weekly payments.', button_text: 'Shop Living', button_link: '/category/living-room' },
+        promo_banner_2: { image: IMG.ad2, badge: 'NEW ARRIVALS', title: 'Bedroom & Dining Essentials', subtitle: 'Premium handcrafted furniture built for New Zealand homes.', button_text: 'Explore Deals', button_link: '/on-sale' },
+      })],
     ];
     for (const [k, v] of settings) {
       pool.execute("INSERT INTO site_settings (`key`, `value`) VALUES (?, ?)", [k, v]);
     }
   }
 
-  const hashedPassword = bcrypt.hashSync('admin123', 10);
+  const bannerDefaults = {
+    'about_banner': '',
+    'terms_banner': '',
+    'privacy_banner': '',
+    'delivery_info_banner': '',
+    'returns_banner': '',
+    'contact_banner': '',
+  };
+  for (const [key, val] of Object.entries(bannerDefaults)) {
+    const [exists] = pool.execute('SELECT key FROM site_settings WHERE key = ?', [key]);
+    if (exists.length === 0) {
+      pool.execute('INSERT INTO site_settings (key, value) VALUES (?, ?)', [key, val]);
+    }
+  }
+
+  const [headerCatsExists] = pool.execute('SELECT key FROM site_settings WHERE key = ?', ['header_categories']);
+  if (headerCatsExists.length === 0) {
+    pool.execute('INSERT INTO site_settings (key, value) VALUES (?, ?)', ['header_categories', '']);
+  }
+
   const [existing] = pool.execute('SELECT id FROM users WHERE email = ?', ['admin@gmail.com']);
   if (existing.length === 0) {
+    const hashedPassword = bcrypt.hashSync('admin123', 10);
     pool.execute('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)', ['Admin', 'admin@gmail.com', hashedPassword, 'admin']);
     console.log('Admin created: admin@gmail.com / admin123');
-  } else {
-    pool.execute('UPDATE users SET password = ?, email = ? WHERE email = ?', [hashedPassword, 'admin@gmail.com', 'admin@gmail.com']);
   }
 
   const categoryImages = {
@@ -452,6 +530,9 @@ async function autoSetup() {
   const aboutSectionTypes = [
     { type: 'main_banner', title: 'Welcome to AF Furnishings', description: 'We provide quality furniture, beds and appliances to make your home feel complete.' },
     { type: 'primary_section', title: 'About Us', description: 'AF Furnishings is a family-owned New Zealand furniture retailer with over 15 years of experience. We believe every home deserves beautiful furniture without the premium price tag.' },
+    { type: 'value_1', title: 'Quality First', description: 'Every piece of furniture is crafted from premium materials, built to last for years of daily use.' },
+    { type: 'value_2', title: 'Comfort Always', description: 'We test every sofa, chair and bed to ensure it meets our comfort standards before it reaches you.' },
+    { type: 'value_3', title: 'For Every Home', description: 'With flexible weekly payments, we make quality furniture accessible to every New Zealand family.' },
     { type: 'features', title: 'Why Choose Us', description: 'Handpicked materials, flexible weekly payments, and nationwide delivery make us the go-to choice for Kiwi homes.' },
     { type: 'conclusion', title: 'Visit Our Showroom', description: 'Come visit us in Auckland or Wellington to experience our collections in person.' }
   ];
@@ -459,6 +540,8 @@ async function autoSetup() {
     const [secExists] = pool.execute('SELECT id FROM about_sections WHERE type=?', [sec.type]);
     if (secExists.length === 0) {
       pool.execute('INSERT INTO about_sections (type, title, description, image) VALUES (?, ?, ?, ?)', [sec.type, sec.title, sec.description, '']);
+    } else if (!secExists[0].description || secExists[0].description.trim() === '') {
+      pool.execute('UPDATE about_sections SET title=?, description=? WHERE type=?', [sec.title, sec.description, sec.type]);
     }
   }
 
@@ -472,6 +555,70 @@ async function autoSetup() {
   if (dynamicPagesExist.length === 0) {
     pool.execute("INSERT INTO dynamic_pages (slug, title, category, content, banner_image, meta_description, sort_order, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       ['about-us', 'About Us', 'Company', '<h2>Welcome to AF Furnishings</h2><p>AF Furnishings is a family-owned New Zealand furniture retailer with over 15 years of experience. We provide quality furniture, beds and appliances to make your home feel complete.</p><p>Our mission is to help every Kiwi create a comfortable, beautiful home without breaking the bank.</p>', '', 'About AF Furnishings - Quality furniture for every NZ home', 1, 1]);
+  }
+
+  // Seed page_content table with built-in pages
+  const [pageContentExists] = pool.execute('SELECT id FROM page_content LIMIT 1');
+  if (pageContentExists.length === 0) {
+    const builtinPages = [
+      {
+        slug: 'about', title: 'About Us', page_type: 'about', sort_order: 0,
+        content: JSON.stringify({
+          eyebrow: 'OUR STORY',
+          title: 'AF Furnishings',
+          subtitle: 'Quality furniture for every New Zealand home.',
+          story_title: 'Who We Are',
+          story_content: 'AF Furnishings is a family-owned New Zealand furniture retailer with over 15 years of experience. We believe every home deserves beautiful furniture without the premium price tag.',
+          features_title: 'Why Choose Us',
+          features_description: 'Handpicked materials, flexible weekly payments, and nationwide delivery make us the go-to choice for Kiwi homes.',
+          val_1_title: 'Quality First', val_1_desc: 'Every piece is crafted from carefully selected materials built to last.',
+          val_2_title: 'Comfort Always', val_2_desc: 'Designed for real living. Comfortable, functional, and beautiful.',
+          val_3_title: 'For Every Home', val_3_desc: 'From apartments to family homes, we have pieces that fit every space.',
+          showroom_title: 'Visit Our Showroom', showroom_desc: 'Come visit us in Auckland or Wellington to experience our collections in person.',
+        }),
+      },
+      {
+        slug: 'terms', title: 'Terms & Conditions', page_type: 'standard', sort_order: 1,
+        content: JSON.stringify({
+          content: '<h2>Terms &amp; Conditions</h2><p><strong>1. General</strong><br>These terms govern your use of AF Furnishings products and services.</p><p><strong>2. Products</strong><br>All product images are for illustration purposes only. Actual product may vary slightly.</p><p><strong>3. Pricing</strong><br>All prices are in NZD and include GST unless otherwise stated.</p><p><strong>4. Delivery</strong><br>Delivery times are estimates only. We aim to deliver within 5-10 business days.</p><p><strong>5. Returns</strong><br>Products may be returned within 14 days of purchase in original condition.</p><p><strong>6. Warranty</strong><br>All products come with a manufacturer warranty covering manufacturing defects.</p><p><strong>7. Payment</strong><br>We accept credit card, debit card, and weekly payment plans.</p><p><strong>8. Privacy</strong><br>Your personal information is handled in accordance with our Privacy Policy and NZ law.</p>',
+        }),
+      },
+      {
+        slug: 'privacy-policy', title: 'Privacy Policy', page_type: 'standard', sort_order: 2,
+        content: JSON.stringify({
+          content: '<h2>Privacy Policy</h2><p>AF Furnishings respects your privacy. We collect personal information only to process orders and improve our services.</p><p><strong>Information We Collect</strong><br>Name, email, phone, address, and payment details when you place an order.</p><p><strong>How We Use It</strong><br>To process orders, send updates, and improve your shopping experience.</p><p><strong>Data Security</strong><br>We use industry-standard encryption to protect your personal data.</p><p><strong>Contact Us</strong><br>For privacy inquiries, email us at affurniture@gmail.com</p>',
+        }),
+      },
+      {
+        slug: 'delivery-info', title: 'Delivery Information', page_type: 'standard', sort_order: 3,
+        content: JSON.stringify({
+          content: '<h2>Delivery Information</h2><p><strong>Nationwide Delivery</strong><br>We deliver to all addresses across New Zealand.</p><p><strong>Delivery Times</strong><br>Auckland: 3-5 business days<br>North Island: 5-7 business days<br>South Island: 7-10 business days</p><p><strong>Delivery Cost</strong><br>Free delivery on orders over $1,000. Standard delivery from $49.</p><p><strong>Assembly</strong><br>White glove delivery and assembly available for selected products.</p>',
+        }),
+      },
+      {
+        slug: 'returns', title: 'Returns & Refunds', page_type: 'standard', sort_order: 4,
+        content: JSON.stringify({
+          content: '<h2>Returns &amp; Refund Policy</h2><p><strong>30-Day Returns</strong><br>We offer a 30-day return policy on most items. Products must be in original condition.</p><p><strong>How to Return</strong><br>Contact our team at affurniture@gmail.com with your order number.</p><p><strong>Refund Process</strong><br>Refunds are processed within 5-7 business days of receiving the returned item.</p><p><strong>Damaged Items</strong><br>If your item arrives damaged, contact us immediately for a replacement or full refund.</p>',
+        }),
+      },
+      {
+        slug: 'contact', title: 'Contact Us', page_type: 'contact', sort_order: 5,
+        content: JSON.stringify({
+          phone: '0800 222 548',
+          email: 'affurniture@gmail.com',
+          address: 'Auckland, New Zealand',
+          business_hours: 'Mon - Sat: 9:00 AM - 5:30 PM | Sun: 10:00 AM - 4:00 PM',
+        }),
+      },
+    ];
+    for (const p of builtinPages) {
+      pool.execute(
+        `INSERT INTO page_content (slug, title, content, page_type, banner_image, meta_description, sort_order, active)
+         VALUES (?, ?, ?, ?, '', ?, ?, 1)`,
+        [p.slug, p.title, p.content, p.page_type, p.title + ' - AF Furnishings', p.sort_order]
+      );
+    }
+    console.log('Built-in pages seeded into page_content.');
   }
 
   const [productExists] = pool.execute('SELECT id FROM products LIMIT 1');
@@ -552,25 +699,41 @@ async function autoSetup() {
       ['Finance Available', IMG.ad3, '/apply-for-finance', 'homepage', 2, 1]);
   }
 
+  const [winzExists] = pool.execute('SELECT id FROM winz_products LIMIT 1');
+  if (winzExists.length === 0) {
+    const winzProducts = [
+      { name: '2-Seater Fabric Sofa', category: 'Living Room', price: 699, image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80', description: 'Comfortable fabric sofa ideal for WINZ-approved furnishing packages.' },
+      { name: 'Queen Bed Frame & Mattress', category: 'Bedroom', price: 899, image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80', description: 'Solid wood queen bed frame with pocket spring mattress included.' },
+      { name: '4-Piece Dining Set', category: 'Dining', price: 799, image: 'https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=600&q=80', description: 'Solid timber dining table with 4 matching chairs.' },
+      { name: '3-Seater Fabric Sofa', category: 'Living Room', price: 849, image: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80', description: 'Spacious 3-seater sofa for family living rooms.' },
+      { name: 'Single Bed Frame & Mattress', category: 'Bedroom', price: 499, image: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=600&q=80', description: 'Compact single bed frame with foam mattress. Ideal for kids rooms.' },
+      { name: 'TV Unit & Storage Cabinet', category: 'Living Room', price: 399, image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?auto=format&fit=crop&w=600&q=80', description: 'Modern TV unit with open and closed storage compartments.' },
+    ];
+    for (const w of winzProducts) {
+      pool.execute('INSERT INTO winz_products (name, category, price, image, description, active) VALUES (?, ?, ?, ?, ?, ?)',
+        [w.name, w.category, w.price, w.image, w.description, 1]);
+    }
+  }
+
   try {
-    const [productsNeedingSlugs] = await pool.execute(
+    const [productsNeedingSlugs] = pool.execute(
       'SELECT p.id, p.name, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.slug IS NULL OR p.slug = \'\''
     );
     for (const p of productsNeedingSlugs) {
       const baseSlug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const catPrefix = p.category_name ? p.category_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') : '';
       let slug = catPrefix ? `${catPrefix}-${baseSlug}` : baseSlug;
-      const [existingSlug] = await pool.execute('SELECT id FROM products WHERE slug = ? AND id != ?', [slug, p.id]);
+      const [existingSlug] = pool.execute('SELECT id FROM products WHERE slug = ? AND id != ?', [slug, p.id]);
       if (existingSlug.length > 0) {
         let suffix = 2;
         while (true) {
           const testSlug = `${catPrefix ? catPrefix + '-' : ''}${baseSlug}-${suffix}`;
-          const [dup] = await pool.execute('SELECT id FROM products WHERE slug = ?', [testSlug]);
+          const [dup] = pool.execute('SELECT id FROM products WHERE slug = ?', [testSlug]);
           if (dup.length === 0) { slug = testSlug; break; }
           suffix++;
         }
       }
-      await pool.execute('UPDATE products SET slug = ? WHERE id = ?', [slug, p.id]);
+      pool.execute('UPDATE products SET slug = ? WHERE id = ?', [slug, p.id]);
     }
     if (productsNeedingSlugs.length > 0) console.log(`Generated slugs for ${productsNeedingSlugs.length} products`);
   } catch (err) { console.error('Slug generation error:', err.message); }

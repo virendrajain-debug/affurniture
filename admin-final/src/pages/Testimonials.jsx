@@ -12,7 +12,7 @@
 // ============================================================
 
 import { useState, useEffect, useRef } from 'react'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
 function Testimonials({ token }) {
@@ -101,7 +101,7 @@ function Testimonials({ token }) {
       role_or_city: t.role_or_city || 'Auckland',
       review_text: t.review_text || '',
       rating: Number(t.rating) || 5,
-      avatar_url: t.avatar_url || '',
+      avatar_url: t.avatar || '',
       is_active: t.is_active === 1 || t.is_active === true ? 1 : 0,
       sort_order: t.sort_order || 0,
     })
@@ -363,7 +363,7 @@ function Testimonials({ token }) {
                       }}
                     >
                       {t.avatar_url ? (
-                        <img src={t.avatar_url} alt={t.client_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none' }} />
+                        <img src={getAssetUrl(t.avatar_url)} alt={t.client_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none' }} />
                       ) : (
                         <span>{initial}</span>
                       )}
@@ -522,7 +522,7 @@ function Testimonials({ token }) {
                       }}
                     >
                       {form.avatar_url ? (
-                        <img src={form.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none' }} />
+                        <img src={getAssetUrl(form.avatar_url)} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none' }} />
                       ) : (
                         <span>{form.client_name ? form.client_name.charAt(0).toUpperCase() : 'C'}</span>
                       )}

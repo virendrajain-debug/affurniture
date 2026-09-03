@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+import BACKEND_URL from '../helpers/backendUrl.js';
 
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '..', 'uploads'),
@@ -81,7 +81,7 @@ router.get('/all', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, upload.single('avatar'), async (req, res) => {
   try {
     const mapped = mapAdminFields(req.body);
-    if (req.file) mapped.avatar = `${BACKEND_URL}/uploads/${req.file.filename}`;
+    if (req.file) mapped.avatar = `/uploads/${req.file.filename}`;
     else if (mapped.avatar) mapped.avatar = resolveUrl(mapped.avatar);
 
     if (!mapped.name || !mapped.quote) return res.status(400).json({ message: 'Name and quote are required' });
@@ -104,7 +104,7 @@ router.put('/:id', authenticateToken, upload.single('avatar'), async (req, res) 
   try {
     const mapped = mapAdminFields(req.body);
     const [existing] = await pool.execute('SELECT avatar FROM testimonials WHERE id = ?', [req.params.id]);
-    if (req.file) mapped.avatar = `${BACKEND_URL}/uploads/${req.file.filename}`;
+    if (req.file) mapped.avatar = `/uploads/${req.file.filename}`;
     else if (mapped.avatar) mapped.avatar = resolveUrl(mapped.avatar);
     else mapped.avatar = existing[0]?.avatar || '';
 

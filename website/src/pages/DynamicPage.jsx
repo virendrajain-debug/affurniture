@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -13,7 +13,7 @@ function DynamicPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    fetch(`${API_BASE}/api/dynamic-pages/${slug}`)
+    fetch(`${API_BASE}/api/page-content/${slug}`, { cache: 'no-store' })
       .then(r => {
         if (!r.ok) throw new Error('Page not found')
         return r.json()
@@ -29,7 +29,7 @@ function DynamicPage() {
       <main className="about-page">
         {page?.banner_image && (
           <section className="terms-hero-banner">
-            <img src={page.banner_image} alt={page.title} />
+            <img src={getAssetUrl(page.banner_image)} alt={page.title} />
             <div className="terms-hero-overlay">
               <span>{page.category?.toUpperCase()}</span>
               <h1>{page.title}</h1>

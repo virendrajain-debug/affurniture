@@ -2,12 +2,12 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
+import BACKEND_URL from '../helpers/backendUrl.js';
 function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+const getCampaigns = async (req, res) => {
   try {
     const { position, active_only } = req.query;
     let sql = 'SELECT * FROM ad_campaigns';
@@ -23,7 +23,10 @@ router.get('/', async (req, res) => {
     console.error('Get ad campaigns error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
-});
+};
+
+router.get('/', getCampaigns);
+router.get('/active', getCampaigns);
 
 router.post('/', authenticateToken, async (req, res) => {
   try {

@@ -1,1051 +1,451 @@
-// ============================================================
-// Phase 3: Dynamic Homepage Manager (Single-Column Linear Form)
-// ============================================================
-// Controls: Hero Sliders, Deals & Benefits, Promo Posters,
-//           About Preview, and Store Locations Preview.
-// Strict UX: Single-column, vertical top-to-bottom layout (No tabs, No live previews).
-// API: GET /api/homepage, GET /api/deals, GET /api/about, GET /api/store-locations
-//      PUT /api/homepage, PUT /api/deals, POST /api/upload
-// ============================================================
-
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
+const DEFAULT_SLIDE = { image: '', tagline: 'AF FURNISHINGS', title: '', description: '', button_link: '/category/lounge-suite', active: true }
+const DEFAULT_PROMO = { image: '', badge: 'AF WEEKLY SPECIAL', title: '', subtitle: '', button_text: '', button_link: '' }
+const DEFAULT_CARDS = [
+  { icon: 'delivery', title: 'NZ Wide Delivery', description: 'Fast and reliable delivery to your doorstep anywhere in New Zealand.' },
+  { icon: 'payment', title: 'Easy Weekly Payment Plans', description: 'Spread the cost with simple weekly instalments that suit your budget.' },
+  { icon: 'shield', title: 'Interest-Free Available', description: 'Enjoy flexible finance options with interest-free payment plans.' },
+]
+const ICON_OPTIONS = [
+  { value: 'delivery', label: 'Delivery Truck' },
+  { value: 'payment', label: 'Payment' },
+  { value: 'shield', label: 'Shield' },
+]
+
+/* ── Shared sub-components (OUTSIDE parent to avoid remount on keystroke) ── */
+
+const Section = ({ num, id, title, collapsed, toggle, children }) => (
+  <div style={S.card}>
+    <div style={S.cardHead} onClick={() => toggle(id)}>
+      <span style={S.sectionNum}>{String(num).padStart(2, '0')}</span>
+      <h3 style={S.sectionTitle}>{title}</h3>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        style={{ marginLeft: 'auto', transition: 'transform .2s', transform: collapsed ? 'rotate(-90deg)' : 'none' }}>
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </div>
+    {!collapsed && <div>{children}</div>}
+  </div>
+)
+
+const Input = ({ label, value, onChange, placeholder, full, type = 'text' }) => (
+  <div style={{ ...S.field, ...(full ? { gridColumn: '1/-1' } : {}) }}>
+    <label style={S.label}>{label}</label>
+    <input
+      type={type}
+      value={value || ''}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      style={S.input}
+    />
+  </div>
+)
+
+const ImageUploader = ({ label, value, onChange, fileRef, uploading, uploadFn }) => (
+  <div>
+    <label style={S.label}>{label || 'Image'}</label>
+    <div style={S.uploadRow}>
+      <div style={S.previewBox}>
+        {value
+          ? <img src={getAssetUrl(value)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = 'https://placehold.co/300x180?text=Image' }} />
+          : <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>No Image</span>}
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <button type="button" style={S.uploadBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
+          {uploading ? 'Uploading...' : 'Browse Image'}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => { if (e.target.files?.[0]) uploadFn(e.target.files[0], onChange) }} />
+        <input
+          type="text"
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Image URL (https://...)"
+          style={S.input}
+        />
+      </div>
+    </div>
+  </div>
+)
+
+const SlideCard = ({ slide, idx, onEdit, onDelete, onToggle }) => (
+  <div style={S.slideItem}>
+    <div style={S.slideThumb}>
+      <img src={getAssetUrl(slide.image)} alt={slide.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.src = 'https://placehold.co/300x180?text=Slide' }} />
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={S.slideTitle}>{slide.title || 'Untitled'}</div>
+      <div style={S.slideMeta}>{slide.tagline || 'AF FURNISHINGS'} &bull; {slide.button_link || '/'}</div>
+    </div>
+    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+      <button type="button" style={slide.active !== false ? S.badgeActive : S.badgeHidden} onClick={() => onToggle(idx)}>
+        {slide.active !== false ? 'Active' : 'Hidden'}
+      </button>
+      <button type="button" style={S.smBtn} onClick={() => onEdit(idx)}>Edit</button>
+      <button type="button" style={{ ...S.smBtn, color: '#ef4444' }} onClick={() => onDelete(idx)}>Delete</button>
+    </div>
+  </div>
+)
+
+const PromoForm = ({ label, banner, setBanner, fileRef, uploading, uploadFn }) => (
+  <div style={{ paddingBottom: 20, marginBottom: 20, borderBottom: '1px solid var(--border-color, #e5e1d8)' }}>
+    <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', color: 'var(--text-primary, #28241f)' }}>{label}</h4>
+    <div style={S.grid}>
+      <ImageUploader value={banner.image} onChange={url => setBanner(prev => ({ ...prev, image: url }))} fileRef={fileRef} uploading={!!uploading} uploadFn={uploadFn} />
+      <Input label="Badge Text" value={banner.badge} onChange={v => setBanner(prev => ({ ...prev, badge: v }))} placeholder="e.g. AF WEEKLY SPECIAL" />
+      <Input label="Title" value={banner.title} onChange={v => setBanner(prev => ({ ...prev, title: v }))} placeholder="e.g. Bring comfort home." />
+      <Input label="Subtitle" value={banner.subtitle} onChange={v => setBanner(prev => ({ ...prev, subtitle: v }))} full placeholder="Subtitle copy..." />
+      <Input label="Button Text" value={banner.button_text} onChange={v => setBanner(prev => ({ ...prev, button_text: v }))} placeholder="Shop Living" />
+      <Input label="Button Link" value={banner.button_link} onChange={v => setBanner(prev => ({ ...prev, button_link: v }))} placeholder="/category/living" />
+    </div>
+  </div>
+)
+
+/* ── Main component ── */
+
 function HomeManager({ token }) {
   const [heroSlides, setHeroSlides] = useState([])
-  const [promoBanner1, setPromoBanner1] = useState({
-    image: '',
-    badge: 'AF WEEKLY SPECIAL',
-    title: 'Bring comfort home.',
-    subtitle: 'Explore our latest living-room arrivals with flexible weekly payments.',
-    button_text: 'Shop Living',
-    button_link: '/category/living',
+  const [promoBanner1, setPromoBanner1] = useState(DEFAULT_PROMO)
+  const [dealsTitle, setDealsTitle] = useState('Limited-Time Weekly Deals')
+  const [dealsSubtitle, setDealsSubtitle] = useState('Comfortable furniture at straightforward prices.')
+  const [dealsCards, setDealsCards] = useState(DEFAULT_CARDS)
+  const [aboutForm, setAboutForm] = useState({
+    company_name: 'AF Furnishings',
+    tagline: 'Quality furniture for every New Zealand home',
+    description: '',
+    image_1: '',
+    image_2: '',
+    address: '',
+    phone: '',
+    email: '',
   })
-  const [promoBanner2, setPromoBanner2] = useState({
-    image: '',
-    badge: 'NEW ARRIVALS',
-    title: 'Bedroom & Dining Essentials',
-    subtitle: 'Premium handcrafted furniture built for New Zealand homes.',
-    button_text: 'Explore Deals',
-    button_link: '/on-sale',
-  })
-
-  const [newSlide, setNewSlide] = useState({
-    image: '',
-    tagline: 'AF FURNISHINGS',
-    title: 'Comfort made for everyday living.',
-    description: 'Furniture, beds and appliances to make your home feel complete.',
-    button_link: '/category/lounge-suite',
-    active: true,
-  })
-  const [editingSlideIndex, setEditingSlideIndex] = useState(null)
-
-  const [dealsCards, setDealsCards] = useState([
-    { icon: 'delivery', title: 'NZ Wide Delivery', description: 'Fast and reliable delivery to your doorstep anywhere in New Zealand.' },
-    { icon: 'payment', title: 'Easy Weekly Payment Plans', description: 'Spread the cost with simple weekly instalments that suit your budget.' },
-    { icon: 'shield', title: 'Interest-Free Available', description: 'Enjoy flexible finance options with interest-free payment plans.' },
-  ])
-
-  const [aboutData, setAboutData] = useState(null)
-  const [storeLocations, setStoreLocations] = useState([])
-
-  const [collapsed, setCollapsed] = useState({
-    hero: false,
-    deals: false,
-    promo: false,
-    about: true,
-    stores: true,
-  })
-
+  const [editingSlide, setEditingSlide] = useState(null)
+  const [slideDraft, setSlideDraft] = useState({ ...DEFAULT_SLIDE })
+  const [collapsed, setCollapsed] = useState({ hero: false, promo: false, deals: false, about: false })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploadingSlide, setUploadingSlide] = useState(false)
-  const [uploadingPromo1, setUploadingPromo1] = useState(false)
-  const [uploadingPromo2, setUploadingPromo2] = useState(false)
-  const [toast, setToast] = useState(null)
-
+  const [toasts, setToasts] = useState([])
   const slideFileRef = useRef(null)
   const promo1FileRef = useRef(null)
-  const promo2FileRef = useRef(null)
-
+  const aboutImg1Ref = useRef(null)
+  const aboutImg2Ref = useRef(null)
   const authToken = getAuthToken(token)
 
-  const showToast = (msg, type = 'info') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3500)
-  }
+  const addToast = useCallback((msg, type = 'info') => {
+    const id = Date.now() + Math.random()
+    setToasts(prev => [...prev, { id, msg, type }])
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+  }, [])
 
-  const toggleSection = (section) => {
-    setCollapsed(prev => ({ ...prev, [section]: !prev[section] }))
-  }
+  const toggle = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))
 
-  // Load Homepage Data
+  const headers = { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }
+
   useEffect(() => {
-    const loadHomepageData = async () => {
+    (async () => {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/homepage`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data && typeof data === 'object') {
-            if (Array.isArray(data.hero_slides)) setHeroSlides(data.hero_slides)
-            if (data.promo_banner_1) setPromoBanner1(prev => ({ ...prev, ...data.promo_banner_1 }))
-            if (data.promo_banner_2) setPromoBanner2(prev => ({ ...prev, ...data.promo_banner_2 }))
+        const [homeRes, dealsRes, aboutRes] = await Promise.all([
+          fetch(`${API_BASE}/api/homepage`),
+          fetch(`${API_BASE}/api/deals`),
+          fetch(`${API_BASE}/api/about`, { cache: 'no-store' }),
+        ])
+        if (homeRes.ok) {
+          const d = await homeRes.json()
+          if (Array.isArray(d.hero_slides)) setHeroSlides(d.hero_slides)
+          if (d.promo_banner_1) setPromoBanner1(prev => ({ ...prev, ...d.promo_banner_1 }))
+        }
+        if (dealsRes.ok) {
+          const d = await dealsRes.json()
+          if (d.title) setDealsTitle(d.title)
+          if (d.subtitle) setDealsSubtitle(d.subtitle)
+          if (Array.isArray(d.cards)) setDealsCards(d.cards)
+        }
+        if (aboutRes.ok) {
+          const d = await aboutRes.json()
+          if (d && typeof d === 'object' && d.id) {
+            setAboutForm(prev => ({
+              ...prev,
+              company_name: d.company_name || prev.company_name,
+              tagline: d.tagline || prev.tagline,
+              description: d.description || prev.description,
+              image_1: d.image_1 || prev.image_1,
+              image_2: d.image_2 || prev.image_2,
+              address: d.address || prev.address,
+              phone: d.phone || prev.phone,
+              email: d.email || prev.email,
+            }))
           }
         }
-      } catch {
-        showToast('Failed to load homepage configuration', 'error')
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadHomepageData()
+      } catch { addToast('Failed to load homepage data', 'error') }
+      setLoading(false)
+    })()
   }, [])
 
-  // Load Deals Data
-  useEffect(() => {
-    fetch(`${API_BASE}/api/deals`)
-      .then(r => r.json())
-      .then(data => {
-        if (data && data.cards && Array.isArray(data.cards)) {
-          setDealsCards(data.cards)
-        }
-      })
-      .catch(() => {})
-  }, [])
+  const [uploadingField, setUploadingField] = useState(null)
 
-  // Load About Data
-  useEffect(() => {
-    fetch(`${API_BASE}/api/about`)
-      .then(r => r.json())
-      .then(data => {
-        if (data && typeof data === 'object') {
-          setAboutData(data)
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  // Load Store Locations
-  useEffect(() => {
-    fetch(`${API_BASE}/api/store-locations`)
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setStoreLocations(data)
-        } else if (data && Array.isArray(data.locations)) {
-          setStoreLocations(data.locations)
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  // Universal Upload Helper
-  const handleUpload = async (file, type) => {
-    if (!file) return
-    if (type === 'slide') setUploadingSlide(true)
-    if (type === 'promo1') setUploadingPromo1(true)
-    if (type === 'promo2') setUploadingPromo2(true)
-
-    const formData = new FormData()
-    formData.append('image', file)
-    formData.append('file', file)
-
+  const uploadImage = async (file, onSuccess) => {
+    setUploadingField(file.name)
+    const fd = new FormData()
+    fd.append('image', file)
     try {
       const res = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-        body: formData,
+        body: fd,
       })
       if (res.ok) {
-        const data = await res.json()
-        const url = data.url || data.imageUrl || data.image_url || data.secure_url
-        if (url) {
-          if (type === 'slide') setNewSlide(prev => ({ ...prev, image: url }))
-          if (type === 'promo1') setPromoBanner1(prev => ({ ...prev, image: url }))
-          if (type === 'promo2') setPromoBanner2(prev => ({ ...prev, image: url }))
-          showToast('Image uploaded successfully!', 'success')
-        }
-      } else {
-        showToast('Failed to upload image', 'error')
+        const d = await res.json()
+        const url = d.url || d.imageUrl || d.image_url || d.secure_url
+        if (url) { onSuccess(url); addToast('Image uploaded!', 'success'); setUploadingField(null); return }
       }
-    } catch {
-      showToast('Error uploading image file', 'error')
-    } finally {
-      if (type === 'slide') setUploadingSlide(false)
-      if (type === 'promo1') setUploadingPromo1(false)
-      if (type === 'promo2') setUploadingPromo2(false)
-    }
+      addToast('Upload failed', 'error')
+    } catch { addToast('Upload error', 'error') }
+    setUploadingField(null)
   }
 
-  // Slide CRUD
-  const handleAddOrUpdateSlide = (e) => {
-    e.preventDefault()
-    if (!newSlide.image && !newSlide.title) {
-      showToast('Please provide an image URL or title for the slide', 'error')
-      return
-    }
+  const startEditSlide = (idx) => {
+    setEditingSlide(idx)
+    setSlideDraft({ ...heroSlides[idx] })
+  }
 
-    if (editingSlideIndex !== null) {
-      setHeroSlides(prev => {
-        const copy = [...prev]
-        copy[editingSlideIndex] = { ...newSlide }
-        return copy
-      })
-      setEditingSlideIndex(null)
-      showToast('Slide updated!', 'info')
+  const cancelSlideEdit = () => { setEditingSlide(null); setSlideDraft({ ...DEFAULT_SLIDE }) }
+
+  const saveSlide = () => {
+    if (!slideDraft.title && !slideDraft.image) { addToast('Need at least a title or image', 'error'); return }
+    if (editingSlide !== null) {
+      const updated = [...heroSlides]; updated[editingSlide] = { ...slideDraft }; setHeroSlides(updated)
+      addToast('Slide updated', 'success')
     } else {
-      if (heroSlides.length >= 5) {
-        showToast('Maximum 5 hero slides allowed', 'error')
-        return
-      }
-      setHeroSlides(prev => [...prev, { ...newSlide, id: Date.now() }])
-      showToast('New slide added to rotation!', 'success')
+      if (heroSlides.length >= 5) { addToast('Max 5 slides', 'error'); return }
+      setHeroSlides(prev => [...prev, { ...slideDraft, id: Date.now() }])
+      addToast('Slide added', 'success')
     }
-
-    setNewSlide({
-      image: '',
-      tagline: 'AF FURNISHINGS',
-      title: '',
-      description: '',
-      button_link: '/category/lounge-suite',
-      active: true,
-    })
+    setEditingSlide(null); setSlideDraft({ ...DEFAULT_SLIDE })
   }
 
-  const handleEditSlide = (index) => {
-    setEditingSlideIndex(index)
-    setNewSlide({ ...heroSlides[index] })
-    window.scrollTo({ top: 300, behavior: 'smooth' })
+  const deleteSlide = (idx) => {
+    if (heroSlides.length <= 1) { addToast('Keep at least one slide', 'info'); return }
+    setHeroSlides(prev => prev.filter((_, i) => i !== idx))
+    addToast('Slide removed', 'info')
   }
 
-  const handleDeleteSlide = (index) => {
-    if (heroSlides.length <= 1) {
-      showToast('Keep at least one hero slide for the homepage', 'info')
-      return
-    }
-    setHeroSlides(prev => prev.filter((_, i) => i !== index))
-    showToast('Slide removed from rotation', 'info')
+  const toggleSlide = (idx) => {
+    setHeroSlides(prev => prev.map((s, i) => i === idx ? { ...s, active: !s.active } : s))
   }
 
-  const handleToggleSlideActive = (index) => {
-    setHeroSlides(prev => {
-      const copy = [...prev]
-      copy[index] = { ...copy[index], active: !copy[index].active }
-      return copy
-    })
+  const updateCard = (idx, field, value) => {
+    setDealsCards(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c))
   }
 
-  // Save All
-  const handleSaveHomepage = async (e) => {
-    e.preventDefault()
+  const handleSave = async () => {
     setSaving(true)
-
-    const payload = {
-      hero_slides: heroSlides,
-      promo_banner_1: promoBanner1,
-      promo_banner_2: promoBanner2,
-    }
-
     try {
-      await fetch(`${API_BASE}/api/deals`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify({
-          title: 'Limited-Time Weekly Deals',
-          subtitle: 'Comfortable furniture at straightforward prices. Flexible weekly payments available.',
-          cards: dealsCards,
+      console.log('[HomeManager] Saving with token:', authToken ? authToken.substring(0, 20) + '...' : 'NO TOKEN')
+      console.log('[HomeManager] Hero slides:', heroSlides.length, 'Promo1:', promoBanner1.title)
+      
+      const [dealsRes, homeRes, aboutRes] = await Promise.all([
+        fetch(`${API_BASE}/api/deals`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ title: dealsTitle, subtitle: dealsSubtitle, cards: dealsCards }),
         }),
-      })
-    } catch {}
-
-    try {
-      const res = await fetch(`${API_BASE}/api/homepage`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      })
-
-      if (res.ok) {
-        showToast('Homepage configuration saved successfully!', 'success')
+        fetch(`${API_BASE}/api/homepage`, {
+          method: 'PUT', headers,
+          body: JSON.stringify({ hero_slides: heroSlides, promo_banner_1: promoBanner1 }),
+        }),
+        fetch(`${API_BASE}/api/about`, {
+          method: 'PUT', headers,
+          body: JSON.stringify(aboutForm),
+        }),
+      ])
+      
+      const dealsBody = await dealsRes.json().catch(() => ({}))
+      const homeBody = await homeRes.json().catch(() => ({}))
+      const aboutBody = await aboutRes.json().catch(() => ({}))
+      
+      console.log('[HomeManager] Deals:', dealsRes.status, 'Homepage:', homeRes.status, 'About:', aboutRes.status)
+      
+      if (dealsRes.ok && homeRes.ok && aboutRes.ok) {
+        addToast('Homepage saved! Refresh website to see changes.', 'success')
       } else {
-        const err = await res.json().catch(() => ({}))
-        showToast(err.message || 'Failed to save homepage settings', 'error')
+        const errors = []
+        if (!dealsRes.ok) errors.push(`Deals (${dealsRes.status})`)
+        if (!homeRes.ok) errors.push(`Homepage (${homeRes.status})`)
+        if (!aboutRes.ok) errors.push(`About (${aboutRes.status})`)
+        addToast(`Save failed: ${errors.join(', ')}`, 'error')
       }
-    } catch {
-      showToast('Server error while saving homepage', 'error')
-    } finally {
-      setSaving(false)
+    } catch (err) {
+      console.error('[HomeManager] Save error:', err)
+      addToast('Save failed - server error: ' + err.message, 'error')
     }
+    setSaving(false)
   }
 
-  const ChevronIcon = ({ isCollapsed }) => (
-    <svg
-      className="hm-chevron"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ marginLeft: 'auto', transition: 'transform 0.2s ease', transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  )
+  if (loading) return <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary, #888)' }}>Loading homepage data...</div>
 
   return (
-    <div className="home-manager-container">
-      <style>{`
-        .home-manager-container {
-          max-width: 900px;
-          margin: 0 auto;
-          padding: 24px 20px 80px;
-          color: var(--text-primary);
-        }
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 100px', color: 'var(--text-primary, #28241f)' }}>
+      <style>{`@keyframes toastSlideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-        .hm-header-box {
-          margin-bottom: 28px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid var(--border-color);
-        }
-
-        .hm-title {
-          font-size: 1.5rem;
-          font-weight: 800;
-          color: var(--text-primary);
-          margin: 0 0 4px;
-          letter-spacing: -0.02em;
-        }
-
-        .hm-subtitle {
-          font-size: 0.88rem;
-          color: var(--text-secondary);
-          margin: 0;
-        }
-
-        .hm-form-vertical {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-        }
-
-        .hm-card {
-          background: var(--card-bg, rgba(255, 255, 255, 0.03));
-          border: 1px solid var(--border-color);
-          border-radius: 14px;
-          padding: 24px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-        }
-
-        .hm-card-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 20px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid var(--border-color);
-          cursor: pointer;
-          user-select: none;
-        }
-
-        .hm-card-header:hover {
-          opacity: 0.85;
-        }
-
-        .hm-card-header h3 {
-          font-size: 1.1rem;
-          font-weight: 700;
-          margin: 0;
-          color: var(--text-primary);
-        }
-
-        .hm-card-header > span:first-child {
-          font-size: 0.78rem;
-          color: var(--accent-color, #d4af37);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .hm-field-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 18px;
-        }
-
-        .hm-field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .hm-field-group.full-width {
-          grid-column: 1 / -1;
-        }
-
-        .hm-label {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: var(--text-primary);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .hm-input {
-          width: 100%;
-          padding: 12px 14px;
-          background: var(--input-bg, rgba(255, 255, 255, 0.05));
-          border: 1px solid var(--border-color);
-          border-radius: 8px;
-          color: var(--text-primary);
-          font-size: 0.92rem;
-          font-family: inherit;
-          box-sizing: border-box;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .hm-input:focus {
-          outline: none;
-          border-color: var(--accent-color, #d4af37);
-          box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-        }
-
-        .hm-slides-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-bottom: 24px;
-        }
-
-        .hm-slide-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 16px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid var(--border-color);
-          border-radius: 10px;
-          gap: 14px;
-        }
-
-        .hm-slide-thumb {
-          width: 90px;
-          height: 55px;
-          border-radius: 6px;
-          overflow: hidden;
-          background: #000;
-          flex-shrink: 0;
-        }
-
-        .hm-slide-thumb img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .hm-slide-meta {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .hm-slide-title {
-          font-size: 0.92rem;
-          font-weight: 700;
-          color: var(--text-primary);
-          margin: 0 0 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .hm-slide-sub {
-          font-size: 0.78rem;
-          color: var(--text-secondary);
-          margin: 0;
-        }
-
-        .hm-slide-actions {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .hm-btn-sm {
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-size: 0.8rem;
-          font-weight: 600;
-          border: 1px solid var(--border-color);
-          background: var(--input-bg, rgba(255, 255, 255, 0.05));
-          color: var(--text-primary);
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .hm-btn-sm:hover {
-          background: var(--border-color);
-        }
-
-        .hm-btn-sm.delete:hover {
-          background: #ef4444;
-          color: #fff;
-          border-color: #ef4444;
-        }
-
-        .hm-btn-sm.active-badge {
-          background: rgba(16, 185, 129, 0.15);
-          color: #10b981;
-          border-color: rgba(16, 185, 129, 0.3);
-        }
-
-        .hm-btn-sm.inactive-badge {
-          background: rgba(239, 68, 68, 0.15);
-          color: #ef4444;
-          border-color: rgba(239, 68, 68, 0.3);
-        }
-
-        .hm-uploader-row {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
-        }
-
-        .hm-preview-box {
-          width: 120px;
-          height: 70px;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid var(--border-color);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          flex-shrink: 0;
-        }
-
-        .hm-preview-box img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .hm-upload-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 10px 16px;
-          background: var(--hover-bg, rgba(255, 255, 255, 0.08));
-          border: 1px solid var(--border-color);
-          border-radius: 8px;
-          color: var(--text-primary);
-          font-size: 0.85rem;
-          font-weight: 600;
-          cursor: pointer;
-          width: fit-content;
-        }
-
-        .hm-preview-section {
-          padding: 16px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid var(--border-color);
-          border-radius: 10px;
-        }
-
-        .hm-preview-item {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 12px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid var(--border-color);
-          border-radius: 8px;
-          margin-bottom: 10px;
-        }
-
-        .hm-preview-item:last-of-type {
-          margin-bottom: 0;
-        }
-
-        .hm-preview-thumb {
-          width: 60px;
-          height: 60px;
-          border-radius: 6px;
-          overflow: hidden;
-          background: #000;
-          flex-shrink: 0;
-        }
-
-        .hm-preview-thumb img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .hm-preview-info {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .hm-preview-info h4 {
-          margin: 0 0 4px;
-          font-size: 0.9rem;
-          color: var(--text-primary);
-        }
-
-        .hm-preview-info p {
-          margin: 0;
-          font-size: 0.8rem;
-          color: var(--text-secondary);
-        }
-
-        .hm-link-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          background: var(--accent-color, #d4af37);
-          color: #000;
-          text-decoration: none;
-          border-radius: 6px;
-          font-size: 0.85rem;
-          font-weight: 600;
-          margin-top: 12px;
-          transition: all 0.2s ease;
-        }
-
-        .hm-link-btn:hover {
-          filter: brightness(1.1);
-        }
-
-        .hm-submit-bar {
-          position: sticky;
-          bottom: 20px;
-          background: var(--header-bg, #1a2238);
-          border: 1px solid var(--border-color);
-          border-radius: 12px;
-          padding: 14px 24px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
-          z-index: 50;
-        }
-
-        .hm-save-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 28px;
-          background: var(--accent-color, #d4af37);
-          color: #000;
-          font-weight: 700;
-          font-size: 0.95rem;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .hm-save-btn:hover:not(:disabled) {
-          transform: translateY(-1px);
-          filter: brightness(1.1);
-          box-shadow: 0 4px 16px rgba(212, 175, 55, 0.3);
-        }
-
-        .hm-toast {
-          position: fixed;
-          bottom: 90px;
-          right: 24px;
-          padding: 12px 20px;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 0.9rem;
-          z-index: 1000;
-          box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-          animation: toastIn 0.25s ease;
-        }
-        .hm-toast.success { background: #10b981; color: #fff; }
-        .hm-toast.error { background: #ef4444; color: #fff; }
-        .hm-toast.info { background: #3b82f6; color: #fff; }
-
-        @keyframes toastIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
-      {toast && <div className={`hm-toast ${toast.type}`}>{toast.msg}</div>}
-
-      <div className="hm-header-box">
-        <h2 className="hm-title">Homepage Manager</h2>
-        <p className="hm-subtitle">Manage hero slider, deals &amp; benefits, promo posters, about preview, and store locations.</p>
+      {/* Toasts */}
+      <div style={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{ ...S.toast, background: t.type === 'success' ? '#10b981' : t.type === 'error' ? '#ef4444' : '#3b82f6', color: '#fff' }}>
+            {t.msg}
+          </div>
+        ))}
       </div>
 
-      {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Loading homepage configuration...
+      {/* Header */}
+      <div style={{ marginBottom: 28, paddingBottom: 16, borderBottom: '1px solid var(--border-color, #e5e1d8)' }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em' }}>Homepage Manager</h2>
+        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary, #888)' }}>Manage hero slider, promo banners, and deals & benefits.</p>
+      </div>
+
+      {/* Hero Slider */}
+      <Section num={1} id="hero" title="Hero Slider" collapsed={collapsed.hero} toggle={toggle}>
+        <div style={{ padding: 16 }}>
+          <div style={{ marginBottom: 8, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary, #888)' }}>
+            Slides ({heroSlides.length}/5)
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+            {heroSlides.map((slide, idx) => <SlideCard key={slide.id || idx} slide={slide} idx={idx} onEdit={startEditSlide} onDelete={deleteSlide} onToggle={toggleSlide} />)}
+          </div>
+          <div style={S.slideForm}>
+            <h4 style={{ margin: '0 0 14px', fontSize: '0.95rem', color: 'var(--accent-color, #aa7a3e)' }}>
+              {editingSlide !== null ? `Edit Slide #${editingSlide + 1}` : 'Add New Slide'}
+            </h4>
+            <div style={S.grid}>
+              <ImageUploader value={slideDraft.image} onChange={url => setSlideDraft(p => ({ ...p, image: url }))} fileRef={slideFileRef} uploading={!!uploadingField} uploadFn={uploadImage} />
+              <Input label="Tagline" value={slideDraft.tagline} onChange={v => setSlideDraft(p => ({ ...p, tagline: v }))} placeholder="e.g. AF FURNISHINGS" />
+              <Input label="Title" value={slideDraft.title} onChange={v => setSlideDraft(p => ({ ...p, title: v }))} placeholder="e.g. Comfort made for everyday living." />
+              <Input label="Description" value={slideDraft.description} onChange={v => setSlideDraft(p => ({ ...p, description: v }))} full placeholder="Short description..." />
+              <Input label="Button Link" value={slideDraft.button_link} onChange={v => setSlideDraft(p => ({ ...p, button_link: v }))} placeholder="/category/lounge-suite" />
+            </div>
+            <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+              <button type="button" style={S.addBtn} onClick={saveSlide}>
+                {editingSlide !== null ? 'Update Slide' : '+ Add Slide'}
+              </button>
+              {editingSlide !== null && (
+                <button type="button" style={S.smBtn} onClick={cancelSlideEdit}>Cancel</button>
+              )}
+            </div>
+          </div>
         </div>
-      ) : (
-        <form className="hm-form-vertical" onSubmit={handleSaveHomepage}>
+      </Section>
 
-          {/* ── Section 1: Hero Slider ── */}
-          <div className="hm-card">
-            <div className="hm-card-header" onClick={() => toggleSection('hero')}>
-              <span>01</span>
-              <h3>Hero Slider</h3>
-              <ChevronIcon isCollapsed={collapsed.hero} />
-            </div>
-            {!collapsed.hero && (
-              <>
-                <div className="hm-slides-list">
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>
-                    Active Sliders in Rotation ({heroSlides.length})
-                  </span>
-                  {heroSlides.map((slide, idx) => (
-                    <div key={slide.id || idx} className="hm-slide-item">
-                      <div className="hm-slide-thumb">
-                        <img src={getAssetUrl(slide.image)} alt={slide.title || 'Slide'} onError={(e) => { e.target.src = 'https://placehold.co/300x180?text=Slide' }} />
-                      </div>
-                      <div className="hm-slide-meta">
-                        <h4 className="hm-slide-title">{slide.title || 'Untitled Slide'}</h4>
-                        <p className="hm-slide-sub">{slide.tagline || 'AF FURNISHINGS'} &bull; {slide.button_link || '/category/lounge-suite'}</p>
-                      </div>
-                      <div className="hm-slide-actions">
-                        <button
-                          type="button"
-                          className={`hm-btn-sm ${slide.active !== false ? 'active-badge' : 'inactive-badge'}`}
-                          onClick={() => handleToggleSlideActive(idx)}
-                        >
-                          {slide.active !== false ? 'Active' : 'Hidden'}
-                        </button>
-                        <button type="button" className="hm-btn-sm" onClick={() => handleEditSlide(idx)}>
-                          Edit
-                        </button>
-                        <button type="button" className="hm-btn-sm delete" onClick={() => handleDeleteSlide(idx)}>
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+      {/* Promo Banners */}
+      <Section num={2} id="promo" title="Promo Banners" collapsed={collapsed.promo} toggle={toggle}>
+        <div style={{ padding: 16 }}>
+          <PromoForm label="Promo Banner" banner={promoBanner1} setBanner={setPromoBanner1} fileRef={promo1FileRef} uploading={uploadingField} uploadFn={uploadImage} />
+        </div>
+      </Section>
+
+      {/* Deals */}
+      <Section num={3} id="deals" title="Deals & Benefits" collapsed={collapsed.deals} toggle={toggle}>
+        <div style={{ padding: 16 }}>
+          <div style={S.grid}>
+            <Input label="Section Title" value={dealsTitle} onChange={setDealsTitle} full placeholder="e.g. Limited-Time Weekly Deals" />
+            <Input label="Subtitle" value={dealsSubtitle} onChange={setDealsSubtitle} full placeholder="e.g. Comfortable furniture at straightforward prices." />
+          </div>
+          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {dealsCards.map((card, idx) => (
+              <div key={idx} style={S.dealCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-color, #aa7a3e)' }}>Card {idx + 1}</span>
+                  <select value={card.icon} onChange={e => updateCard(idx, 'icon', e.target.value)} style={{ ...S.input, width: 'auto', padding: '8px 12px' }}>
+                    {ICON_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                 </div>
-
-                <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border-color)', borderRadius: '10px' }}>
-                  <h4 style={{ margin: '0 0 14px', fontSize: '0.95rem', color: 'var(--accent-color, #d4af37)' }}>
-                    {editingSlideIndex !== null ? `Edit Slide #${editingSlideIndex + 1}` : 'Add New Hero Slide'}
-                  </h4>
-                  <div className="hm-field-grid">
-                    <div className="hm-field-group full-width">
-                      <label className="hm-label">Slide Image</label>
-                      <div className="hm-uploader-row">
-                        <div className="hm-preview-box">
-                          {newSlide.image ? (
-                            <img src={getAssetUrl(newSlide.image)} alt="Slide" onError={(e) => { e.target.src = 'https://placehold.co/300x180?text=Slide' }} />
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>No Image</span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                          <button type="button" className="hm-upload-btn" onClick={() => slideFileRef.current?.click()} disabled={uploadingSlide}>
-                            {uploadingSlide ? 'Uploading...' : 'Browse Image'}
-                          </button>
-                          <input ref={slideFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) handleUpload(e.target.files[0], 'slide') }} />
-                          <input type="text" value={newSlide.image} onChange={(e) => setNewSlide(prev => ({ ...prev, image: e.target.value }))} placeholder="Image URL (https://...)" className="hm-input" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Eyebrow Tagline</label>
-                      <input type="text" value={newSlide.tagline} onChange={(e) => setNewSlide(prev => ({ ...prev, tagline: e.target.value }))} placeholder="e.g. AF FURNISHINGS" className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Hero Title</label>
-                      <input type="text" value={newSlide.title} onChange={(e) => setNewSlide(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Comfort made for everyday living." className="hm-input" />
-                    </div>
-                    <div className="hm-field-group full-width">
-                      <label className="hm-label">Subtext / Description</label>
-                      <input type="text" value={newSlide.description} onChange={(e) => setNewSlide(prev => ({ ...prev, description: e.target.value }))} placeholder="e.g. Furniture, beds and appliances to make your home feel complete." className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Button Target Link</label>
-                      <input type="text" value={newSlide.button_link} onChange={(e) => setNewSlide(prev => ({ ...prev, button_link: e.target.value }))} placeholder="/category/lounge-suite" className="hm-input" />
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '14px', display: 'flex', gap: '10px' }}>
-                    <button type="button" className="hm-save-btn" onClick={handleAddOrUpdateSlide} style={{ padding: '8px 18px', fontSize: '0.88rem' }}>
-                      {editingSlideIndex !== null ? 'Save Slide Updates' : '+ Add Slide to Rotation'}
-                    </button>
-                    {editingSlideIndex !== null && (
-                      <button type="button" className="hm-btn-sm" onClick={() => { setEditingSlideIndex(null); setNewSlide({ image: '', tagline: 'AF FURNISHINGS', title: '', description: '', button_link: '/category/lounge-suite', active: true }) }}>
-                        Cancel Edit
-                      </button>
-                    )}
-                  </div>
+                <div style={S.grid}>
+                  <Input label="Title" value={card.title} onChange={v => updateCard(idx, 'title', v)} />
+                  <Input label="Description" value={card.description} onChange={v => updateCard(idx, 'description', v)} full />
                 </div>
-              </>
-            )}
+              </div>
+            ))}
           </div>
+        </div>
+      </Section>
 
-          {/* ── Section 2: Deals & Benefits ── */}
-          <div className="hm-card">
-            <div className="hm-card-header" onClick={() => toggleSection('deals')}>
-              <span>02</span>
-              <h3>Deals &amp; Benefits</h3>
-              <ChevronIcon isCollapsed={collapsed.deals} />
-            </div>
-            {!collapsed.deals && (
-              <>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
-                  These 3 benefit cards appear on the homepage between the hero slider and category sections.
-                </p>
-                {dealsCards.map((card, idx) => (
-                  <div key={idx} style={{ padding: '14px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '10px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent-color, #d4af37)' }}>Card {idx + 1}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>({card.icon})</span>
-                    </div>
-                    <div className="hm-field-grid">
-                      <div className="hm-field-group">
-                        <label className="hm-label">Title</label>
-                        <input type="text" value={card.title} onChange={(e) => { const updated = [...dealsCards]; updated[idx] = { ...updated[idx], title: e.target.value }; setDealsCards(updated) }} className="hm-input" />
-                      </div>
-                      <div className="hm-field-group full-width">
-                        <label className="hm-label">Description</label>
-                        <input type="text" value={card.description} onChange={(e) => { const updated = [...dealsCards]; updated[idx] = { ...updated[idx], description: e.target.value }; setDealsCards(updated) }} className="hm-input" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
+      {/* About Us Section */}
+      <Section num={4} id="about" title="About Us Section" collapsed={collapsed.about} toggle={toggle}>
+        <div style={{ padding: 16 }}>
+          <div style={{ marginBottom: 12, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary, #888)' }}>
+            This section appears on the homepage between categories and footer.
           </div>
-
-          {/* ── Section 3: Promo Posters ── */}
-          <div className="hm-card">
-            <div className="hm-card-header" onClick={() => toggleSection('promo')}>
-              <span>03</span>
-              <h3>Promo Posters</h3>
-              <ChevronIcon isCollapsed={collapsed.promo} />
-            </div>
-            {!collapsed.promo && (
-              <>
-                {/* Promo Banner 1 */}
-                <div style={{ marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid var(--border-color)' }}>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>Promotional Feature Banner #1</h4>
-                  <div className="hm-field-grid">
-                    <div className="hm-field-group full-width">
-                      <label className="hm-label">Poster Image</label>
-                      <div className="hm-uploader-row">
-                        <div className="hm-preview-box">
-                          {promoBanner1.image ? (
-                            <img src={getAssetUrl(promoBanner1.image)} alt="Promo 1" onError={(e) => { e.target.src = 'https://placehold.co/600x300?text=Promo+1' }} />
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>No Image</span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                          <button type="button" className="hm-upload-btn" onClick={() => promo1FileRef.current?.click()} disabled={uploadingPromo1}>
-                            {uploadingPromo1 ? 'Uploading...' : 'Browse Image'}
-                          </button>
-                          <input ref={promo1FileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) handleUpload(e.target.files[0], 'promo1') }} />
-                          <input type="text" value={promoBanner1.image} onChange={(e) => setPromoBanner1(prev => ({ ...prev, image: e.target.value }))} placeholder="Image URL (https://...)" className="hm-input" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Badge Text</label>
-                      <input type="text" value={promoBanner1.badge} onChange={(e) => setPromoBanner1(prev => ({ ...prev, badge: e.target.value }))} placeholder="e.g. AF WEEKLY SPECIAL" className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Headline Title</label>
-                      <input type="text" value={promoBanner1.title} onChange={(e) => setPromoBanner1(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Bring comfort home." className="hm-input" />
-                    </div>
-                    <div className="hm-field-group full-width">
-                      <label className="hm-label">Subtitle Copy</label>
-                      <input type="text" value={promoBanner1.subtitle} onChange={(e) => setPromoBanner1(prev => ({ ...prev, subtitle: e.target.value }))} placeholder="e.g. Explore our latest living-room arrivals with flexible payments." className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Button Label</label>
-                      <input type="text" value={promoBanner1.button_text} onChange={(e) => setPromoBanner1(prev => ({ ...prev, button_text: e.target.value }))} placeholder="Shop Living" className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Button Link URL</label>
-                      <input type="text" value={promoBanner1.button_link} onChange={(e) => setPromoBanner1(prev => ({ ...prev, button_link: e.target.value }))} placeholder="/category/living" className="hm-input" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Promo Banner 2 */}
-                <div>
-                  <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', color: 'var(--text-primary)' }}>Promotional Feature Banner #2</h4>
-                  <div className="hm-field-grid">
-                    <div className="hm-field-group full-width">
-                      <label className="hm-label">Poster Image</label>
-                      <div className="hm-uploader-row">
-                        <div className="hm-preview-box">
-                          {promoBanner2.image ? (
-                            <img src={getAssetUrl(promoBanner2.image)} alt="Promo 2" onError={(e) => { e.target.src = 'https://placehold.co/600x300?text=Promo+2' }} />
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>No Image</span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                          <button type="button" className="hm-upload-btn" onClick={() => promo2FileRef.current?.click()} disabled={uploadingPromo2}>
-                            {uploadingPromo2 ? 'Uploading...' : 'Browse Image'}
-                          </button>
-                          <input ref={promo2FileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) handleUpload(e.target.files[0], 'promo2') }} />
-                          <input type="text" value={promoBanner2.image} onChange={(e) => setPromoBanner2(prev => ({ ...prev, image: e.target.value }))} placeholder="Image URL (https://...)" className="hm-input" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Badge Text</label>
-                      <input type="text" value={promoBanner2.badge} onChange={(e) => setPromoBanner2(prev => ({ ...prev, badge: e.target.value }))} placeholder="e.g. NEW ARRIVALS" className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Headline Title</label>
-                      <input type="text" value={promoBanner2.title} onChange={(e) => setPromoBanner2(prev => ({ ...prev, title: e.target.value }))} placeholder="e.g. Bedroom & Dining Essentials" className="hm-input" />
-                    </div>
-                    <div className="hm-field-group full-width">
-                      <label className="hm-label">Subtitle Copy</label>
-                      <input type="text" value={promoBanner2.subtitle} onChange={(e) => setPromoBanner2(prev => ({ ...prev, subtitle: e.target.value }))} placeholder="e.g. Premium handcrafted furniture built for New Zealand homes." className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Button Label</label>
-                      <input type="text" value={promoBanner2.button_text} onChange={(e) => setPromoBanner2(prev => ({ ...prev, button_text: e.target.value }))} placeholder="Explore Deals" className="hm-input" />
-                    </div>
-                    <div className="hm-field-group">
-                      <label className="hm-label">Button Link URL</label>
-                      <input type="text" value={promoBanner2.button_link} onChange={(e) => setPromoBanner2(prev => ({ ...prev, button_link: e.target.value }))} placeholder="/on-sale" className="hm-input" />
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+          <div style={S.grid}>
+            <Input label="Company Name" value={aboutForm.company_name} onChange={v => setAboutForm(p => ({ ...p, company_name: v }))} placeholder="e.g. AF Furnishings" />
+            <Input label="Tagline" value={aboutForm.tagline} onChange={v => setAboutForm(p => ({ ...p, tagline: v }))} placeholder="e.g. Quality furniture for every NZ home" />
           </div>
-
-          {/* ── Section 4: About Preview ── */}
-          <div className="hm-card">
-            <div className="hm-card-header" onClick={() => toggleSection('about')}>
-              <span>04</span>
-              <h3>About Section Preview</h3>
-              <ChevronIcon isCollapsed={collapsed.about} />
-            </div>
-            {!collapsed.about && (
-              <>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
-                  Preview of the About page data. Edit the full content in the dedicated About page.
-                </p>
-                {aboutData ? (
-                  <div className="hm-preview-section">
-                    <div className="hm-preview-item">
-                      {aboutData.image_1 && (
-                        <div className="hm-preview-thumb">
-                          <img src={getAssetUrl(aboutData.image_1)} alt="About" onError={(e) => { e.target.src = 'https://placehold.co/120x120?text=About' }} />
-                        </div>
-                      )}
-                      <div className="hm-preview-info">
-                        <h4>{aboutData.company_name || 'AF Furnishings'}</h4>
-                        <p>{aboutData.tagline || 'Trusted New Zealand furniture store since 1987'}</p>
-                      </div>
-                    </div>
-                    {aboutData.image_2 && (
-                      <div className="hm-preview-item" style={{ marginTop: '10px' }}>
-                        <div className="hm-preview-thumb">
-                          <img src={getAssetUrl(aboutData.image_2)} alt="About 2" onError={(e) => { e.target.src = 'https://placehold.co/120x120?text=About' }} />
-                        </div>
-                        <div className="hm-preview-info">
-                          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Second about image loaded</p>
-                        </div>
-                      </div>
-                    )}
-                    <a href="#/dashboard/pages/about" className="hm-link-btn">
-                      Edit Full About Page →
-                    </a>
-                  </div>
-                ) : (
-                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    Loading about data...
-                  </div>
-                )}
-              </>
-            )}
+          <div style={{ marginTop: 12 }}>
+            <label style={S.label}>Description</label>
+            <textarea
+              value={aboutForm.description}
+              onChange={e => setAboutForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Tell customers about your company..."
+              rows={3}
+              style={{ ...S.input, resize: 'vertical', minHeight: 80 }}
+            />
           </div>
-
-          {/* ── Section 5: Store Locations Preview ── */}
-          <div className="hm-card">
-            <div className="hm-card-header" onClick={() => toggleSection('stores')}>
-              <span>05</span>
-              <h3>Store Locations Preview</h3>
-              <ChevronIcon isCollapsed={collapsed.stores} />
-            </div>
-            {!collapsed.stores && (
-              <>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
-                  Preview of store locations. Manage the full list in the dedicated Store Locations page.
-                </p>
-                {storeLocations.length > 0 ? (
-                  <div className="hm-preview-section">
-                    {storeLocations.slice(0, 3).map((store, idx) => (
-                      <div key={store.id || idx} className="hm-preview-item">
-                        {store.image && (
-                          <div className="hm-preview-thumb">
-                            <img src={getAssetUrl(store.image)} alt={store.name} onError={(e) => { e.target.src = 'https://placehold.co/120x120?text=Store' }} />
-                          </div>
-                        )}
-                        <div className="hm-preview-info">
-                          <h4>{store.name || 'Store Location'}</h4>
-                          <p>{store.address || 'Address not provided'}</p>
-                        </div>
-                      </div>
-                    ))}
-                    <a href="#/dashboard/store-locations" className="hm-link-btn">
-                      Manage Store Locations →
-                    </a>
-                  </div>
-                ) : (
-                  <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    Loading store locations...
-                  </div>
-                )}
-              </>
-            )}
+          <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <ImageUploader label="Image 1 (Main)" value={aboutForm.image_1} onChange={url => setAboutForm(p => ({ ...p, image_1: url }))} fileRef={aboutImg1Ref} uploading={!!uploadingField} uploadFn={uploadImage} />
+            <ImageUploader label="Image 2 (Secondary)" value={aboutForm.image_2} onChange={url => setAboutForm(p => ({ ...p, image_2: url }))} fileRef={aboutImg2Ref} uploading={!!uploadingField} uploadFn={uploadImage} />
           </div>
-
-          {/* ── Sticky Bottom Publish Bar ── */}
-          <div className="hm-submit-bar">
-            <div>
-              <strong style={{ fontSize: '0.9rem', display: 'block' }}>Save Homepage Configuration?</strong>
-              <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Hero slider, deals, and promo banners update live immediately.</span>
-            </div>
-            <button type="submit" className="hm-save-btn" disabled={saving}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
-              </svg>
-              {saving ? 'Publishing Homepage...' : 'Publish Homepage'}
-            </button>
+          <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <Input label="Address" value={aboutForm.address} onChange={v => setAboutForm(p => ({ ...p, address: v }))} placeholder="e.g. Auckland, NZ" />
+            <Input label="Phone" value={aboutForm.phone} onChange={v => setAboutForm(p => ({ ...p, phone: v }))} placeholder="e.g. 0800 222 548" />
+            <Input label="Email" value={aboutForm.email} onChange={v => setAboutForm(p => ({ ...p, email: v }))} placeholder="e.g. info@af.co.nz" />
           </div>
+        </div>
+      </Section>
 
-        </form>
-      )}
+      {/* Save bar - Floating at bottom */}
+      <div style={S.saveBar}>
+        <div>
+          <strong style={{ fontSize: '0.9rem', display: 'block' }}>Save Homepage?</strong>
+          <span style={{ fontSize: '0.78rem', opacity: 0.7 }}>Hero slider, promos, deals, and about section update live.</span>
+        </div>
+        <button type="button" style={S.saveBtn} onClick={handleSave} disabled={saving}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          {saving ? 'Saving...' : 'Save All Changes'}
+        </button>
+      </div>
+      <div style={{ height: 100 }} /> {/* Spacer for fixed save bar */}
     </div>
   )
+}
+
+const S = {
+  card: { background: 'var(--card-bg, rgba(255,255,255,0.03))', border: '1px solid var(--border-color, #e5e1d8)', borderRadius: 14, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginBottom: 20 },
+  cardHead: { display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 12, borderBottom: '1px solid var(--border-color, #e5e1d8)', cursor: 'pointer', userSelect: 'none' },
+  sectionNum: { fontSize: '0.78rem', color: 'var(--accent-color, #aa7a3e)', fontWeight: 600 },
+  sectionTitle: { fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--text-primary, #28241f)' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 },
+  field: { display: 'flex', flexDirection: 'column', gap: 6 },
+  label: { fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary, #28241f)' },
+  input: { width: '100%', padding: '11px 14px', background: 'var(--input-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-color, #e5e1d8)', borderRadius: 8, color: 'var(--text-primary, #28241f)', fontSize: '0.92rem', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' },
+  uploadRow: { display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' },
+  previewBox: { width: 120, height: 70, borderRadius: 8, background: 'var(--input-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border-color, #e5e1d8)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  uploadBtn: { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border-color, #e5e1d8)', borderRadius: 8, color: 'var(--text-primary, #28241f)', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', width: 'fit-content' },
+  slideItem: { display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color, #e5e1d8)', borderRadius: 10 },
+  slideThumb: { width: 90, height: 55, borderRadius: 6, overflow: 'hidden', background: '#000', flexShrink: 0 },
+  slideTitle: { fontSize: '0.92rem', fontWeight: 700, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  slideMeta: { fontSize: '0.78rem', color: 'var(--text-secondary, #888)' },
+  slideForm: { padding: 16, background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border-color, #e5e1d8)', borderRadius: 10 },
+  smBtn: { padding: '6px 12px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, border: '1px solid var(--border-color, #e5e1d8)', background: 'var(--input-bg, rgba(255,255,255,0.05))', color: 'var(--text-primary, #28241f)', cursor: 'pointer' },
+  badgeActive: { padding: '6px 12px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer' },
+  badgeHidden: { padding: '6px 12px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer' },
+  addBtn: { padding: '8px 18px', fontSize: '0.88rem', fontWeight: 700, background: 'var(--accent-color, #aa7a3e)', color: '#000', border: 'none', borderRadius: 8, cursor: 'pointer' },
+  dealCard: { padding: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color, #e5e1d8)', borderRadius: 10 },
+  toast: { position: 'fixed', top: 24, right: 24, padding: '12px 20px', borderRadius: 8, fontWeight: 600, fontSize: '0.9rem', zIndex: 9999, boxShadow: '0 6px 24px rgba(0,0,0,0.3)', animation: 'toastSlideIn 0.25s ease' },
+  saveBar: { position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--header-bg, #1a1e29)', borderTop: '2px solid var(--accent-color, #aa7a3e)', borderRadius: 0, padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 -4px 30px rgba(0,0,0,0.5)', zIndex: 999 },
+  saveBtn: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: 'var(--accent-color, #aa7a3e)', color: '#000', fontWeight: 800, fontSize: '1rem', border: 'none', borderRadius: 8, cursor: 'pointer', boxShadow: '0 4px 16px rgba(170,122,62,0.4)' },
 }
 
 export default HomeManager

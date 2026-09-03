@@ -135,7 +135,8 @@ function Dashboard({ onLogout, token }) {
           box-sizing: border-box;
           transform: translateZ(0);
           position: relative;
-          min-height: 100vh;
+          height: 100vh;
+          overflow: hidden;
           transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -146,6 +147,8 @@ function Dashboard({ onLogout, token }) {
           flex-direction: column;
           width: 100%;
           min-width: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
         }
 
         .dashboard-content {
@@ -173,6 +176,8 @@ function Dashboard({ onLogout, token }) {
           .dashboard-main {
             margin-left: 0;
             width: 100%;
+            height: 100vh;
+            overflow: hidden;
           }
           .dashboard-content { padding: 0; }
         }

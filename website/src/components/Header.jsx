@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { API_BASE } from '../config'
+import { API_BASE, getAssetUrl } from '../config'
 
 const slugify = (str) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-
-const HARDCODED_CATS = ['Bedroom', 'Dining', 'Living Room']
 
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -18,10 +16,10 @@ function Header() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [panelTop, setPanelTop] = useState(98)
   const [allCategories, setAllCategories] = useState([])
-  const [hardcodedCats, setHardcodedCats] = useState([])
+  const [headerCatIds, setHeaderCatIds] = useState([])
+  const [settings, setSettings] = useState({})
   const [logoUrl, setLogoUrl] = useState('/logo.png')
   const [socialLinks, setSocialLinks] = useState([])
-  const API_URL = API_BASE
   const headerRef = useRef(null)
   const searchRef = useRef(null)
   const searchTimerRef = useRef(null)
@@ -51,64 +49,45 @@ function Header() {
   useEffect(() => {
     const loadAll = () => {
       Promise.all([
-        fetch(`${API_BASE}/api/categories`).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/api/subcategories`).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/api/settings`).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/social`).then(r => r.json()).catch(() => []),
-      ]).then(([cats, subs, settings, socials]) => {
+        fetch(`${API_BASE}/api/categories`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/api/social`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
+      ]).then(([cats, settingsData, socials]) => {
         if (Array.isArray(cats)) {
-          const allSubs = Array.isArray(subs) ? subs : []
-          const buildCat = (cat) => {
+          const all = cats.map((cat) => {
             const catSlug = slugify(cat.name)
-            const catSubs = allSubs.filter(s => String(s.category_id) === String(cat.id))
+            const allSub = { label: `All ${cat.name}`, href: `/category/${catSlug}` }
+            const subs = Array.isArray(cat.subcategories) && cat.subcategories.length > 0
+              ? cat.subcategories.map(s => ({
+                  label: s.name,
+                  href: `/category/${catSlug}?subcategory_id=${s.id}`,
+                }))
+              : []
             return {
+              id: cat.id,
               label: cat.name,
               href: `/category/${catSlug}`,
-              subcategories: [
-                { label: `All ${cat.name}`, href: `/category/${catSlug}` },
-                ...catSubs.map(sub => ({
-                  label: sub.name,
-                  href: `/category/${catSlug}?sub_id=${sub.id}`,
-                })),
-              ],
+              subcategories: [allSub, ...subs],
             }
-          }
-          const all = cats.map(buildCat)
+          })
           setAllCategories(all)
-          setHardcodedCats(all.filter(c => HARDCODED_CATS.includes(c.label)))
         }
-        if (settings?.site_logo) {
-          const logo = settings.site_logo.startsWith('http') ? settings.site_logo : `${API_BASE}${settings.site_logo}`
-          setLogoUrl(logo)
-          localStorage.setItem('site_logo', logo)
+        if (settingsData) {
+          setSettings(settingsData)
+          if (settingsData.site_logo) {
+            setLogoUrl(getAssetUrl(settingsData.site_logo))
+          }
+          if (settingsData.header_categories) {
+            try {
+              const ids = JSON.parse(settingsData.header_categories)
+              setHeaderCatIds(Array.isArray(ids) ? ids : [])
+            } catch {}
+          }
         }
         if (Array.isArray(socials)) setSocialLinks(socials)
       })
     }
     loadAll()
-    const onLogoUpdate = () => {
-      const cached = localStorage.getItem('site_logo')
-      if (cached) setLogoUrl(cached)
-      loadAll()
-    }
-    const logoInterval = setInterval(() => {
-      fetch(`${API_BASE}/api/settings`).then(r => r.json()).then(d => {
-        if (d?.site_logo) {
-          const logo = d.site_logo.startsWith('http') ? d.site_logo : `${API_BASE}${d.site_logo}`
-          if (logo !== localStorage.getItem('site_logo')) {
-            localStorage.setItem('site_logo', logo)
-            setLogoUrl(logo)
-          }
-        }
-      }).catch(() => {})
-    }, 15000)
-    window.addEventListener('logo-updated', onLogoUpdate)
-    window.addEventListener('storage', onLogoUpdate)
-    return () => {
-      clearInterval(logoInterval)
-      window.removeEventListener('logo-updated', onLogoUpdate)
-      window.removeEventListener('storage', onLogoUpdate)
-    }
   }, [])
 
   useEffect(() => {
@@ -126,7 +105,7 @@ function Header() {
     if (searchQuery.trim().length >= 1) {
       setSearchLoading(true)
       searchTimerRef.current = setTimeout(() => {
-        fetch(`${API_BASE}/api/products?search=${encodeURIComponent(searchQuery.trim())}&limit=6`)
+        fetch(`${API_BASE}/api/products?search=${encodeURIComponent(searchQuery.trim())}&limit=6`, { cache: 'no-store' })
           .then(r => r.json())
           .then(data => {
             const products = data.products || (Array.isArray(data) ? data : [])
@@ -144,6 +123,10 @@ function Header() {
   }, [searchQuery])
 
   const isHome = location.pathname === '/'
+
+  const topCategories = headerCatIds.length > 0
+    ? headerCatIds.map(id => allCategories.find(c => c.id === id)).filter(Boolean)
+    : allCategories.slice(0, 3)
 
   const handleNavClick = (href) => {
     setMenuOpen(false)
@@ -169,17 +152,16 @@ function Header() {
   }
 
   const getSocialIcon = (platform) => {
-    const icons = {
-      instagram: <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" alt="Instagram" width="20" height="20" />,
-      facebook: <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="20" height="20" />,
-    }
-    return icons[platform?.toLowerCase()] || null
+    const key = (platform || '').toLowerCase()
+    if (key === 'instagram') return <img src="https://cdn-icons-png.flaticon.com/512/174/174855.png" alt="Instagram" width="20" height="20" />
+    if (key === 'facebook') return <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="20" height="20" />
+    return null
   }
 
   return (
     <>
       <div className="announcement-bar">
-        Welcome to AF Furnishings <span>&#8226;</span> Quality pieces for every home
+        {settings.announcement_bar_text || 'Welcome to AF Furnishings'}
       </div>
       <header ref={headerRef} className={`site-header${scrolled ? ' scrolled' : ''}`}>
         <button className="nav-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Open menu">
@@ -191,7 +173,7 @@ function Header() {
 
         <nav className="desktop-nav">
           <Link to="/" onClick={() => { setHoveredMenu(null) }}>Home</Link>
-          {hardcodedCats.map((cat) => (
+          {topCategories.map((cat) => (
             <div
               key={cat.label}
               className="nav-dropdown"
@@ -259,7 +241,7 @@ function Header() {
                     <div className="search-suggestion-loading">Searching...</div>
                   ) : (
                     searchSuggestions.map(p => {
-                      const imgSrc = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? p.images[0] : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=100&q=80'
+                      const imgSrc = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? getAssetUrl(p.images[0]) : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=100&q=80'
                       return (
                         <Link
                           key={p.id}
@@ -287,7 +269,7 @@ function Header() {
               )}
             </div>
             <div className="header-social-icons">
-              {socialLinks.map(link => (
+              {socialLinks.filter(link => ['instagram', 'facebook'].includes((link.platform || '').toLowerCase())).map(link => (
                 <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="header-social-icon" title={link.platform}>
                   {getSocialIcon(link.platform)}
                 </a>
@@ -307,8 +289,8 @@ function Header() {
                 {searchLoading ? (
                   <div className="search-suggestion-loading">Searching...</div>
                 ) : (
-                  searchSuggestions.map(p => {
-                    const imgSrc = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? p.images[0] : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=100&q=80'
+                    searchSuggestions.map(p => {
+                      const imgSrc = (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) ? getAssetUrl(p.images[0]) : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=100&q=80'
                     return (
                       <Link
                         key={p.id}
@@ -343,7 +325,7 @@ function Header() {
           <div className="mobile-nav-panel" style={{ top: panelTop + 'px', maxHeight: `calc(100vh - ${panelTop}px)` }}>
             <Link className="mobile-nav-finance" to="/apply-for-finance" onClick={() => setMenuOpen(false)}>APPLY FOR FINANCE</Link>
             <a className="mobile-nav-item" href="/" onClick={(e) => { e.preventDefault(); handleNavClick('/') }}>HOME</a>
-            {hardcodedCats.map((cat) => (
+            {topCategories.map((cat) => (
               <div key={cat.label} className="mobile-nav-item-group">
                 <div className="mobile-nav-item" onClick={() => setExpandedCat(expandedCat === cat.label ? null : cat.label)}>
                   <span>{cat.label.toUpperCase()}</span>

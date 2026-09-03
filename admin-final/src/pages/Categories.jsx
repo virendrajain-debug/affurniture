@@ -20,6 +20,8 @@ function Categories({ token }) {
   const [subcategories, setSubcategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
+  const [headerCatIds, setHeaderCatIds] = useState([])
+  const [savingHeader, setSavingHeader] = useState(false)
 
   // Add / Edit Category State
   const [newCatName, setNewCatName] = useState('')
@@ -41,12 +43,14 @@ function Categories({ token }) {
   // Fetch all categories & subcategories on mount
   const fetchCategoriesAndSubs = async () => {
     try {
-      const [catRes, subRes] = await Promise.all([
+      const [catRes, subRes, settingsRes] = await Promise.all([
         fetch(`${API_BASE}/api/categories`),
         fetch(`${API_BASE}/api/subcategories`),
+        fetch(`${API_BASE}/api/settings`, { headers: authToken ? { Authorization: `Bearer ${authToken}` } : {} }),
       ])
       const catData = await catRes.json()
       const subData = await subRes.json()
+      const settingsData = await settingsRes.json().catch(() => ({}))
 
       if (Array.isArray(catData)) {
         const sorted = [...catData].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
@@ -54,6 +58,12 @@ function Categories({ token }) {
       }
       if (Array.isArray(subData)) {
         setSubcategories(subData)
+      }
+      if (settingsData.header_categories) {
+        try {
+          const ids = JSON.parse(settingsData.header_categories)
+          setHeaderCatIds(Array.isArray(ids) ? ids : [])
+        } catch { setHeaderCatIds([]) }
       }
     } catch {
       showToast('Failed to load collection data', 'error')
@@ -97,6 +107,34 @@ function Categories({ token }) {
   // Split into Frontpage (Slots 1–7) and Other Categories in ascending order
   const frontpageCategories = categories.slice(0, 7)
   const otherCategories = categories.slice(7)
+
+  // Header category toggle (max 3)
+  const toggleHeaderCategory = async (catId) => {
+    let newIds
+    if (headerCatIds.includes(catId)) {
+      newIds = headerCatIds.filter(id => id !== catId)
+    } else {
+      if (headerCatIds.length >= 3) return showToast('Maximum 3 header categories allowed', 'warning')
+      newIds = [...headerCatIds, catId]
+    }
+    setHeaderCatIds(newIds)
+    setSavingHeader(true)
+    try {
+      await fetch(`${API_BASE}/api/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({ header_categories: JSON.stringify(newIds) }),
+      })
+      showToast('Header categories updated', 'success')
+    } catch {
+      showToast('Failed to save header categories', 'error')
+    } finally {
+      setSavingHeader(false)
+    }
+  }
 
   // 1. Up & Down Button Reordering
   const handleMoveUp = (globalIndex) => {
@@ -501,6 +539,66 @@ function Categories({ token }) {
           + Add Category
         </button>
       </form>
+
+      {/* Container 0: Header Navigation (Top 3) */}
+      <div className="admin-card" style={{ marginBottom: '28px' }}>
+        <div className="admin-card-header">
+          <div>
+            <h3 className="admin-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Header Navigation (Top 3)
+              <span className="badge badge-purple" style={{ fontSize: '0.78rem' }}>
+                {headerCatIds.length} / 3 Selected
+              </span>
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              Select up to 3 categories to display in the website header navigation. Home, All Categories, WinZ, and On Sale are always shown.
+            </span>
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-secondary)' }}>Loading...</div>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', padding: '4px 0' }}>
+            {categories.map((cat) => {
+              const isSelected = headerCatIds.includes(cat.id)
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  disabled={savingHeader || (!isSelected && headerCatIds.length >= 3)}
+                  onClick={() => toggleHeaderCategory(cat.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: `1.5px solid ${isSelected ? 'var(--accent-color, #d4af37)' : 'var(--border-color, rgba(255,255,255,0.15))'}`,
+                    background: isSelected ? 'rgba(212, 175, 55, 0.12)' : 'rgba(255,255,255,0.03)',
+                    color: isSelected ? 'var(--accent-color, #d4af37)' : 'var(--text-primary, #e8e4dd)',
+                    cursor: savingHeader || (!isSelected && headerCatIds.length >= 3) ? 'not-allowed' : 'pointer',
+                    fontWeight: isSelected ? 600 : 400,
+                    fontSize: '0.88rem',
+                    opacity: !isSelected && headerCatIds.length >= 3 ? 0.5 : 1,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span style={{
+                    width: '18px', height: '18px', borderRadius: '4px',
+                    border: `2px solid ${isSelected ? 'var(--accent-color, #d4af37)' : 'var(--text-secondary, #888)'}`,
+                    background: isSelected ? 'var(--accent-color, #d4af37)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', flexShrink: 0,
+                  }}>
+                    {isSelected ? '✓' : ''}
+                  </span>
+                  {cat.name}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Container 1: Frontpage Categories (Slots 1 to 7) */}
       <div className="admin-card" style={{ marginBottom: '28px' }}>

@@ -2,18 +2,22 @@ import { Router } from 'express';
 import pool from '../config/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
+function upsertSetting(key, value) {
+  const [existing] = pool.execute('SELECT key FROM site_settings WHERE key = ?', [key]);
+  if (existing.length > 0) {
+    pool.execute('UPDATE site_settings SET value = ?, updated_at = datetime(\'now\') WHERE key = ?', [value, key]);
+  } else {
+    pool.execute('INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\'))', [key, value]);
+  }
+}
+
 const router = Router();
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://backend.affurnishings.co.nz';
-function resolveUrl(u) { if (!u || u.startsWith('http')) return u; return `${BACKEND_URL}${u}`; }
-
-// GET /api/deals - public endpoint
-router.get('/', async (req, res) => {
+router.get('/', (req, res) => {
   try {
-    const [rows] = await pool.execute("SELECT * FROM site_settings WHERE `key` = 'deals'");
+    const [rows] = pool.execute("SELECT value FROM site_settings WHERE key = 'deals'");
     if (rows.length > 0) {
-      const val = rows[0].value;
-      try { res.json(JSON.parse(val)); } catch { res.json({}); }
+      try { res.json(JSON.parse(rows[0].value)); } catch { res.json({}); }
     } else {
       res.json({});
     }
@@ -23,16 +27,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/deals - protected
-router.put('/', authenticateToken, async (req, res) => {
+router.put('/', authenticateToken, (req, res) => {
   try {
-    const [existing] = await pool.execute("SELECT id FROM site_settings WHERE `key` = 'deals'");
-    if (existing.length > 0) {
-      await pool.execute("UPDATE site_settings SET `value` = ? WHERE `key` = 'deals'", [JSON.stringify(req.body)]);
-    } else {
-      await pool.execute("INSERT INTO site_settings (`key`, `value`) VALUES (?, ?)", ['deals', JSON.stringify(req.body)]);
-    }
-    res.json({ message: 'Deals updated' });
+    const value = JSON.stringify(req.body);
+    upsertSetting('deals', value);
+    pool.flush();
+    res.json({ message: 'Deals updated successfully' });
   } catch (error) {
     console.error('Update deals error:', error.message);
     res.status(500).json({ message: 'Server error' });

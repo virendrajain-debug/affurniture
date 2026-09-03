@@ -1,12 +1,23 @@
+import { getAssetUrl } from '../config'
+
 function PromoPoster({ ad }) {
+  if (!ad) return null
+
+  const image = getAssetUrl(ad.image) || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85'
+  const badge = ad.badge || 'AF WEEKLY SPECIAL'
+  const title = ad.title || 'Bring comfort home.'
+  const subtitle = ad.subtitle || 'Explore our latest arrivals with flexible weekly payments.'
+  const buttonText = ad.button_text || 'View'
+  const buttonLink = ad.button_link || '#'
+
   return (
     <section className="promo-poster">
-      <img src={ad?.image || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1800&q=85'} alt={ad?.name || 'Modern furniture promotion'} />
+      <img src={image} alt={title} />
       <div>
-        <span>AF WEEKLY SPECIAL</span>
-        <h2>{ad?.name || 'Bring comfort home.'}</h2>
-        <p>{ad?.name ? 'Check out our latest deals and offers.' : 'Explore our latest arrivals with flexible weekly payments.'}</p>
-        <a className="primary" href={ad?.link || '#'} target="_blank" rel="noopener noreferrer">View</a>
+        <span>{badge}</span>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
+        <a className="primary" href={buttonLink}>{buttonText}</a>
       </div>
     </section>
   )

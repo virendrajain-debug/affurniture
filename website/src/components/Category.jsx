@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { getAssetUrl } from '../config'
 
 const defaultImages = {
   'Living Room': 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1800&q=85',
@@ -20,14 +21,14 @@ function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-function Category({ id, title, subtitle, image, link, reverse, apiCategory }) {
+function Category({ title, image, link, reverse }) {
   const slug = slugify(title)
   const categoryLink = link || `/category/${slug}`
-  const img = image || defaultImages[apiCategory || title] || defaultImages['Living Room']
-  const sub = subtitle || subtitles[apiCategory || title] || 'Quality furniture for your home'
+  const img = getAssetUrl(image) || defaultImages[title] || defaultImages['Living Room']
+  const sub = subtitles[title] || 'Quality furniture for your home'
 
   return (
-    <section className={`category ${reverse ? 'reverse' : ''}`} id={id || slug}>
+    <section className={`category ${reverse ? 'reverse' : ''}`} id={slug}>
       <div className="category-hero">
         <img src={img} alt={title} loading="lazy" />
         <div>

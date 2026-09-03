@@ -17,6 +17,7 @@
 // ============================================================
 
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { API_BASE, getAssetUrl } from '../config'
 import { getAuthToken } from '../utils/api'
 
@@ -177,12 +178,14 @@ function ProductList({ token }) {
 
   const [form, setForm] = useState(initialForm)
 
-  // Images State
-  const [existingImages, setExistingImages] = useState([])
-  const [newImageFiles, setNewImageFiles] = useState([])
+  // Images State - Thumbnail (1) + Extra Review Images (up to 5)
+  const [thumbnailImage, setThumbnailImage] = useState('')
+  const [newThumbnailFile, setNewThumbnailFile] = useState(null)
+  const [extraImages, setExtraImages] = useState([])
+  const [newExtraFiles, setNewExtraFiles] = useState([])
   const [directImageUrl, setDirectImageUrl] = useState('')
-  const [primaryImageIdx, setPrimaryImageIdx] = useState(0)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [dragTarget, setDragTarget] = useState('')
 
   // Color Palette State
   const [selectedColors, setSelectedColors] = useState([])
@@ -193,7 +196,6 @@ function ProductList({ token }) {
   const [selectedSizes, setSelectedSizes] = useState([])
   const [customSizeInput, setCustomSizeInput] = useState('')
 
-  const fileInputRef = useRef(null)
   const authToken = getAuthToken(token)
 
   const showToast = (msg, type = 'info') => {
@@ -231,15 +233,17 @@ function ProductList({ token }) {
   // Open Create Drawer
   const handleOpenCreate = () => {
     setForm(initialForm)
-    setExistingImages([])
-    setNewImageFiles([])
+    setThumbnailImage('')
+    setNewThumbnailFile(null)
+    setExtraImages([])
+    setNewExtraFiles([])
     setDirectImageUrl('')
-    setPrimaryImageIdx(0)
     setSelectedColors([])
     setSelectedSizes([])
     setActiveProductId(null)
     setIsCreating(true)
     setModalOpen(true)
+    document.body.style.overflow = 'hidden'
   }
 
   // Open Edit Drawer
@@ -274,16 +278,23 @@ function ProductList({ token }) {
       description: product.description || '',
     })
 
-    // Parse images
+    // Parse images into thumbnail + extras
     let imgs = []
     if (Array.isArray(product.images)) imgs = product.images
     else if (typeof product.images === 'string') {
       try { imgs = JSON.parse(product.images) } catch { imgs = [product.images] }
     }
-    setExistingImages(imgs.filter(Boolean))
-    setNewImageFiles([])
+    const validImgs = imgs.filter(Boolean)
+    if (validImgs.length > 0) {
+      setThumbnailImage(validImgs[0])
+      setExtraImages(validImgs.slice(1, 6))
+    } else {
+      setThumbnailImage('')
+      setExtraImages([])
+    }
+    setNewThumbnailFile(null)
+    setNewExtraFiles([])
     setDirectImageUrl('')
-    setPrimaryImageIdx(0)
 
     // Parse colors
     if (product.color) {
@@ -307,6 +318,7 @@ function ProductList({ token }) {
     }
 
     setModalOpen(true)
+    document.body.style.overflow = 'hidden'
   }
 
   // Auto-calculate weekly price
@@ -368,27 +380,60 @@ function ProductList({ token }) {
     const url = directImageUrl.trim()
     if (!url) return
     if (!url.startsWith('http')) return showToast('Please enter a valid image URL (e.g. https://...)', 'warning')
-    setExistingImages(prev => [...prev, url])
+    if (dragTarget === 'thumbnail') {
+      setThumbnailImage(url)
+    } else if (dragTarget === 'extra' && extraImages.length < 5) {
+      setExtraImages(prev => [...prev, url])
+    } else {
+      // Default: add to extras if under limit
+      if (extraImages.length < 5) {
+        setExtraImages(prev => [...prev, url])
+      } else {
+        return showToast('Maximum 5 extra review images allowed', 'warning')
+      }
+    }
     setDirectImageUrl('')
-    showToast('Image URL added to gallery', 'success')
+    showToast('Image URL added', 'success')
   }
 
   // File selection & drop
-  const handleFileSelect = (e) => {
+  const handleFileSelect = (e, target) => {
     const files = Array.from(e.target.files || [])
-    if (files.length > 0) {
-      setNewImageFiles(prev => [...prev, ...files])
-      showToast(`${files.length} image(s) queued for upload`, 'info')
+    if (files.length === 0) return
+
+    if (target === 'thumbnail') {
+      setNewThumbnailFile(files[0])
+      showToast('Thumbnail image queued for upload', 'info')
+    } else {
+      const remaining = 5 - extraImages.length - newExtraFiles.length
+      if (remaining <= 0) {
+        showToast('Maximum 5 extra review images allowed', 'warning')
+        return
+      }
+      const accepted = files.slice(0, remaining)
+      setNewExtraFiles(prev => [...prev, ...accepted])
+      showToast(`${accepted.length} extra image(s) queued for upload`, 'info')
     }
   }
 
-  const handleDrop = (e) => {
+  const handleDrop = (e, target) => {
     e.preventDefault()
     setIsDragOver(false)
     const files = Array.from(e.dataTransfer.files || [])
-    if (files.length > 0) {
-      setNewImageFiles(prev => [...prev, ...files])
-      showToast(`${files.length} image(s) queued for upload`, 'info')
+    if (files.length === 0) return
+
+    if (target === 'thumbnail') {
+      setNewThumbnailFile(files[0])
+      showToast('Thumbnail image queued for upload', 'info')
+    } else {
+      const remaining = 5 - extraImages.length - newExtraFiles.length
+      if (remaining <= 0) {
+        showToast('Maximum 5 extra review images allowed', 'warning')
+        return
+      }
+      const accepted = files.slice(0, remaining)
+      setNewExtraFiles(prev => [...prev, ...accepted])
+      showToast(`${accepted.length} extra image(s) queued for upload`, 'info')
     }
   }
 
@@ -430,16 +475,18 @@ function ProductList({ token }) {
       formData.append('color', colorString)
       formData.append('size', selectedSizes.join(', '))
 
-      // Reorder existing images if primary is changed
-      let orderedExisting = [...existingImages]
-      if (primaryImageIdx < existingImages.length) {
-        const [prim] = orderedExisting.splice(primaryImageIdx, 1)
-        orderedExisting.unshift(prim)
-      }
+      // Build ordered images array: thumbnail first, then extras
+      const orderedExisting = []
+      if (thumbnailImage) orderedExisting.push(thumbnailImage)
+      extraImages.forEach(img => orderedExisting.push(img))
       formData.append('existing_images', JSON.stringify(orderedExisting))
 
-      // Append new files
-      newImageFiles.forEach(file => {
+      // Append new thumbnail file
+      if (newThumbnailFile) {
+        formData.append('images', newThumbnailFile)
+      }
+      // Append new extra files
+      newExtraFiles.forEach(file => {
         formData.append('images', file)
       })
 
@@ -454,6 +501,7 @@ function ProductList({ token }) {
 
       if (res.ok) {
         showToast(isCreating ? 'Product created successfully' : 'Product updated successfully', 'success')
+        document.body.style.overflow = ''
         setModalOpen(false)
         fetchData()
       } else {
@@ -789,7 +837,7 @@ function ProductList({ token }) {
       )}
 
       {/* Add / Edit Product Drawer / Modal */}
-      {modalOpen && (
+      {modalOpen && createPortal((
         <div
           className="modal-overlay"
           style={{
@@ -800,10 +848,10 @@ function ProductList({ token }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 10000,
             padding: '20px',
           }}
-          onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false) }}
+          onClick={(e) => { if (e.target === e.currentTarget) { document.body.style.overflow = ''; setModalOpen(false) } }}
         >
           <div
             className="admin-card"
@@ -816,6 +864,7 @@ function ProductList({ token }) {
               display: 'flex',
               flexDirection: 'column',
               boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              margin: 'auto',
             }}
           >
             {/* Modal Header */}
@@ -843,7 +892,7 @@ function ProductList({ token }) {
               <button
                 type="button"
                 className="btn-icon"
-                onClick={() => setModalOpen(false)}
+                onClick={() => { document.body.style.overflow = ''; setModalOpen(false) }}
                 style={{ width: '32px', height: '32px', fontSize: '1.1rem' }}
               >
                 &times;
@@ -1026,50 +1075,83 @@ function ProductList({ token }) {
                 </div>
               </div>
 
-              {/* Section 3: Product Images Gallery */}
+              {/* Section 3: Product Images - Thumbnail + Extra Review Images */}
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '10px' }}>
-                  03. Product Images Gallery
+                  03. Product Images
                 </span>
-                <div style={{ background: 'var(--sidebar-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                  
-                  {/* Image Dropzone */}
+
+                {/* Thumbnail Section */}
+                <div style={{ background: 'var(--sidebar-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginBottom: '14px' }}>
+                  <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontWeight: 700 }}>
+                    Thumbnail Image (1 required)
+                  </label>
                   <div
-                    onDrop={handleDrop}
-                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+                    onDrop={(e) => handleDrop(e, 'thumbnail')}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); setDragTarget('thumbnail') }}
                     onDragLeave={() => setIsDragOver(false)}
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => { setDragTarget('thumbnail'); document.getElementById('thumb-file-input')?.click() }}
                     style={{
-                      border: `2px dashed ${isDragOver ? 'var(--accent-color, #d4af37)' : 'var(--border-color)'}`,
+                      border: `2px dashed ${isDragOver && dragTarget === 'thumbnail' ? 'var(--accent-color, #d4af37)' : 'var(--border-color)'}`,
                       borderRadius: '8px',
-                      padding: '22px',
+                      padding: '18px',
                       textAlign: 'center',
                       cursor: 'pointer',
-                      background: isDragOver ? 'rgba(212, 175, 55, 0.08)' : 'var(--header-bg)',
+                      background: isDragOver && dragTarget === 'thumbnail' ? 'rgba(212, 175, 55, 0.08)' : 'var(--header-bg)',
                       transition: 'all 0.2s ease',
-                      marginBottom: '14px',
+                      minHeight: '120px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 6px', display: 'block', color: 'var(--accent-color, #d4af37)' }}>
-                      <polyline points="16 16 12 12 8 16" />
-                      <line x1="12" y1="12" x2="12" y2="21" />
-                      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-                    </svg>
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600 }}>
-                      Drag and drop image files here, or click to browse
-                    </p>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                      PNG, JPG, WebP supported. First image is automatically set as Primary thumbnail.
-                    </span>
-                    <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={handleFileSelect} />
+                    {(thumbnailImage || newThumbnailFile) ? (
+                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                        <img
+                          src={newThumbnailFile ? URL.createObjectURL(newThumbnailFile) : getAssetUrl(thumbnailImage)}
+                          alt="Thumbnail"
+                          style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--accent-color, #d4af37)' }}
+                          onError={(e) => { e.target.src = 'https://placehold.co/120x120?text=Image' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setThumbnailImage(''); setNewThumbnailFile(null) }}
+                          style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1 }}
+                          title="Remove thumbnail"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 6px', display: 'block', color: 'var(--accent-color, #d4af37)' }}>
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                          Click or drag to upload thumbnail
+                        </p>
+                        <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
+                          PNG, JPG, WebP. This is the main product image.
+                        </span>
+                      </>
+                    )}
+                    <input id="thumb-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => handleFileSelect(e, 'thumbnail')} />
                   </div>
+                </div>
 
-                  {/* Add by Image URL */}
-                  <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                {/* Extra Review Images Section */}
+                <div style={{ background: 'var(--sidebar-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                  <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontWeight: 700 }}>
+                    Extra Review Images (up to 5)
+                  </label>
+
+                  {/* Add by URL */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Or paste direct image URL (https://...)"
+                      placeholder="Paste image URL (https://...)"
                       value={directImageUrl}
                       onChange={(e) => setDirectImageUrl(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddDirectImageUrl() } }}
@@ -1080,43 +1162,29 @@ function ProductList({ token }) {
                     </button>
                   </div>
 
-                  {/* Thumbnails Grid */}
-                  {(existingImages.length > 0 || newImageFiles.length > 0) && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))', gap: '10px' }}>
-                      {/* Existing Images */}
-                      {existingImages.map((imgUrl, idx) => (
+                  {/* Thumbnails Grid for extras */}
+                  {(extraImages.length > 0 || newExtraFiles.length > 0) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(105px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+                      {/* Existing Extra Images */}
+                      {extraImages.map((imgUrl, idx) => (
                         <div
-                          key={`exist-${idx}`}
+                          key={`extra-${idx}`}
                           style={{
                             position: 'relative',
                             height: '95px',
                             borderRadius: '8px',
                             overflow: 'hidden',
-                            border: `2px solid ${primaryImageIdx === idx ? 'var(--accent-color, #d4af37)' : 'var(--border-color)'}`,
+                            border: '2px solid var(--border-color)',
                             background: '#000',
                           }}
                         >
-                          <img src={getAssetUrl(imgUrl)} alt="Product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://placehold.co/100x95?text=Image' }} />
-                          <span
-                            onClick={() => setPrimaryImageIdx(idx)}
-                            style={{
-                              position: 'absolute',
-                              top: '4px',
-                              left: '4px',
-                              background: primaryImageIdx === idx ? 'var(--accent-color, #d4af37)' : 'rgba(0,0,0,0.65)',
-                              color: primaryImageIdx === idx ? '#000' : '#fff',
-                              fontSize: '0.65rem',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontWeight: 700,
-                            }}
-                          >
-                            {primaryImageIdx === idx ? 'Primary' : 'Set Primary'}
+                          <img src={getAssetUrl(imgUrl)} alt={`Extra ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.src = 'https://placehold.co/100x95?text=Image' }} />
+                          <span style={{ position: 'absolute', top: '4px', left: '4px', background: 'rgba(0,0,0,0.65)', color: '#fff', fontSize: '0.6rem', padding: '2px 5px', borderRadius: '4px', fontWeight: 600 }}>
+                            #{idx + 1}
                           </span>
                           <button
                             type="button"
-                            onClick={() => setExistingImages(prev => prev.filter((_, i) => i !== idx))}
+                            onClick={() => setExtraImages(prev => prev.filter((_, i) => i !== idx))}
                             style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239,68,68,0.85)', color: '#fff', border: 'none', borderRadius: '4px', width: '20px', height: '20px', cursor: 'pointer', fontSize: '0.8rem', lineHeight: 1 }}
                             title="Remove Image"
                           >
@@ -1125,10 +1193,10 @@ function ProductList({ token }) {
                         </div>
                       ))}
 
-                      {/* New Image Files */}
-                      {newImageFiles.map((file, idx) => (
+                      {/* New Extra Files */}
+                      {newExtraFiles.map((file, idx) => (
                         <div
-                          key={`new-${idx}`}
+                          key={`newextra-${idx}`}
                           style={{
                             position: 'relative',
                             height: '95px',
@@ -1139,12 +1207,12 @@ function ProductList({ token }) {
                           }}
                         >
                           <img src={URL.createObjectURL(file)} alt="New upload" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#10b981', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                          <span style={{ position: 'absolute', top: '4px', left: '4px', background: '#10b981', color: '#fff', fontSize: '0.6rem', padding: '2px 5px', borderRadius: '4px', fontWeight: 600 }}>
                             New
                           </span>
                           <button
                             type="button"
-                            onClick={() => setNewImageFiles(prev => prev.filter((_, i) => i !== idx))}
+                            onClick={() => setNewExtraFiles(prev => prev.filter((_, i) => i !== idx))}
                             style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(239,68,68,0.85)', color: '#fff', border: 'none', borderRadius: '4px', width: '20px', height: '20px', cursor: 'pointer', fontSize: '0.8rem', lineHeight: 1 }}
                             title="Remove File"
                           >
@@ -1153,6 +1221,43 @@ function ProductList({ token }) {
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {/* Dropzone for extras */}
+                  {(extraImages.length + newExtraFiles.length) < 5 && (
+                    <div
+                      onDrop={(e) => handleDrop(e, 'extra')}
+                      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); setDragTarget('extra') }}
+                      onDragLeave={() => setIsDragOver(false)}
+                      onClick={() => { setDragTarget('extra'); document.getElementById('extra-file-input')?.click() }}
+                      style={{
+                        border: `2px dashed ${isDragOver && dragTarget === 'extra' ? 'var(--accent-color, #d4af37)' : 'var(--border-color)'}`,
+                        borderRadius: '8px',
+                        padding: '14px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        background: isDragOver && dragTarget === 'extra' ? 'rgba(212, 175, 55, 0.08)' : 'var(--header-bg)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 4px', display: 'block', color: 'var(--accent-color, #d4af37)' }}>
+                        <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" />
+                        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                      </svg>
+                      <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                        Drag & drop or click to add more images
+                      </p>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
+                        {5 - extraImages.length - newExtraFiles.length} slot(s) remaining
+                      </span>
+                      <input id="extra-file-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => handleFileSelect(e, 'extra')} />
+                    </div>
+                  )}
+
+                  {(extraImages.length + newExtraFiles.length) >= 5 && (
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '8px' }}>
+                      Maximum 5 extra review images reached.
+                    </p>
                   )}
                 </div>
               </div>
@@ -1420,7 +1525,7 @@ function ProductList({ token }) {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => { document.body.style.overflow = ''; setModalOpen(false) }}
                   disabled={saving}
                   style={{ padding: '10px 20px' }}
                 >
@@ -1439,7 +1544,7 @@ function ProductList({ token }) {
             </form>
           </div>
         </div>
-      )}
+        ), document.body)}
     </div>
   )
 }
