@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import EnquiryModal from '../components/EnquiryModal'
@@ -111,8 +112,7 @@ function ProductDetail() {
   }, [slug])
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/settings`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/settings')
       .then(setSettings)
       .catch(() => {})
   }, [])

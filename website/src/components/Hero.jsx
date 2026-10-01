@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 
 const defaultSlides = [
   {
@@ -18,8 +19,7 @@ function Hero() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/homepage`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/homepage')
       .then(data => {
         if (data && Array.isArray(data.hero_slides) && data.hero_slides.length > 0) {
           const activeSlides = data.hero_slides.filter(s => s.active !== false)

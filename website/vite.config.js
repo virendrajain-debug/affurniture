@@ -8,9 +8,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules/react-dom')) return 'react-vendor'
-          if (id.includes('node_modules/react')) return 'react-vendor'
-          if (id.includes('node_modules/react-router')) return 'router'
+          if (!id.includes('node_modules')) return
+          const path = id.replace(/\\/g, '/')
+          // react-router must be matched before react (it contains 'react')
+          if (path.includes('node_modules/react-router')) return 'router'
+          if (
+            path.includes('node_modules/react-dom') ||
+            path.includes('node_modules/scheduler') ||
+            path.includes('node_modules/react/')
+          ) return 'react-vendor'
         }
       }
     }

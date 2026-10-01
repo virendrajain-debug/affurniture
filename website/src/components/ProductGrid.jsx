@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
 import { stripHtml } from '../utils'
@@ -8,6 +8,7 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
   const [loading, setLoading] = useState(true)
   const [currentSlide, setCurrentSlide] = useState(0)
   const sliderRef = useRef(null)
+  const scrollFrameRef = useRef(null)
   const [slidesPerView, setSlidesPerView] = useState(4)
 
   useEffect(() => {
@@ -22,25 +23,35 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
   }, [])
 
   useEffect(() => {
+    const controller = new AbortController()
     const fetchProducts = async () => {
       setLoading(true)
       try {
         const url = category
           ? `${API_BASE}/api/products?category=${encodeURIComponent(category)}&limit=8`
           : `${API_BASE}/api/products?limit=8`
-        const res = await fetch(url, { cache: 'no-store' })
+        const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
         const data = await res.json()
         const items = Array.isArray(data) ? data : (data.products || [])
         setProducts(items)
-      } catch {
+      } catch (err) {
+        if (err && err.name === 'AbortError') return
         setProducts([])
       }
       setLoading(false)
     }
     fetchProducts()
+    return () => controller.abort()
   }, [category])
 
-  const displayProducts = products
+  // Strip HTML once per products update instead of on every render/scroll frame.
+  const displayProducts = useMemo(() => products.map((p) => {
+    const desc = stripHtml(p.description)
+    return {
+      ...p,
+      shortDesc: desc ? desc.substring(0, 80) + (desc.length > 80 ? '...' : '') : '',
+    }
+  }), [products])
   const maxSlide = Math.max(0, displayProducts.length - slidesPerView)
 
   const nextSlide = () => {
@@ -62,12 +73,20 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
   }
 
   const handleScroll = () => {
-    if (!sliderRef.current) return
-    const track = sliderRef.current
-    const cardWidth = track.scrollWidth / displayProducts.length
-    const idx = Math.round(track.scrollLeft / cardWidth)
-    setCurrentSlide(Math.min(idx, maxSlide))
+    if (scrollFrameRef.current !== null) return
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null
+      if (!sliderRef.current || displayProducts.length === 0) return
+      const track = sliderRef.current
+      const cardWidth = track.scrollWidth / displayProducts.length
+      const idx = Math.min(Math.round(track.scrollLeft / cardWidth), maxSlide)
+      setCurrentSlide((prev) => (prev === idx ? prev : idx))
+    })
   }
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current)
+  }, [])
 
   const getWeeklyPrice = (price) => {
     if (!price) return null
@@ -111,8 +130,7 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
             const imgSrc = getImg(p)
             const weekly = getWeeklyPrice(p.selling_price || p.mrp)
             const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
-            const desc = stripHtml(p.description)
-            const shortDesc = desc ? desc.substring(0, 80) + (desc.length > 80 ? '...' : '') : ''
+            const shortDesc = p.shortDesc
             return (
               <article key={p.id} className="product-card">
                 <Link to={`/product/${p.slug || p.id}`} className="product-card-img">

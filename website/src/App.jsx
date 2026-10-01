@@ -1,6 +1,6 @@
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
-import { API_BASE, getAssetUrl } from './config'
+import { getJson } from './api'
 import Header from './components/Header'
 import Hero from './components/Hero'
 import Deals from './components/Deals'
@@ -40,8 +40,7 @@ function DynamicCategories() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/categories`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/categories')
       .then(data => {
         if (Array.isArray(data)) setCategories(data)
         setLoading(false)
@@ -79,8 +78,7 @@ function HomePage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/homepage`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/homepage')
       .then(data => {
         if (data && typeof data === 'object') {
           setPromoBanners({

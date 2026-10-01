@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,8 +12,7 @@ function StoreLocationPage() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/store-locations`, { cache: 'no-store' })
-        const data = await res.json()
+        const data = await getJson('/api/store-locations')
         if (Array.isArray(data) && data.length > 0) {
           setLocations(data)
           setSelected(data[0])

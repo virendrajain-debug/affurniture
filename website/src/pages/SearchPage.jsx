@@ -11,17 +11,22 @@ function SearchPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const controller = new AbortController()
     const fetchResults = async () => {
       if (!query.trim()) { setProducts([]); setLoading(false); return }
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/products?search=${encodeURIComponent(query)}`, { cache: 'no-store' })
+        const res = await fetch(`${API_BASE}/api/products?search=${encodeURIComponent(query)}`, { cache: 'no-store', signal: controller.signal })
         const data = await res.json()
-        setProducts(Array.isArray(data) ? data : [])
-      } catch { setProducts([]) }
+        setProducts(Array.isArray(data) ? data : (data.products || []))
+      } catch (err) {
+        if (err && err.name === 'AbortError') return
+        setProducts([])
+      }
       setLoading(false)
     }
     fetchResults()
+    return () => controller.abort()
   }, [query])
 
   const getImg = (p) => {

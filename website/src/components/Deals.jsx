@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../config'
+import { getJson } from '../api'
 
 const DEFAULT_CARDS = [
   { icon: 'delivery', title: 'NZ Wide Delivery', description: 'Fast and reliable delivery to your doorstep anywhere in New Zealand.' },
@@ -20,8 +20,7 @@ function Deals() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/deals`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/deals')
       .then(data => {
         if (data && data.cards && Array.isArray(data.cards) && data.cards.length > 0) {
           setCards(data.cards)

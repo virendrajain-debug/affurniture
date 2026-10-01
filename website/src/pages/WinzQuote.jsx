@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { API_BASE } from '../config'
 import Header from '../components/Header'
@@ -14,10 +14,16 @@ function WinzQuote() {
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const toastTimerRef = useRef(null)
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+  }, [])
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000)
   }
 
   const handleChange = (e) => {

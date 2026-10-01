@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -12,12 +13,10 @@ function OnSalePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, settingsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/products?on_sale=true`, { cache: 'no-store' }),
-          fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }),
+        const [productsData, settings] = await Promise.all([
+          fetch(`${API_BASE}/api/products?on_sale=true`, { cache: 'no-store' }).then(r => r.json()),
+          getJson('/api/settings').catch(() => ({})),
         ])
-        const productsData = await productsRes.json()
-        const settings = await settingsRes.json().catch(() => ({}))
         setProducts(Array.isArray(productsData) ? productsData : (productsData.products || []))
         setBanner(settings.on_sale_banner || '')
       } catch { setProducts([]) }

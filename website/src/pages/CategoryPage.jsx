@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { getJson } from '../api'
 import { stripHtml } from '../utils'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
@@ -35,8 +36,7 @@ function CategoryPage() {
   const PER_PAGE = 12
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/categories`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/categories')
       .then(data => {
         if (Array.isArray(data)) {
           const match = data.find(c => {
@@ -53,13 +53,14 @@ function CategoryPage() {
   }, [slug])
 
   useEffect(() => {
+    const controller = new AbortController()
     const fetchProducts = async () => {
       setLoading(true)
       try {
         let url = `${API_BASE}/api/products?category=${encodeURIComponent(apiCategory)}&page=${currentPage}&per_page=${PER_PAGE}`
         if (subId) url += `&subcategory_id=${subId}`
         else if (subSlug) url += `&subcategory=${subSlug}`
-        const res = await fetch(url, { cache: 'no-store' })
+        const res = await fetch(url, { cache: 'no-store', signal: controller.signal })
         const data = await res.json()
         if (data.products) {
           setProducts(data.products)
@@ -67,31 +68,55 @@ function CategoryPage() {
         } else {
           setProducts(Array.isArray(data) ? data : [])
         }
-      } catch { setProducts([]) }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return
+        setProducts([])
+      }
       setLoading(false)
     }
     fetchProducts()
-    fetch(`${API_BASE}/api/ad-campaigns/active?position=category_detail`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setAdCampaigns(data) })
-      .catch(() => {})
     window.scrollTo(0, 0)
+    return () => controller.abort()
   }, [apiCategory, subSlug, subId, currentPage])
 
-  let filtered = products
-  if (selectedColors.length > 0) {
-    filtered = filtered.filter(p => selectedColors.includes(p.color))
-  }
-  if (priceRange.min > 0 || priceRange.max < 9999) {
-    filtered = filtered.filter(p => {
-      const price = p.selling_price || p.mrp || 0
-      return price >= priceRange.min && price <= priceRange.max
-    })
-  }
+  // Ad campaigns are position-wide (not per category/page) - load once per mount.
+  useEffect(() => {
+    let cancelled = false
+    getJson('/api/ad-campaigns/active?position=category_detail')
+      .then(data => { if (!cancelled && Array.isArray(data)) setAdCampaigns(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
-  if (sortBy === 'price-low') filtered = [...filtered].sort((a, b) => (a.selling_price || a.mrp) - (b.selling_price || b.mrp))
-  else if (sortBy === 'price-high') filtered = [...filtered].sort((a, b) => (b.selling_price || b.mrp) - (a.selling_price || a.mrp))
-  else if (sortBy === 'name') filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name))
+  const filtered = useMemo(() => {
+    let list = products
+    if (selectedColors.length > 0) {
+      list = list.filter(p => selectedColors.includes(p.color))
+    }
+    if (priceRange.min > 0 || priceRange.max < 9999) {
+      list = list.filter(p => {
+        const price = p.selling_price || p.mrp || 0
+        return price >= priceRange.min && price <= priceRange.max
+      })
+    }
+
+    if (sortBy === 'price-low') list = [...list].sort((a, b) => (a.selling_price || a.mrp) - (b.selling_price || b.mrp))
+    else if (sortBy === 'price-high') list = [...list].sort((a, b) => (b.selling_price || b.mrp) - (a.selling_price || a.mrp))
+    else if (sortBy === 'name') list = [...list].sort((a, b) => a.name.localeCompare(b.name))
+
+    return list
+  }, [products, selectedColors, priceRange, sortBy])
+
+  // Strip HTML once per products/filter change instead of on every keystroke.
+  const visibleProducts = useMemo(() => filtered.map((p) => {
+    const desc = stripHtml(p.description)
+    return {
+      ...p,
+      shortDesc: desc
+        ? (desc.length > 80 ? desc.substring(0, 80) + '...' : desc)
+        : `Comfortable ${p.category_name || 'furniture'} piece.`,
+    }
+  }), [filtered])
 
   const getImg = (p) => {
     if (p.images && p.images.length > 0 && !String(p.images[0]).startsWith('[')) return getAssetUrl(p.images[0])
@@ -150,9 +175,11 @@ function CategoryPage() {
     setSearchParams(params)
   }
 
-  const subcategories = apiSubcategories.length > 0
-    ? [{ name: `All ${displayTitle}`, id: null, slug: '' }, ...apiSubcategories.map(s => ({ name: s.name, id: s.id, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))]
-    : []
+  const subcategories = useMemo(() => (
+    apiSubcategories.length > 0
+      ? [{ name: `All ${displayTitle}`, id: null, slug: '' }, ...apiSubcategories.map(s => ({ name: s.name, id: s.id, slug: s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') }))]
+      : []
+  ), [apiSubcategories, displayTitle])
 
   return (
     <>
@@ -292,21 +319,18 @@ function CategoryPage() {
               ) : (
                 <>
                   <div className="catalog-grid">
-                    {filtered.map(p => {
+                    {visibleProducts.map(p => {
                       const imgSrc = getImg(p)
                       const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
                       const price = p.selling_price || p.mrp
-                      const desc = stripHtml(p.description)
-                      const shortDesc = desc ? (desc.length > 80 ? desc.substring(0, 80) + '...' : desc) : `Comfortable ${p.category_name || 'furniture'} piece.`
+                      const shortDesc = p.shortDesc
                       return (
                         <article key={p.id} className="catalog-card">
                           <Link to={`/product/${p.slug || p.id}`} className="catalog-card-image">
                             <img src={imgSrc} alt={p.name} loading="lazy" />
-                            <div className="catalog-card-banner">
-                              <span>{p.name}</span>
-                            </div>
                           </Link>
                           <div className="catalog-card-body">
+                            <Link to={`/product/${p.slug || p.id}`} className="catalog-card-title">{p.name}</Link>
                             <p className="catalog-card-desc">{shortDesc}</p>
                             <div className="catalog-card-pricing">
                               {hasDiscount ? (

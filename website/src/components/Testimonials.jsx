@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 
 function Testimonials() {
   const [testimonials, setTestimonials] = useState([])
@@ -7,8 +8,7 @@ function Testimonials() {
   const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/testimonials`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/testimonials')
       .then(data => {
         if (Array.isArray(data) && data.length > 0) setTestimonials(data)
         setLoading(false)

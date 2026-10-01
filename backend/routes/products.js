@@ -162,6 +162,7 @@ router.get('/', async (req, res) => {
       let countQuery = `SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE 1=1`;
       const countParams = [];
       if (category) { countQuery += ' AND c.name = ?'; countParams.push(category); }
+      if (subcategory_id) { countQuery += ' AND p.subcategory_id = ?'; countParams.push(subcategory_id); }
       if (subcategory) {
         const subKeywords = { 'sofas': ['sofa','sofas','lounge'], 'armchairs': ['armchair','armchairs','chair'], 'coffee-tables': ['coffee table','coffee tables'], 'bed-frames': ['bed frame','bed frames','bed'], 'mattresses': ['mattress','mattresses'], 'bedroom-sets': ['bedroom set','bedroom sets','bedroom suite'], 'dining-suites': ['dining suite','dining suites','dining set'], 'dining-tables': ['dining table','dining tables'], 'dining-chairs': ['dining chair','dining chairs'], 'console-tables': ['console table','console tables'], 'bar-stools': ['bar stool','bar stools','stool'] };
         const keywords = subKeywords[subcategory] || [subcategory.replace(/-/g, ' ')];

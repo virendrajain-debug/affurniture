@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 
 const DEFAULT_STORES = [
   {
@@ -25,8 +26,7 @@ function Stores() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/store-locations`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/store-locations')
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setStores(data.map(s => ({

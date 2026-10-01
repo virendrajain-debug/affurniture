@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { useState, useEffect, useMemo } from 'react'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,9 +12,9 @@ function AboutPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API_BASE}/api/about`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
-      fetch(`${API_BASE}/api/about-sections`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
+      getJson('/api/about').catch(() => null),
+      getJson('/api/settings').catch(() => ({})),
+      getJson('/api/about-sections').catch(() => []),
     ]).then(([aboutData, settingsData, sectionsData]) => {
       if (aboutData) setAbout(aboutData)
       if (settingsData) setBanners(settingsData)
@@ -30,19 +31,21 @@ function AboutPage() {
   const heroTitle = about?.company_name || 'About AF Furnishings'
   const heroSubtitle = about?.tagline || 'Quality furniture for every New Zealand home'
 
-  const valueCards = [
-    sections.value_1?.title ? { title: sections.value_1.title, desc: sections.value_1.description, img: sections.value_1.image } : null,
-    sections.value_2?.title ? { title: sections.value_2.title, desc: sections.value_2.description, img: sections.value_2.image } : null,
-    sections.value_3?.title ? { title: sections.value_3.title, desc: sections.value_3.description, img: sections.value_3.image } : null,
-  ].filter(Boolean)
+  const displayCards = useMemo(() => {
+    const valueCards = [
+      sections.value_1?.title ? { title: sections.value_1.title, desc: sections.value_1.description, img: sections.value_1.image } : null,
+      sections.value_2?.title ? { title: sections.value_2.title, desc: sections.value_2.description, img: sections.value_2.image } : null,
+      sections.value_3?.title ? { title: sections.value_3.title, desc: sections.value_3.description, img: sections.value_3.image } : null,
+    ].filter(Boolean)
 
-  const defaultCards = [
-    { title: 'Quality First', desc: 'Every piece of furniture is crafted from premium materials, built to last for years of daily use.', img: '' },
-    { title: 'Comfort Always', desc: 'We test every sofa, chair and bed to ensure it meets our comfort standards before it reaches you.', img: '' },
-    { title: 'For Every Home', desc: 'With flexible weekly payments, we make quality furniture accessible to every New Zealand family.', img: '' },
-  ]
+    const defaultCards = [
+      { title: 'Quality First', desc: 'Every piece of furniture is crafted from premium materials, built to last for years of daily use.', img: '' },
+      { title: 'Comfort Always', desc: 'We test every sofa, chair and bed to ensure it meets our comfort standards before it reaches you.', img: '' },
+      { title: 'For Every Home', desc: 'With flexible weekly payments, we make quality furniture accessible to every New Zealand family.', img: '' },
+    ]
 
-  const displayCards = valueCards.length > 0 ? valueCards : defaultCards
+    return valueCards.length > 0 ? valueCards : defaultCards
+  }, [sections])
 
   return (
     <>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { getJson } from '../api'
 
 const slugify = (str) => str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -23,6 +24,7 @@ function Header() {
   const headerRef = useRef(null)
   const searchRef = useRef(null)
   const searchTimerRef = useRef(null)
+  const searchControllerRef = useRef(null)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -49,9 +51,9 @@ function Header() {
   useEffect(() => {
     const loadAll = () => {
       Promise.all([
-        fetch(`${API_BASE}/api/categories`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/social`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
+        getJson('/api/categories').catch(() => []),
+        getJson('/api/settings').catch(() => ({})),
+        getJson('/api/social').catch(() => []),
       ]).then(([cats, settingsData, socials]) => {
         if (Array.isArray(cats)) {
           const all = cats.map((cat) => {
@@ -102,10 +104,13 @@ function Header() {
 
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    if (searchControllerRef.current) searchControllerRef.current.abort()
     if (searchQuery.trim().length >= 1) {
       setSearchLoading(true)
       searchTimerRef.current = setTimeout(() => {
-        fetch(`${API_BASE}/api/products?search=${encodeURIComponent(searchQuery.trim())}&limit=6`, { cache: 'no-store' })
+        const controller = new AbortController()
+        searchControllerRef.current = controller
+        fetch(`${API_BASE}/api/products?search=${encodeURIComponent(searchQuery.trim())}&limit=6`, { cache: 'no-store', signal: controller.signal })
           .then(r => r.json())
           .then(data => {
             const products = data.products || (Array.isArray(data) ? data : [])
@@ -113,20 +118,28 @@ function Header() {
             setShowSuggestions(true)
             setSearchLoading(false)
           })
-          .catch(() => { setSearchSuggestions([]); setSearchLoading(false) })
+          .catch((err) => {
+            if (err && err.name === 'AbortError') return
+            setSearchSuggestions([])
+            setSearchLoading(false)
+          })
       }, 300)
     } else {
       setSearchSuggestions([])
       setShowSuggestions(false)
+      setSearchLoading(false)
     }
-    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      if (searchControllerRef.current) searchControllerRef.current.abort()
+    }
   }, [searchQuery])
 
   const isHome = location.pathname === '/'
 
   const topCategories = headerCatIds.length > 0
     ? headerCatIds.map(id => allCategories.find(c => c.id === id)).filter(Boolean)
-    : allCategories.slice(0, 3)
+    : allCategories
 
   const handleNavClick = (href) => {
     setMenuOpen(false)
@@ -172,8 +185,7 @@ function Header() {
         </Link>
 
         <nav className="desktop-nav">
-          <Link to="/" onClick={() => { setHoveredMenu(null) }}>Home</Link>
-          {topCategories.map((cat) => (
+          {allCategories.map((cat) => (
             <div
               key={cat.label}
               className="nav-dropdown"
@@ -194,24 +206,6 @@ function Header() {
               )}
             </div>
           ))}
-          <div
-            className="nav-dropdown"
-            onMouseEnter={() => setHoveredMenu('all-categories')}
-            onMouseLeave={() => setHoveredMenu(null)}
-          >
-            <span className="nav-dropdown-trigger">
-              All Categories <span className="dropdown-arrow">&#9662;</span>
-            </span>
-            {hoveredMenu === 'all-categories' && (
-              <div className="dropdown-menu">
-                {allCategories.map((cat) => (
-                  <a key={cat.label} href={cat.href} onClick={(e) => { e.preventDefault(); handleNavClick(cat.href) }}>
-                    {cat.label}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
           <Link to="/winz">WinZ</Link>
           <a className="sale-link" href="/on-sale" onClick={(e) => { e.preventDefault(); handleNavClick('/on-sale') }}>On Sale!</a>
         </nav>
@@ -223,10 +217,17 @@ function Header() {
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </button>
+            <div className="header-social-icons">
+              {socialLinks.filter(link => ['instagram', 'facebook'].includes((link.platform || '').toLowerCase())).map(link => (
+                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="header-social-icon" title={link.platform}>
+                  {getSocialIcon(link.platform)}
+                </a>
+              ))}
+            </div>
             <Link to="/apply-for-finance" className="btn-finance">Apply for Finance</Link>
           </div>
           <div className="header-tools-bottom">
-            <div className="header-search-wrapper" ref={searchRef}>
+          <div className="header-search-wrapper" ref={searchRef}>
               <form className="header-search-bar-desktop" onSubmit={handleSearch}>
                 <input type="search" placeholder="Search Here..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => { if (searchQuery.trim().length >= 1 && searchSuggestions.length > 0) setShowSuggestions(true) }} />
                 <button type="submit">
@@ -267,13 +268,6 @@ function Header() {
                   </Link>
                 </div>
               )}
-            </div>
-            <div className="header-social-icons">
-              {socialLinks.filter(link => ['instagram', 'facebook'].includes((link.platform || '').toLowerCase())).map(link => (
-                <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="header-social-icon" title={link.platform}>
-                  {getSocialIcon(link.platform)}
-                </a>
-              ))}
             </div>
           </div>
         </div>
@@ -324,8 +318,7 @@ function Header() {
         <div className="mobile-nav-overlay">
           <div className="mobile-nav-panel" style={{ top: panelTop + 'px', maxHeight: `calc(100vh - ${panelTop}px)` }}>
             <Link className="mobile-nav-finance" to="/apply-for-finance" onClick={() => setMenuOpen(false)}>APPLY FOR FINANCE</Link>
-            <a className="mobile-nav-item" href="/" onClick={(e) => { e.preventDefault(); handleNavClick('/') }}>HOME</a>
-            {topCategories.map((cat) => (
+            {allCategories.map((cat) => (
               <div key={cat.label} className="mobile-nav-item-group">
                 <div className="mobile-nav-item" onClick={() => setExpandedCat(expandedCat === cat.label ? null : cat.label)}>
                   <span>{cat.label.toUpperCase()}</span>
@@ -342,21 +335,6 @@ function Header() {
                 )}
               </div>
             ))}
-            <div className="mobile-nav-item-group">
-              <div className="mobile-nav-item" onClick={() => setExpandedCat(expandedCat === 'all-categories' ? null : 'all-categories')}>
-                <span>ALL CATEGORIES</span>
-                <span className={`mobile-nav-arrow ${expandedCat === 'all-categories' ? 'open' : ''}`}>&#9662;</span>
-              </div>
-              {expandedCat === 'all-categories' && (
-                <div className="mobile-nav-sub">
-                  {allCategories.map((cat) => (
-                    <a key={cat.label} href={cat.href} onClick={(e) => { e.preventDefault(); handleNavClick(cat.href) }}>
-                      {cat.label}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
             <a className="mobile-nav-item" href="/winz" onClick={(e) => { e.preventDefault(); handleNavClick('/winz') }}>WINZ</a>
             <a className="mobile-nav-sale" href="/on-sale" onClick={(e) => { e.preventDefault(); handleNavClick('/on-sale') }}>ON SALE!</a>
           </div>

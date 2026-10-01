@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
 import { stripHtml } from '../utils'
@@ -10,19 +10,28 @@ function WinzPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const controller = new AbortController()
     const fetchProducts = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/winz-products?active_only=true`, { cache: 'no-store' })
+        const res = await fetch(`${API_BASE}/api/winz-products?active_only=true`, { cache: 'no-store', signal: controller.signal })
         const data = await res.json()
         if (Array.isArray(data)) setProducts(data)
-      } catch {
+      } catch (err) {
+        if (err && err.name === 'AbortError') return
         setProducts([])
       }
       setLoading(false)
     }
     fetchProducts()
+    return () => controller.abort()
   }, [])
+
+  // Strip HTML once per products update instead of twice per card per render.
+  const displayProducts = useMemo(() => products.map((p) => ({
+    ...p,
+    descriptionText: stripHtml(p.description),
+  })), [products])
 
   const getImg = (p) => {
     if (p.image) return getAssetUrl(p.image)
@@ -53,7 +62,7 @@ function WinzPage() {
             </div>
           ) : (
             <div className="winz-grid">
-              {products.map(p => (
+              {displayProducts.map(p => (
                 <article key={p.id} className="winz-product-card">
                   <div className="winz-product-img">
                     <img src={getImg(p)} alt={p.name} loading="lazy" />
@@ -62,7 +71,7 @@ function WinzPage() {
                     </div>
                   </div>
                   <div className="winz-product-info">
-                    {stripHtml(p.description) && <p>{stripHtml(p.description)}</p>}
+                    {p.descriptionText && <p>{p.descriptionText}</p>}
                     <Link
                       to={`/winz-quote?product=${encodeURIComponent(p.name)}`}
                       className="winz-quote-btn"

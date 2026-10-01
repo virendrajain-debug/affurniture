@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { API_BASE, getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,7 +12,7 @@ function ReturnsPage() {
   useEffect(() => {
     Promise.all([
       fetch(`${API_BASE}/api/page-content/returns`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+      getJson('/api/settings').catch(() => ({})),
     ]).then(([returnsData, settingsData]) => {
       if (returnsData) setData(returnsData)
       if (settingsData) setBanners(settingsData)

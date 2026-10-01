@@ -11,16 +11,22 @@ function DynamicPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
-    fetch(`${API_BASE}/api/page-content/${slug}`, { cache: 'no-store' })
+    fetch(`${API_BASE}/api/page-content/${slug}`, { cache: 'no-store', signal: controller.signal })
       .then(r => {
         if (!r.ok) throw new Error('Page not found')
         return r.json()
       })
       .then(data => { setPage(data); setLoading(false) })
-      .catch(err => { setError(err.message); setLoading(false) })
+      .catch(err => {
+        if (err && err.name === 'AbortError') return
+        setError(err.message)
+        setLoading(false)
+      })
     window.scrollTo(0, 0)
+    return () => controller.abort()
   }, [slug])
 
   return (

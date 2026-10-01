@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { API_BASE, getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,7 +12,7 @@ function TermsPage() {
   useEffect(() => {
     Promise.all([
       fetch(`${API_BASE}/api/page-content/terms`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+      getJson('/api/settings').catch(() => ({})),
     ]).then(([termsData, settingsData]) => {
       if (termsData) setTerms(termsData)
       if (settingsData) setBanners(settingsData)

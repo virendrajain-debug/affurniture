@@ -7,8 +7,9 @@
 // FIELDS: Name, Email, Phone, Message
 // ============================================================
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../config'
+import { getJson } from '../api'
 
 function ContactSection() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' })
@@ -17,16 +18,22 @@ function ContactSection() {
   const [storeLocations, setStoreLocations] = useState([])
   const [socialLinks, setSocialLinks] = useState([])
   const [settings, setSettings] = useState({})
+  const toastTimerRef = useRef(null)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/store-locations`, { cache: 'no-store' }).then(r => r.json()).then(d => { if (Array.isArray(d)) setStoreLocations(d) }).catch(() => {})
-    fetch(`${API_BASE}/api/social`, { cache: 'no-store' }).then(r => r.json()).then(d => { if (Array.isArray(d)) setSocialLinks(d) }).catch(() => {})
-    fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).then(d => { if (d) setSettings(d) }).catch(() => {})
+    getJson('/api/store-locations').then(d => { if (Array.isArray(d)) setStoreLocations(d) }).catch(() => {})
+    getJson('/api/social').then(d => { if (Array.isArray(d)) setSocialLinks(d) }).catch(() => {})
+    getJson('/api/settings').then(d => { if (d) setSettings(d) }).catch(() => {})
+  }, [])
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
   }, [])
 
   const showToast = (msg, type) => {
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000)
   }
 
   const handleChange = (e) => {

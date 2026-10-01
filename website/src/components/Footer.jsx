@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 
 function SocialIcon({ platform }) {
   const key = (platform || '').toLowerCase().trim()
@@ -19,10 +20,10 @@ function Footer() {
   useEffect(() => {
     const loadAll = () => {
       Promise.all([
-        fetch(`${API_BASE}/api/categories`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/api/social`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
-        fetch(`${API_BASE}/api/about`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+        getJson('/api/categories').catch(() => []),
+        getJson('/api/settings').catch(() => ({})),
+        getJson('/api/social').catch(() => []),
+        getJson('/api/about').catch(() => ({})),
       ]).then(([cats, settings, socials, aboutData]) => {
         if (Array.isArray(cats)) setCategories(cats)
         if (settings) {

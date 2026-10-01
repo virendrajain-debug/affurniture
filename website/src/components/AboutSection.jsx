@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 
 function AboutSection() {
   const [about, setAbout] = useState(null)
@@ -8,8 +9,8 @@ function AboutSection() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API_BASE}/api/about`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-      fetch(`${API_BASE}/api/about-sections`, { cache: 'no-store' }).then(r => r.json()).catch(() => []),
+      getJson('/api/about').catch(() => null),
+      getJson('/api/about-sections').catch(() => []),
     ]).then(([aboutData, sectionsData]) => {
       if (aboutData) setAbout(aboutData)
       if (Array.isArray(sectionsData)) {

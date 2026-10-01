@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { API_BASE, getAssetUrl } from '../config'
+import { getAssetUrl } from '../config'
+import { getJson } from '../api'
 import Header from '../components/Header'
 import ContactSection from '../components/ContactSection'
 import Footer from '../components/Footer'
@@ -9,8 +10,7 @@ function ContactPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/settings`, { cache: 'no-store' })
-      .then(r => r.json())
+    getJson('/api/settings')
       .then(data => {
         setBanners(data)
         setLoading(false)
