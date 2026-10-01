@@ -3,7 +3,7 @@ import { API_BASE, getAssetUrl } from '../config'
 
 const defaultSlides = [
   {
-    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85',
+    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80',
     alt: 'Modern green sofa in a living room',
     tagline: 'AF FURNISHINGS',
     title: 'Comfort made for everyday living.',
@@ -56,6 +56,8 @@ function Hero() {
           src={slide.image}
           alt={slide.alt}
           className={`hero-slide ${i === current ? 'active' : ''}`}
+          loading={i === 0 ? 'eager' : 'lazy'}
+          decoding="async"
         />
       ))}
       <div className="hero-shade"></div>

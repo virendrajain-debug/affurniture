@@ -51,6 +51,7 @@ function RichTextEditor({ value, onChange, placeholder = 'Enter formatted text c
 
 const FIXED_PAGES = [
   { slug: 'about', title: 'About Us' },
+  { slug: 'on-sale', title: 'On Sale' },
   { slug: 'terms', title: 'Terms & Conditions' },
   { slug: 'privacy-policy', title: 'Privacy Policy' },
   { slug: 'delivery-info', title: 'Delivery Information' },
@@ -60,6 +61,7 @@ const FIXED_PAGES = [
 
 const BANNER_KEY_MAP = {
   about: 'about_banner',
+  'on-sale': 'on_sale_banner',
   terms: 'terms_banner',
   'privacy-policy': 'privacy_banner',
   'delivery-info': 'delivery_info_banner',
@@ -67,7 +69,7 @@ const BANNER_KEY_MAP = {
   contact: 'contact_banner',
 }
 
-const STANDARD_SLUGS = ['terms', 'privacy-policy', 'delivery-info', 'returns']
+const STANDARD_SLUGS = ['on-sale', 'terms', 'privacy-policy', 'delivery-info', 'returns']
 
 const SECTION_TYPES = ['primary_section', 'value_1', 'value_2', 'value_3', 'features', 'conclusion']
 
@@ -188,6 +190,9 @@ function BannerUpload({ value, onChange, authToken, fallback }) {
           {uploading ? 'Uploading...' : 'Upload Image'}
         </button>
       </div>
+      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)', marginTop: '6px', display: 'block' }}>
+        Recommended resolution: 1920 x 520 pixels
+      </span>
       {displayValue && (
         <div style={{ marginTop: '10px', position: 'relative' }}>
           <img src={getAssetUrl(displayValue)} alt="Preview" style={{ width: '100%', maxHeight: '180px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border-color, #e5e1d8)' }}
@@ -298,10 +303,22 @@ function PageEditor({ token }) {
         })
       } else if (STANDARD_SLUGS.includes(slug)) {
         const bannerKey = BANNER_KEY_MAP[slug]
-        const [pageRes, settingsRes] = await Promise.all([
+        let [pageRes, settingsRes] = await Promise.all([
           fetch(`${API_BASE}/api/page-content/${slug}`, { headers: authHeaders() }),
           fetch(`${API_BASE}/api/settings`, { headers: authHeaders() }),
         ])
+
+        // Auto-create the page if it doesn't exist yet
+        if (pageRes.status === 404) {
+          const titles = { 'on-sale': 'On Sale', 'terms': 'Terms & Conditions', 'privacy-policy': 'Privacy Policy', 'delivery-info': 'Delivery Information', 'returns': 'Returns & Refund Policy' }
+          await fetch(`${API_BASE}/api/page-content`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ slug, title: titles[slug] || slug, content: { content: '' }, page_type: 'standard', banner_image: '', meta_description: '', sort_order: 0, active: true }),
+          })
+          pageRes = await fetch(`${API_BASE}/api/page-content/${slug}`, { headers: authHeaders() })
+        }
+
         const page = pageRes.ok ? await pageRes.json() : null
         const settings = settingsRes.ok ? await settingsRes.json() : {}
         const content = page ? (() => {
@@ -537,6 +554,7 @@ function PageEditor({ token }) {
 
   const FB = {
     about_banner: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85',
+    on_sale_banner: 'https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=2000&q=85',
     story_image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=900&q=85',
     val_1_image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80',
     val_2_image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80',

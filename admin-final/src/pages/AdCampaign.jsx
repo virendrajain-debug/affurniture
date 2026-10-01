@@ -293,6 +293,7 @@ function AdCampaign({ token }) {
               >
                 {uploading ? 'Uploading...' : '📁 Upload Image'}
               </button>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)' }}>Recommended: 1440 x 400 pixels</span>
 
               <input
                 type="text"

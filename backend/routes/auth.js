@@ -225,14 +225,19 @@ router.post('/reset-password', async (req, res) => {
 // -----------------------------------------------------------
 router.get('/profile', authenticateToken, async (req, res) => {
   try {
+    console.log('Profile request from user:', req.user);
     const [users] = await pool.execute('SELECT id, name, email, profile_image, role FROM users WHERE id = ?', [req.user.id]);
-    if (users.length === 0) return res.status(404).json({ message: 'User not found' });
+    if (users.length === 0) {
+      console.log('Profile: user not found for id:', req.user.id);
+      return res.status(404).json({ message: 'User not found' });
+    }
     const [socials] = await pool.execute('SELECT platform, url FROM social_links WHERE enabled = 1');
     const user = users[0];
     user.profile_image = resolveUrl(user.profile_image);
     socials.forEach(s => { user[s.platform.toLowerCase()] = s.url; });
     res.json(user);
   } catch (error) {
+    console.error('Profile error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 });

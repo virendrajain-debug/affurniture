@@ -298,6 +298,7 @@ function Profile({ profileImage, onProfileImageChange, token }) {
                 <input type="file" accept="image/*" onChange={handleAvatarUpload} disabled={uploadingAvatar} hidden />
                 {uploadingAvatar ? 'Uploading...' : 'Change Photo'}
               </label>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)' }}>Recommended: 400 x 400 pixels</span>
               {profileImage && (
                 <button type="button" className="btn-action btn-delete" onClick={handleRemovePhoto}>
                   Remove

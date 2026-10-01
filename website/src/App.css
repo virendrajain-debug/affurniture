@@ -1,6 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
-
-:root{--ink:#28241f;--beige:#f5eddf;--paper:#fffdf9;--gold:#aa7a3e;--line:#e2d7c5}
+﻿:root{--ink:#28241f;--beige:#f5eddf;--paper:#fffdf9;--gold:#aa7a3e;--line:#e2d7c5}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;overflow-x:hidden}
 body{color:var(--ink);font:15px "DM Sans",sans-serif;background:var(--paper);overflow-x:hidden}
@@ -79,7 +77,7 @@ nav a:hover,.desktop-nav a:hover{color:var(--gold);transform:translateY(-2px)}
 .aff-bottom{display:none;width:100%;text-align:center;background:#2c3e6b;color:white;padding:10px;font:600 12px "DM Sans";text-decoration:none;text-transform:uppercase;letter-spacing:.5px}
 .aff-bottom:hover{background:#1e2d4d}
 
-.fade-in{opacity:0;transform:translateY(40px);transition:opacity 0.8s ease,transform 0.8s ease}
+.js-loaded .fade-in{opacity:0;transform:translateY(40px);transition:opacity 0.8s ease,transform 0.8s ease}
 .fade-in.visible{opacity:1;transform:translateY(0)}
 .stagger-1{transition-delay:0.1s}
 .stagger-2{transition-delay:0.2s}
@@ -128,7 +126,7 @@ nav a:hover,.desktop-nav a:hover{color:var(--gold);transform:translateY(-2px)}
 .products{padding:90px 7vw;background:var(--paper)}
 .products.compact{padding-top:65px}
 .section-title{text-align:center;margin-bottom:42px}
-.section-title h2{font:600 clamp(52px,7vw,90px) "Cormorant Garamond",serif;margin:10px 0}
+.section-title h2{font:600 clamp(28px,3.5vw,42px) "Cormorant Garamond",serif;margin:10px 0}
 .product-slider-wrapper{position:relative;max-width:1400px;margin:0 auto;padding:0 30px}
 .product-slider{overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;display:flex;gap:18px;scrollbar-width:none;-ms-overflow-style:none}
 .product-slider::-webkit-scrollbar{display:none}
@@ -315,6 +313,8 @@ footer a:hover{color:#e2b76f}
 .modal-content h2{margin:0;font:600 14px "DM Sans";color:#999;text-transform:uppercase;letter-spacing:1px}
 .modal-content h3{margin:4px 0 6px;font:600 24px "Cormorant Garamond",serif;color:var(--ink)}
 .modal-price{color:var(--gold);font-weight:700;font-size:22px;margin:0 0 20px}
+.modal-price-size{font-size:14px;font-weight:500;color:#72695d}
+.modal-price-mrp{font-size:15px;font-weight:500;color:#999;text-decoration:line-through;margin-left:8px}
 .modal-content .input-group{margin-bottom:14px}
 .modal-content .primary{width:100%;margin-top:6px;border:0;cursor:pointer}
 .modal-content .toast{margin-bottom:14px}
@@ -332,22 +332,24 @@ footer a:hover{color:#e2b76f}
 .enquiry-swatch.active{border-color:var(--gold);background:rgba(170,122,62,0.08)}
 .enquiry-swatch-dot{width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(0,0,0,0.12);flex-shrink:0}
 .enquiry-swatch-name{white-space:nowrap}
+.enquiry-swatch-price{margin-left:auto;font-size:12px;font-weight:700;color:var(--gold);white-space:nowrap}
 
 .product-detail-page{padding-top:146px;padding-bottom:0}
 .pd-breadcrumb{padding:20px 7vw;font-size:13px;color:#999}
 .pd-breadcrumb a{color:var(--gold);text-decoration:none}
 .pd-breadcrumb a:hover{text-decoration:underline}
 .pd-section-label{display:block;color:var(--gold);font:700 11px "DM Sans";text-transform:uppercase;letter-spacing:2px;margin-bottom:12px}
-.pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;max-width:1200px;margin:0 auto;padding:0 7vw 60px;align-items:start}
-.pd-gallery{position:relative}
+.pd-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:50px;max-width:1200px;margin:0 auto;padding:0 7vw 60px;align-items:start}
+.pd-gallery{position:relative;min-width:0}
+.pd-info{min-width:0}
 .pd-main-image{position:relative;border-radius:20px;overflow:hidden}
-.pd-main-image img{width:100%;height:auto;display:block;aspect-ratio:4/3;object-fit:cover}
+.pd-main-image img{width:100%;height:auto;display:block;aspect-ratio:4/3;object-fit:contain;background:#fff}
 .pd-zoom-btn{position:absolute;bottom:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(0,0,0,0.6);color:white;cursor:pointer;display:grid;place-items:center;transition:background 0.3s ease,transform 0.2s ease;z-index:2}
 .pd-zoom-btn:hover{background:var(--gold);transform:scale(1.1)}
-.pd-thumbnails{display:flex;gap:10px;margin-top:12px}
+.pd-thumbnails{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .pd-thumb{width:80px;height:80px;border-radius:10px;overflow:hidden;border:2px solid transparent;cursor:pointer;transition:border-color 0.2s;padding:0;background:none}
 .pd-thumb.active{border-color:var(--gold)}
-.pd-thumb img{width:100%;height:100%;object-fit:cover}
+.pd-thumb img{width:100%;height:100%;object-fit:contain;background:#fff}
 .pd-zoom-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeIn 0.2s ease}
 .pd-zoom-controls{display:flex;align-items:center;gap:14px;padding:12px 20px;background:rgba(255,255,255,0.1);border-radius:999px;margin-bottom:16px}
 .pd-zoom-controls button{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);background:transparent;color:white;font-size:20px;cursor:pointer;display:grid;place-items:center;transition:background 0.2s}
@@ -363,9 +365,12 @@ footer a:hover{color:#e2b76f}
 .pd-mrp{color:#999;text-decoration:line-through;font-size:18px}
 .pd-weekly{color:#72695d;font-size:14px;margin:0 0 20px}
 .pd-weekly strong{color:var(--gold)}
-.pd-desc-full{margin:0 0 40px;padding:0 7vw}
+.pd-desc-section{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;max-width:1300px;margin:0 auto;padding:40px 7vw 60px;border-top:1px solid rgba(0,0,0,0.08)}
+.pd-desc-full img{max-width:100%;height:auto}
+.pd-desc-full{margin:0}
 .pd-desc-heading{font-size:1.5rem;font-weight:700;color:var(--ink,#28241f);margin:0 0 16px;padding-bottom:12px;border-bottom:2px solid var(--gold,#aa7a3e);display:inline-block}
 .pd-desc-full p{color:#333;line-height:1.85;font-size:16px;margin:0 0 24px}
+.pd-additional-info{background:var(--beige);border-radius:16px;padding:24px 28px}
 .pd-meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;padding:20px;background:var(--beige);border-radius:16px}
 .pd-meta-grid div{display:flex;flex-direction:column;gap:2px}
 .pd-meta-grid strong{font:600 11px "DM Sans";color:#999;text-transform:uppercase;letter-spacing:.5px}
@@ -386,12 +391,13 @@ footer a:hover{color:#e2b76f}
 .pd-rating-stars-inline{color:var(--gold);font-size:16px;letter-spacing:2px}
 .pd-rating-link{font:400 13px "DM Sans";color:#72695d;text-decoration:underline;cursor:pointer}
 
-.pd-option-group{margin-bottom:24px}
-.pd-option-group label{display:block;font:600 13px "DM Sans";color:var(--ink);margin-bottom:10px}
+.pd-option-group{margin-bottom:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pd-option-group label{font:600 13px "DM Sans";color:var(--ink);white-space:nowrap;margin-bottom:0}
 .pd-option-pills{display:flex;gap:10px;flex-wrap:wrap}
 .pd-pill{padding:10px 22px;border:1.5px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);font:500 13px "DM Sans";cursor:pointer;transition:all 0.2s}
 .pd-pill:hover{border-color:var(--gold)}
 .pd-pill.active{border-color:var(--gold);background:rgba(170,122,62,0.08);color:var(--gold);font-weight:600}
+.pd-pill-price{font-size:11px;font-weight:600;opacity:.8;margin-left:7px}
 
 .pd-colour-swatches{display:flex;gap:12px}
 .pd-swatch{width:40px;height:40px;border-radius:50%;border:2px solid transparent;cursor:pointer;position:relative;transition:all 0.2s;padding:0}
@@ -414,6 +420,7 @@ footer a:hover{color:#e2b76f}
 .pd-mrp{font:400 18px "DM Sans";color:#999;text-decoration:line-through}
 .pd-discount-badge{background:#ef4444;color:#fff;font:700 12px "DM Sans";padding:4px 10px;border-radius:20px}
 .pd-savings{font:500 13px "DM Sans";color:#16a34a;margin:6px 0 0}
+.pd-size-price-note{font:500 12px "DM Sans";color:#72695d;margin:8px 0 0}
 
 .pd-details-list{margin:0 0 20px;display:flex;flex-direction:column;gap:8px}
 .pd-detail-item{font:400 14px "DM Sans";color:#555}
@@ -447,7 +454,7 @@ footer a:hover{color:#e2b76f}
 .pd-recently-viewed{padding:60px 20px 40px;max-width:1200px;margin:0 auto}
 .pd-rv-inner .pd-section-label{display:block;font:600 11px "DM Sans";letter-spacing:2px;color:var(--accent,#aa7a3e);margin-bottom:8px}
 .pd-rv-inner h2{font:400 32px "Playfair Display",serif;color:var(--title,#28241f);margin:0 0 24px}
-.pd-rv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.pd-rv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .pd-rv-card{background:var(--card,#fff);border-radius:14px;overflow:hidden;border:1px solid var(--border,#e8e4de);transition:transform 0.2s,box-shadow 0.2s;text-decoration:none;color:inherit;position:relative}
 .pd-rv-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
 .pd-rv-img{height:160px;overflow:hidden}
@@ -455,8 +462,8 @@ footer a:hover{color:#e2b76f}
 .pd-rv-card:hover .pd-rv-img img{transform:scale(1.05)}
 .pd-rv-info{padding:14px}
 .pd-rv-info h3{font:500 14px "DM Sans";color:var(--title,#28241f);margin:0 0 8px;line-height:1.3}
-@media(max-width:900px){.pd-rv-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:500px){.pd-rv-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.pd-rv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:500px){.pd-rv-grid{grid-template-columns:minmax(0,1fr)}}
 
 .home-ad-banner{display:block;width:100%;max-width:1200px;margin:0 auto;padding:0 20px;box-sizing:border-box;border-radius:16px;overflow:hidden;transition:transform 0.3s}
 .home-ad-banner:hover{transform:scale(1.01)}
@@ -499,7 +506,7 @@ footer a:hover{color:#e2b76f}
 /* Related Products */
 .pd-related{padding:70px 7vw;text-align:center}
 .pd-related h2{font:400 clamp(32px,4vw,50px) "Cormorant Garamond",serif;color:var(--ink);margin:0 0 35px}
-.pd-related-grid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:24px;max-width:1200px;margin:0 auto;width:100%}
+.pd-related-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:24px;max-width:1200px;margin:0 auto;width:100%}
 .pd-related-card{display:block;border-radius:16px;overflow:hidden;text-decoration:none;color:var(--ink);background:var(--paper);transition:transform 0.3s ease,box-shadow 0.3s ease;position:relative}
 .pd-related-card:hover{transform:translateY(-5px);box-shadow:0 12px 32px rgba(0,0,0,0.1)}
 .pd-related-img{overflow:hidden}
@@ -547,6 +554,7 @@ footer a:hover{color:#e2b76f}
   .nav-toggle{display:block;color:var(--ink);font-size:26px;background:none;border:0;cursor:pointer;padding:8px}
   .desktop-nav{display:none}
   .logo{width:110px;height:80px;position:absolute;left:50%;transform:translateX(-50%);top:6px}
+  .logo:hover{transform:translateX(-50%) scale(1.03)}
   .header-tools{min-width:auto;gap:8px;flex-direction:row;align-items:center}
   .header-tools-top{position:static;display:flex;align-items:center;gap:8px}
   .header-tools-bottom{position:static;display:flex;align-items:center;gap:8px}
@@ -593,15 +601,16 @@ footer a:hover{color:#e2b76f}
   .footer-nav{gap:14px}
   .footer-logo{margin-bottom:30px}
   .footer-social-row{flex-direction:row}
-  .pd-grid{grid-template-columns:1fr;gap:30px;padding:0 24px 40px}
+  .pd-grid{grid-template-columns:minmax(0,1fr);gap:30px;padding:0 24px 40px}
+  .pd-desc-section{grid-template-columns:minmax(0,1fr);gap:24px;padding:24px 24px 40px}
   .pd-meta-grid{grid-template-columns:1fr}
   .pd-order-inner{grid-template-columns:1fr;gap:30px}
   .pd-spec-row{flex-direction:column;gap:6px}
   .pd-spec-row strong{min-width:auto}
   .pd-reviews-grid{grid-template-columns:1fr!important;max-width:440px;margin:0 auto 40px}
-  .pd-related-grid{grid-template-columns:1fr!important;max-width:400px}
+  .pd-related-grid{grid-template-columns:minmax(0,1fr)!important;max-width:400px}
   .pd-help-card{padding:28px 24px}
-  .pd-thumbnails{overflow-x:auto;gap:8px}
+  .pd-thumbnails{overflow-x:auto;gap:8px;flex-wrap:nowrap}
   .pd-thumb{width:60px;height:60px;flex-shrink:0}
   .pd-option-pills{gap:8px}
   .pd-pill{padding:8px 16px;font-size:12px}
@@ -717,8 +726,9 @@ footer a:hover{color:#e2b76f}
 .finance-logos-track span{font:700 16px "Cormorant Garamond",serif;color:var(--ink);opacity:0.5;letter-spacing:1px}
 
 /* ── Category Catalogue Page ── */
-.catalog-hero{background:linear-gradient(135deg,#f5eddf 0%,#e8dcc8 100%);padding:120px 7vw 100px;min-height:350px;text-align:center}
-.catalog-hero-inner{max-width:800px;margin:0 auto}
+.catalog-hero{position:relative;background:linear-gradient(135deg,#f5eddf 0%,#e8dcc8 100%);padding:120px 7vw 100px;min-height:350px;text-align:center;background-size:cover;background-position:center;background-repeat:no-repeat}
+.catalog-hero[style*="background-image"]::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 62% 72% at 50% 50%,rgba(255,253,249,0.78) 0%,rgba(255,253,249,0.35) 45%,rgba(255,253,249,0) 75%)}
+.catalog-hero-inner{position:relative;z-index:1;max-width:800px;margin:0 auto}
 .catalog-hero-label{color:var(--gold);letter-spacing:3px;font-weight:700;font-size:12px;text-transform:uppercase}
 .catalog-hero h1{font:700 clamp(48px,6vw,80px)/1 "Playfair Display",serif;margin:12px 0;color:var(--ink)}
 .catalog-hero p{color:#72695d;font-size:16px;margin:0}
@@ -744,7 +754,7 @@ footer a:hover{color:#e2b76f}
 .page-num:hover{border-color:var(--gold);color:var(--gold)}
 .page-num.active{background:var(--gold);color:#fff;border-color:var(--gold)}
 
-.catalog-layout{display:grid;grid-template-columns:260px 1fr;gap:40px}
+.catalog-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:40px}
 .catalog-sidebar{position:sticky;top:140px;align-self:start;max-height:calc(100vh - 160px);overflow-y:auto;padding-right:8px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .catalog-sidebar::-webkit-scrollbar{width:4px}
 .catalog-sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
@@ -764,14 +774,14 @@ footer a:hover{color:#e2b76f}
 .color-dot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,0.15);flex-shrink:0}
 .filter-clear-btn{width:100%;padding:10px;border:1px solid var(--gold);border-radius:999px;background:transparent;color:var(--gold);font:600 12px "DM Sans";cursor:pointer;transition:all 0.3s;margin-top:10px}
 .filter-clear-btn:hover{background:var(--gold);color:#fff}
-.catalog-main{min-height:400px}
-.catalog-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.catalog-main{min-height:400px;min-width:0}
+.catalog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
 .catalog-card{background:#f7f0e4;border-radius:16px;overflow:hidden;transition:transform 0.3s ease,box-shadow 0.3s ease;display:flex;flex-direction:column}
 .catalog-card:hover{transform:translateY(-4px);box-shadow:0 10px 28px rgba(0,0,0,0.1)}
 .sale-badge{position:absolute;top:12px;left:12px;background:#d9534f;color:#fff;font:700 11px "DM Sans",sans-serif;padding:4px 12px;border-radius:4px;letter-spacing:1px;z-index:2}
 .sale-discount-badge{position:absolute;top:12px;right:12px;background:#d9534f;color:#fff;font:700 12px "DM Sans",sans-serif;padding:4px 10px;border-radius:20px;z-index:2}
-.catalog-card-image{display:block;position:relative;aspect-ratio:4/3;overflow:hidden}
-.catalog-card-image img{width:100%;height:100%;object-fit:cover;transition:transform 0.5s ease}
+.catalog-card-image{display:block;position:relative;aspect-ratio:4/3;overflow:hidden;background:#fff}
+.catalog-card-image img{width:100%;height:100%;object-fit:contain;transition:transform 0.5s ease}
 .catalog-card:hover .catalog-card-image img{transform:scale(1.05)}
 .catalog-card-banner{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.6));padding:12px 16px}
 .catalog-card-banner span{color:#fff;font:600 14px "Cormorant Garamond",serif}
@@ -795,8 +805,8 @@ footer a:hover{color:#e2b76f}
 .category-product-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
 .category-product-card{background:#f7f0e4;border-radius:20px;overflow:hidden;transition:transform 0.3s,box-shadow 0.3s}
 .category-product-card:hover{transform:translateY(-5px);box-shadow:0 12px 32px rgba(0,0,0,0.1)}
-.category-product-img{display:block;position:relative;aspect-ratio:4/3;overflow:hidden}
-.category-product-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.5s}
+.category-product-img{display:block;position:relative;aspect-ratio:4/3;overflow:hidden;background:#fff}
+.category-product-img img{width:100%;height:100%;object-fit:contain;transition:transform 0.5s}
 .category-product-card:hover .category-product-img img{transform:scale(1.05)}
 .category-product-body{padding:16px}
 .category-product-body h3{font:600 18px "Cormorant Garamond",serif;margin:0 0 6px;transition:color 0.2s}
@@ -811,6 +821,8 @@ footer a:hover{color:#e2b76f}
 .store-location-card{padding:20px;border:1px solid var(--line);border-radius:16px;cursor:pointer;transition:all 0.3s}
 .store-location-card:hover{border-color:var(--gold);box-shadow:0 4px 16px rgba(0,0,0,0.06)}
 .store-location-card.active{border-color:var(--gold);background:rgba(170,122,62,0.04);box-shadow:0 4px 16px rgba(170,122,62,0.12)}
+.store-location-img{margin:0 0 12px;border-radius:12px;overflow:hidden}
+.store-location-img img{width:100%;height:200px;object-fit:cover;display:block}
 .store-location-card h3{font:600 18px "Cormorant Garamond",serif;margin:0 0 6px}
 .store-loc-address,.store-loc-phone,.store-loc-email,.store-loc-desc{margin:0 0 4px;color:#72695d;font-size:13px;line-height:1.5}
 .store-loc-desc{margin-top:6px}
@@ -825,13 +837,17 @@ footer a:hover{color:#e2b76f}
 .store-map-placeholder{display:grid;place-items:center;height:400px;color:#999;font-size:14px}
 
 @media(max-width:980px){
-  .catalog-layout{grid-template-columns:1fr}
+  .catalog-layout{grid-template-columns:minmax(0,1fr)}
+  .catalog-page{padding:0 16px 60px}
   .catalog-sidebar{display:none}
+  .catalog-hero{padding:80px 24px 64px;min-height:260px}
+  .about-page:has(.catalog-hero){padding-top:110px}
   .catalog-sidebar.mobile-open{display:block;position:fixed;top:0;left:0;bottom:0;width:85%;max-width:360px;z-index:2000;background:var(--paper);overflow-y:auto;padding:16px;box-shadow:4px 0 24px rgba(0,0,0,0.2);animation:slideInLeft 0.3s ease}
-  .catalog-grid{grid-template-columns:repeat(2,1fr)}
+  .catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .category-product-grid{grid-template-columns:repeat(2,1fr);gap:14px}
   .finance-form .form-row{grid-template-columns:1fr}
   .store-location-container{grid-template-columns:1fr}
+  .store-location-img img{height:180px}
   .store-map-wrapper{height:300px}
   .mobile-filter-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1999}
   .mobile-filter-overlay.open{display:block}
@@ -845,10 +861,16 @@ footer a:hover{color:#e2b76f}
   @keyframes slideInLeft{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 }
 @media(max-width:600px){
+  .catalog-hero{padding:52px 18px 44px;min-height:200px}
+  .catalog-hero h1{font-size:clamp(30px,9vw,40px);line-height:1.12}
+  .catalog-hero-label{letter-spacing:2px}
+  .catalog-hero p{font-size:14px}
   .category-product-grid{grid-template-columns:1fr;max-width:400px}
   .subcategory-tabs{gap:6px}
   .subcat-tab{padding:6px 14px;font-size:12px}
   .catalog-sidebar.mobile-open{width:90%}
-  .catalog-grid{grid-template-columns:1fr}
+  .catalog-grid{grid-template-columns:minmax(0,1fr)}
   .winz-grid{grid-template-columns:1fr 1fr;gap:14px}
+  .store-location-card{padding:14px}
+  .store-location-img img{height:160px}
 }

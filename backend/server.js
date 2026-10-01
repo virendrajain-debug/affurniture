@@ -43,16 +43,18 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || process.env.NODE_PORT || 5000;
 
-app.use(cors({
+const corsOptions = {
   origin: function(origin, callback) {
     callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'cache-control'],
+};
 
-app.options('*', cors());
+app.use(cors(corsOptions));
+
+app.options('*', cors(corsOptions));
 
 app.set('etag', false); // Disable ETags for API freshness
 
@@ -401,6 +403,10 @@ async function autoSetup() {
   pool.run("ALTER TABLE products ADD COLUMN brand TEXT");
   pool.run("ALTER TABLE products ADD COLUMN on_sale INTEGER DEFAULT 0");
   pool.run("ALTER TABLE products ADD COLUMN weekly_price REAL");
+  pool.run("ALTER TABLE products ADD COLUMN size_prices TEXT DEFAULT NULL");
+  pool.run("ALTER TABLE products ADD COLUMN size_mrps TEXT DEFAULT NULL");
+  pool.run("ALTER TABLE enquiries ADD COLUMN size TEXT DEFAULT NULL");
+  pool.run("ALTER TABLE enquiries ADD COLUMN size_price REAL DEFAULT NULL");
   pool.run("ALTER TABLE categories ADD COLUMN image TEXT DEFAULT ''");
   pool.run("ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0");
   pool.run("ALTER TABLE subcategories ADD COLUMN sort_order INTEGER DEFAULT 0");
@@ -463,6 +469,7 @@ async function autoSetup() {
 
   const bannerDefaults = {
     'about_banner': '',
+    'on_sale_banner': '',
     'terms_banner': '',
     'privacy_banner': '',
     'delivery_info_banner': '',

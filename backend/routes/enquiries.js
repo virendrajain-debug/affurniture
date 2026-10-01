@@ -127,17 +127,27 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // -----------------------------------------------------------
 router.post('/', async (req, res) => {
   try {
-    const { name, email, phone, product_id, product_name, message, type } = req.body;
+    const { name, email, phone, product_id, product_name, message, type, size, size_price } = req.body;
     if (!name || !email) {
       return res.status(400).json({ message: 'Name and email are required' });
     }
 
-    const [result] = pool.execute(
-      'INSERT INTO enquiries (name, email, phone, product_id, product_name, message, type) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, email, phone || null, product_id || null, product_name || null, message || null, type || 'product']
+    const parsedSizePrice = size_price !== undefined && size_price !== null && size_price !== '' && Number.isFinite(Number(size_price))
+      ? Number(size_price)
+      : null;
+
+    const [result] = await pool.execute(
+      'INSERT INTO enquiries (name, email, phone, product_id, product_name, message, type, size, size_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, email, phone || null, product_id || null, product_name || null, message || null, type || 'product', size || null, parsedSizePrice]
     );
 
-    sendEnquiryEmail({ name, email, phone, product_name, message, type }).catch(() => {});
+    const emailMessage = [
+      message || '',
+      size ? `Size: ${size}${parsedSizePrice !== null ? ` ($${parsedSizePrice.toLocaleString()})` : ''}.` : '',
+    ].filter(Boolean).join(' ');
+
+    sendEnquiryEmail({ name, email, phone, product_name, message: emailMessage, type }).catch(() => {});
+
 
     res.status(201).json({ message: 'Enquiry submitted successfully', id: result.insertId });
   } catch (error) {

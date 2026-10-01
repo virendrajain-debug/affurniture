@@ -541,6 +541,7 @@ function Testimonials({ token }) {
                       <input ref={avatarInputRef} type="file" accept="image/*" hidden onChange={handleAvatarUpload} disabled={uploadingAvatar} />
                       {uploadingAvatar ? 'Uploading...' : 'Upload File'}
                     </label>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)' }}>Recommended: 400 x 400 pixels</span>
                   </div>
                 </div>
 

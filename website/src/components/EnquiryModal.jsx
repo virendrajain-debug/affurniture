@@ -23,13 +23,39 @@ function getColorName(raw) {
   return raw
 }
 
-export default function EnquiryModal({ product, onClose }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', message: `I'm interested in ${product.name}. Please provide more details about availability and pricing.`, color: '' })
+function parseSizePrices(raw) {
+  if (!raw) return {}
+  let parsed = raw
+  if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw) } catch { return {} }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+  const out = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    const price = Number(value)
+    if (key && Number.isFinite(price)) out[key] = price
+  }
+  return out
+}
+
+export default function EnquiryModal({ product, onClose, selectedSize = '' }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', message: `I'm interested in ${product.name}. Please provide more details about availability and pricing.`, color: '', size: selectedSize })
   const [toast, setToast] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   const colours = product.color ? product.color.split(',').map(c => c.trim()).filter(Boolean) : []
+  const sizes = product.size ? product.size.split(',').map(s => s.trim()).filter(Boolean) : []
+  const sizePrices = parseSizePrices(product.size_prices)
+  const sizeMrps = parseSizePrices(product.size_mrps)
+
+  const activeSizePrice = form.size && sizePrices[form.size] !== undefined ? sizePrices[form.size] : null
+  const displayPrice = activeSizePrice !== null
+    ? activeSizePrice
+    : Number(product.selling_price || product.mrp) || 0
+  const displayMrp = form.size && sizeMrps[form.size] !== undefined
+    ? sizeMrps[form.size]
+    : Number(product.mrp) || 0
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
@@ -48,9 +74,11 @@ export default function EnquiryModal({ product, onClose }) {
           name: form.name,
           email: form.email,
           phone: form.phone,
-          message: (form.color ? `Colour: ${form.color}. ` : '') + (form.message || `Enquiry about ${product.name}`),
+          message: (form.color ? `Colour: ${form.color}. ` : '') + (form.size ? `Size: ${form.size}${activeSizePrice !== null ? ` ($${activeSizePrice.toLocaleString()})` : ''}. ` : '') + (form.message || `Enquiry about ${product.name}`),
           product_id: product.id,
           product_name: product.name,
+          size: form.size || null,
+          size_price: activeSizePrice,
           type: 'product',
         }),
       })
@@ -88,8 +116,12 @@ export default function EnquiryModal({ product, onClose }) {
           <>
             <h2>Enquire about</h2>
             <h3>{product.name}</h3>
-            {product.selling_price && (
-              <p className="modal-price">${Number(product.selling_price).toLocaleString()}</p>
+            {displayPrice > 0 && (
+              <p className="modal-price">
+                ${displayPrice.toLocaleString()}
+                {displayMrp > 0 && displayMrp > displayPrice && <span className="modal-price-mrp">${displayMrp.toLocaleString()}</span>}
+                {form.size && <span className="modal-price-size"> &middot; {form.size}</span>}
+              </p>
             )}
             <form onSubmit={handleSubmit}>
               {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
@@ -107,6 +139,27 @@ export default function EnquiryModal({ product, onClose }) {
                       >
                         <span className="enquiry-swatch-dot" style={{ background: getColorHex(c) }} />
                         <span className="enquiry-swatch-name">{getColorName(c)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {sizes.length > 0 && (
+                <div className="input-group">
+                  <label>Preferred Size</label>
+                  <div className="enquiry-colours">
+                    {sizes.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`enquiry-swatch ${form.size === s ? 'active' : ''}`}
+                        onClick={() => setForm(prev => ({ ...prev, size: s }))}
+                      >
+                        <span className="enquiry-swatch-dot" style={{ background: '#72695d' }} />
+                        <span className="enquiry-swatch-name">{s}</span>
+                        {sizePrices[s] !== undefined && (
+                          <span className="enquiry-swatch-price">${Number(sizePrices[s]).toLocaleString()}</span>
+                        )}
                       </button>
                     ))}
                   </div>

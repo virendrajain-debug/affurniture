@@ -49,7 +49,7 @@ function AboutPage() {
       <Header />
       <main className="about-page">
         <section className="about-hero-banner">
-          <img src={getAssetUrl(banners.about_banner) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85'} alt="AF Furnishings showroom" />
+          <img src={getAssetUrl(banners.about_banner) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80'} alt="AF Furnishings showroom" loading="lazy" decoding="async" />
           <div className="about-hero-overlay">
             <span>{heroEyebrow}</span>
             <h1>{heroTitle}</h1>

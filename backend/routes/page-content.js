@@ -175,7 +175,7 @@ router.delete('/:slug', authenticateToken, (req, res) => {
     if (existing.length === 0) return res.status(404).json({ message: 'Page not found' });
 
     // Prevent deleting built-in pages
-    const builtIn = ['about', 'terms', 'privacy-policy', 'delivery-info', 'returns', 'contact'];
+    const builtIn = ['about', 'on-sale', 'terms', 'privacy-policy', 'delivery-info', 'returns', 'contact'];
     if (builtIn.includes(req.params.slug)) {
       return res.status(400).json({ message: 'Cannot delete built-in pages' });
     }

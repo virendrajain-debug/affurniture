@@ -159,7 +159,7 @@ function CustomerEnquiries({ token }) {
           background: var(--card-bg, rgba(255, 255, 255, 0.03));
           border: 1px solid var(--border-color);
           border-radius: 14px;
-          overflow: hidden;
+          overflow-x: auto;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
@@ -435,6 +435,15 @@ function CustomerEnquiries({ token }) {
                   {selected.product_name || 'General Inventory Item'}
                 </span>
               </div>
+              {(selected.size || selected.size_price) ? (
+                <div className="inbox-modal-field" style={{ gridColumn: '1 / -1' }}>
+                  <label>Requested Size</label>
+                  <span>
+                    {selected.size || 'Not specified'}
+                    {selected.size_price ? ` — $${Number(selected.size_price).toLocaleString()}` : ''}
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             <div className="inbox-modal-field" style={{ marginBottom: '8px' }}>

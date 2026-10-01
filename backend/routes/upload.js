@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from '../middleware/auth.js';
+import { compressImage } from '../utils/imageProcessor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,8 +34,12 @@ const upload = multer({
 const uploadMiddleware = (req, res, next) => {
   upload(req, res, (err) => {
     if (err) {
-      console.error('Multer error:', err.message);
+      console.error('Multer error:', err.message, '| File:', err.file?.originalname, '| Mimetype:', err.file?.mimetype);
       return res.status(400).json({ message: err.message });
+    }
+    if (!req.file) {
+      console.error('Upload error: No file received by multer');
+      return res.status(400).json({ message: 'No file uploaded' });
     }
     next();
   });
@@ -42,11 +47,13 @@ const uploadMiddleware = (req, res, next) => {
 
 const router = Router();
 
-router.post('/', authenticateToken, uploadMiddleware, (req, res) => {
+router.post('/', authenticateToken, uploadMiddleware, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
+    const filePath = path.join(__dirname, '../uploads', req.file.filename);
+    await compressImage(filePath);
     const url = `/uploads/${req.file.filename}`;
     res.json({ url, filename: req.file.filename });
   } catch (err) {
@@ -55,11 +62,12 @@ router.post('/', authenticateToken, uploadMiddleware, (req, res) => {
   }
 });
 
-router.post('/multiple', authenticateToken, multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter }).array('images', 10), (req, res) => {
+router.post('/multiple', authenticateToken, multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter }).array('images', 10), async (req, res) => {
   try {
     if (!req.files || !req.files.length) {
       return res.status(400).json({ message: 'No files uploaded' });
     }
+    await Promise.all(req.files.map(f => compressImage(path.join(__dirname, '../uploads', f.filename))));
     const urls = req.files.map(f => `/uploads/${f.filename}`);
     res.json({ urls });
   } catch (err) {
@@ -69,11 +77,13 @@ router.post('/multiple', authenticateToken, multer({ storage, limits: { fileSize
 });
 
 // Alias: /api/upload/image (same as POST /api/upload)
-router.post('/image', authenticateToken, uploadMiddleware, (req, res) => {
+router.post('/image', authenticateToken, uploadMiddleware, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
+    const filePath = path.join(__dirname, '../uploads', req.file.filename);
+    await compressImage(filePath);
     const url = `/uploads/${req.file.filename}`;
     res.json({ url, filename: req.file.filename });
   } catch (err) {
@@ -83,11 +93,13 @@ router.post('/image', authenticateToken, uploadMiddleware, (req, res) => {
 });
 
 // Alias: /api/upload/single (same as POST /api/upload)
-router.post('/single', authenticateToken, uploadMiddleware, (req, res) => {
+router.post('/single', authenticateToken, uploadMiddleware, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
+    const filePath = path.join(__dirname, '../uploads', req.file.filename);
+    await compressImage(filePath);
     const url = `/uploads/${req.file.filename}`;
     res.json({ url, filename: req.file.filename });
   } catch (err) {

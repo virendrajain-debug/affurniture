@@ -39,6 +39,21 @@ function getColorName(raw) {
   return raw
 }
 
+function parseSizePrices(raw) {
+  if (!raw) return {}
+  let parsed = raw
+  if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw) } catch { return {} }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+  const out = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    const price = Number(value)
+    if (key && Number.isFinite(price)) out[key] = price
+  }
+  return out
+}
+
 function ProductDetail() {
   const { slug } = useParams()
   const [product, setProduct] = useState(null)
@@ -52,6 +67,7 @@ function ProductDetail() {
   const [selectedImg, setSelectedImg] = useState(0)
   const [recentlyViewed, setRecentlyViewed] = useState(getRecentlyViewed())
   const [settings, setSettings] = useState({})
+  const [selectedSize, setSelectedSize] = useState('')
 
   useEffect(() => {
     setLoading(true)
@@ -60,6 +76,7 @@ function ProductDetail() {
     setProduct(null)
     setRelated([])
     setAllCategoryProducts([])
+    setSelectedSize('')
     const controller = new AbortController()
     fetch(`${API_BASE}/api/products/by-slug/${slug}`, { signal: controller.signal, cache: 'no-store' })
       .then(r => {
@@ -69,10 +86,12 @@ function ProductDetail() {
       .then(data => {
         setProduct(data)
         setLoading(false)
+        const sizeList = data.size ? data.size.split(',').map(s => s.trim()).filter(Boolean) : []
+        if (sizeList.length > 0) setSelectedSize(sizeList[0])
         addToRecentlyViewed(data)
         setRecentlyViewed(getRecentlyViewed())
         if (data.category_name) {
-          fetch(`${API_BASE}/api/products?category=${encodeURIComponent(data.category_name)}&limit=50`, { cache: 'no-store' })
+          fetch(`${API_BASE}/api/products?category=${encodeURIComponent(data.category_name)}&limit=4`, { cache: 'no-store' })
             .then(r => r.json())
             .then(items => {
               const list = Array.isArray(items) ? items : (items.products || [])
@@ -107,10 +126,16 @@ function ProductDetail() {
   if (error || !product) return <><Header /><main className="product-detail-page" style={{ textAlign: 'center', padding: '200px 20px' }}><h2>Product not found</h2><Link to="/" className="primary" style={{ marginTop: 20, display: 'inline-block' }}>Back to Home</Link></main><Footer /></>
 
   const images = getImages(product)
-  const hasDiscount = product.selling_price && product.mrp && Number(product.selling_price) < Number(product.mrp)
-  const discountPct = hasDiscount ? Math.round(((Number(product.mrp) - Number(product.selling_price)) / Number(product.mrp)) * 100) : 0
-  const savings = hasDiscount ? Number(product.mrp) - Number(product.selling_price) : 0
-  const activePrice = product.selling_price || product.mrp
+  const sizeList = product.size ? product.size.split(',').map(s => s.trim()).filter(Boolean) : []
+  const sizePrices = parseSizePrices(product.size_prices)
+  const sizeMrps = parseSizePrices(product.size_mrps)
+  const sizePrice = selectedSize && sizePrices[selectedSize] !== undefined ? sizePrices[selectedSize] : null
+  const baseMrp = Number(product.mrp) || 0
+  const activeMrp = selectedSize && sizeMrps[selectedSize] !== undefined ? sizeMrps[selectedSize] : baseMrp
+  const activePrice = sizePrice !== null ? sizePrice : Number(product.selling_price || product.mrp) || 0
+  const hasDiscount = activeMrp > 0 && activePrice > 0 && activePrice < activeMrp
+  const discountPct = hasDiscount ? Math.round(((activeMrp - activePrice) / activeMrp) * 100) : 0
+  const savings = hasDiscount ? activeMrp - activePrice : 0
   const weeklyPrice = activePrice ? Math.ceil(Number(activePrice) / 52) : null
 
   return (
@@ -166,16 +191,19 @@ function ProductDetail() {
               {hasDiscount ? (
                 <>
                   <div className="pd-price-row">
-                    <span className="pd-selling-price">${Number(product.selling_price).toLocaleString()}</span>
-                    <span className="pd-mrp">${Number(product.mrp).toLocaleString()}</span>
+                    <span className="pd-selling-price">${activePrice.toLocaleString()}</span>
+                    <span className="pd-mrp">${activeMrp.toLocaleString()}</span>
                     <span className="pd-discount-badge">-{discountPct}%</span>
                   </div>
                   <p className="pd-savings">You save ${savings.toLocaleString()}</p>
                 </>
               ) : (
                 <div className="pd-price-row">
-                  <span className="pd-selling-price">${Number(product.mrp || product.selling_price).toLocaleString()}</span>
+                  <span className="pd-selling-price">${activePrice.toLocaleString()}</span>
                 </div>
+              )}
+              {sizePrice !== null && (
+                <p className="pd-size-price-note">Price for selected size: <strong>{selectedSize}</strong></p>
               )}
             </div>
 
@@ -195,15 +223,32 @@ function ProductDetail() {
             )}
 
             {/* Materials & Details */}
-            {(product.material || product.color || product.warranty || product.dimensions || product.weight || product.size) && (
+            {(product.material || product.weight) && (
               <div className="pd-details-list">
                 {product.material && <div className="pd-detail-item"><strong>Material:</strong> {product.material}</div>}
-                {product.color && <div className="pd-detail-item"><strong>Colour:</strong> {product.color}</div>}
-                {product.size && <div className="pd-detail-item"><strong>Size:</strong> {product.size}</div>}
-                {product.dimensions && <div className="pd-detail-item"><strong>Dimensions:</strong> {product.dimensions}</div>}
                 {product.weight && <div className="pd-detail-item"><strong>Weight:</strong> {product.weight} kg</div>}
-                {product.warranty && <div className="pd-detail-item"><strong>Warranty:</strong> {product.warranty}</div>}
-                {product.delivery_info && <div className="pd-detail-item"><strong>Delivery:</strong> {product.delivery_info}</div>}
+              </div>
+            )}
+
+            {/* Size */}
+            {sizeList.length > 0 && (
+              <div className="pd-option-group">
+                <label>Size</label>
+                <div className="pd-option-pills">
+                  {sizeList.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`pd-pill ${selectedSize === s ? 'active' : ''}`}
+                      onClick={() => setSelectedSize(s)}
+                    >
+                      <span>{s}</span>
+                      {sizePrices[s] !== undefined && (
+                        <span className="pd-pill-price">${Number(sizePrices[s]).toLocaleString()}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -225,11 +270,24 @@ function ProductDetail() {
           </div>
         </div>
 
-        {/* Full Width Description */}
-        {product.description && (
-          <div className="pd-desc-full">
-            <h2 className="pd-desc-heading">Description</h2>
-            <div dangerouslySetInnerHTML={{ __html: product.description }} />
+        {/* Full Width Description + Additional Info */}
+        {(product.description || product.warranty || product.delivery_info) && (
+          <div className="pd-desc-section">
+            {product.description && (
+              <div className="pd-desc-full">
+                <h2 className="pd-desc-heading">Description</h2>
+                <div dangerouslySetInnerHTML={{ __html: product.description }} />
+              </div>
+            )}
+            {(product.warranty || product.delivery_info) && (
+              <div className="pd-additional-info">
+                <h2 className="pd-desc-heading">Additional Information</h2>
+                <div className="pd-details-list">
+                  {product.warranty && <div className="pd-detail-item"><strong>Warranty:</strong> {product.warranty}</div>}
+                  {product.delivery_info && <div className="pd-detail-item"><strong>Delivery:</strong> {product.delivery_info}</div>}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -325,7 +383,13 @@ function ProductDetail() {
       )}
 
       <Footer />
-      {showModal && <EnquiryModal product={product} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <EnquiryModal
+          product={product}
+          selectedSize={selectedSize}
+          onClose={() => setShowModal(false)}
+        />
+      )}
 
       {/* Zoom Overlay */}
       {zoomOpen && (

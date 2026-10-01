@@ -23,7 +23,7 @@ function ContactPage() {
       <Header />
       <main>
         <section className="terms-hero-banner">
-          <img src={getAssetUrl(banners.contact_banner) || 'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?auto=format&fit=crop&w=2000&q=85'} alt="Contact Us" />
+          <img src={getAssetUrl(banners.contact_banner) || 'https://images.unsplash.com/photo-1423666639041-f56000c27a9a?auto=format&fit=crop&w=1200&q=80'} alt="Contact Us" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>GET IN TOUCH</span>
             <h1>Contact Us</h1>

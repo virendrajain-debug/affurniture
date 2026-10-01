@@ -7,17 +7,23 @@ import Footer from '../components/Footer'
 function OnSalePage() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [banner, setBanner] = useState('')
 
   useEffect(() => {
-    const fetchSaleProducts = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/products?on_sale=true`, { cache: 'no-store' })
-        const data = await res.json()
-        setProducts(Array.isArray(data) ? data : (data.products || []))
+        const [productsRes, settingsRes] = await Promise.all([
+          fetch(`${API_BASE}/api/products?on_sale=true`, { cache: 'no-store' }),
+          fetch(`${API_BASE}/api/settings`, { cache: 'no-store' }),
+        ])
+        const productsData = await productsRes.json()
+        const settings = await settingsRes.json().catch(() => ({}))
+        setProducts(Array.isArray(productsData) ? productsData : (productsData.products || []))
+        setBanner(settings.on_sale_banner || '')
       } catch { setProducts([]) }
       setLoading(false)
     }
-    fetchSaleProducts()
+    fetchData()
   }, [])
 
   const getImg = (p) => {
@@ -35,7 +41,7 @@ function OnSalePage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=2000&q=85" alt="On Sale" />
+          <img src={getAssetUrl(banner) || 'https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&fit=crop&w=1200&q=80'} alt="On Sale" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>DEALS</span>
             <h1>On Sale!</h1>

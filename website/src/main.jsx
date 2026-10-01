@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+document.body.classList.add('js-loaded')
+
 const cursor = document.createElement('div')
 cursor.className = 'custom-cursor'
 document.body.appendChild(cursor)
@@ -57,8 +59,10 @@ function observeFadeIns() {
 
 observeFadeIns()
 
+let mutationTimeout
 const mutationObserver = new MutationObserver(() => {
-  observeFadeIns()
+  clearTimeout(mutationTimeout)
+  mutationTimeout = setTimeout(observeFadeIns, 100)
 })
 mutationObserver.observe(document.body, { childList: true, subtree: true })
 

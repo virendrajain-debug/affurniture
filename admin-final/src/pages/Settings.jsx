@@ -96,7 +96,6 @@ function GlobalSettings({ token }) {
     setUploadingLogo(true)
     const formData = new FormData()
     formData.append('image', file)
-    formData.append('file', file)
 
     try {
       const res = await fetch(`${API_BASE}/api/upload`, {
@@ -518,6 +517,7 @@ function GlobalSettings({ token }) {
                       </svg>
                       {uploadingLogo ? 'Uploading...' : 'Upload New Logo'}
                     </button>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)' }}>Recommended: 400 x 400 pixels</span>
                     <input
                       ref={fileInputRef}
                       type="file"

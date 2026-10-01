@@ -24,7 +24,7 @@ function PrivacyPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={getAssetUrl(banners.privacy_banner) || 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=2000&q=85'} alt="Privacy & Security" />
+          <img src={getAssetUrl(banners.privacy_banner) || 'https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=80'} alt="Privacy & Security" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>YOUR PRIVACY</span>
             <h1>Privacy Policy</h1>

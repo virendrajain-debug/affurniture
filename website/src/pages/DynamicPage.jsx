@@ -39,7 +39,7 @@ function DynamicPage() {
 
         {!page?.banner_image && (
           <section className="terms-hero-banner">
-            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=2000&q=85" alt={page?.title} />
+            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80" alt={page?.title} />
             <div className="terms-hero-overlay">
               <span>{page?.category?.toUpperCase()}</span>
               <h1>{page?.title}</h1>

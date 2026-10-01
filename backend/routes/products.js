@@ -22,6 +22,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import multer from 'multer';      // For handling file uploads
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { compressImage } from '../utils/imageProcessor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,23 @@ function resolveImages(images) {
   if (!images) return images;
   if (Array.isArray(images)) return images.map(resolveImageUrl);
   return images;
+}
+
+// Normalise the per-size price map into a JSON string: { "Queen": 1299, ... }
+function sanitizeSizePrices(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  let parsed = raw;
+  if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw); } catch { return null; }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const out = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    const name = String(key || '').trim();
+    const price = Number(value);
+    if (name && Number.isFinite(price) && price >= 0) out[name] = price;
+  }
+  return Object.keys(out).length > 0 ? JSON.stringify(out) : null;
 }
 
 // Configure multer for image uploads
@@ -255,18 +273,21 @@ router.get('/:id', async (req, res) => {
 //   weight, warranty, delivery_info, featured, new_arrival
 //   images (file uploads)
 // -----------------------------------------------------------
-router.post('/', authenticateToken, upload.array('images', 10), async (req, res) => {
+router.post('/', authenticateToken, upload.array('images', 25), async (req, res) => {
   try {
     const {
       name, category_id, subcategory_id, mrp, selling_price, discounted_price, description,
       stock, material, color, size, dimensions, weight, warranty, delivery_info,
-      featured, new_arrival, brand
+      featured, new_arrival, brand, size_prices, size_mrps
     } = req.body;
 
     // Validate required fields
     if (!name || !mrp) {
       return res.status(400).json({ message: 'Name and MRP are required' });
     }
+
+    const sizePrices = sanitizeSizePrices(size_prices);
+    const sizeMrps = sanitizeSizePrices(size_mrps);
 
     // Generate slug from name + category prefix
     const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -293,11 +314,16 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
     // Convert uploaded files to URL paths
     const images = req.files ? req.files.map(f => `/uploads/${f.filename}`) : [];
 
+    // Compress uploaded images
+    if (req.files && req.files.length > 0) {
+      await Promise.all(req.files.map(f => compressImage(path.join(__dirname, '../uploads', f.filename))));
+    }
+
     // Insert product into database
     const [result] = await pool.execute(
-      `INSERT INTO products (name, category_id, subcategory_id, mrp, selling_price, discounted_price, description, stock, material, color, size, dimensions, weight, warranty, delivery_info, featured, new_arrival, images, slug, brand) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null]
+      `INSERT INTO products (name, category_id, subcategory_id, mrp, selling_price, discounted_price, description, stock, material, color, size, dimensions, weight, warranty, delivery_info, featured, new_arrival, images, slug, brand, size_prices, size_mrps) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null, sizePrices, sizeMrps]
     );
 
     res.status(201).json({ message: 'Product created successfully', id: result.insertId, slug });
@@ -312,18 +338,23 @@ router.post('/', authenticateToken, upload.array('images', 10), async (req, res)
 // -----------------------------------------------------------
 // Update an existing product. REQUIRES AUTHENTICATION.
 // -----------------------------------------------------------
-router.put('/:id', authenticateToken, upload.array('images', 10), async (req, res) => {
+router.put('/:id', authenticateToken, upload.array('images', 25), async (req, res) => {
   try {
     const {
       name, category_id, subcategory_id, mrp, selling_price, discounted_price, description,
       stock, material, color, size, dimensions, weight, warranty, delivery_info,
-      featured, new_arrival, existing_images, brand
+      featured, new_arrival, existing_images, brand, size_prices, size_mrps
     } = req.body;
+
+    const sizePrices = sanitizeSizePrices(size_prices);
+    const sizeMrps = sanitizeSizePrices(size_mrps);
 
     // Combine existing images with newly uploaded ones
     let images = existing_images ? JSON.parse(existing_images) : [];
     if (req.files && req.files.length > 0) {
       images = [...images, ...req.files.map(f => `/uploads/${f.filename}`)];
+      // Compress uploaded images
+      await Promise.all(req.files.map(f => compressImage(path.join(__dirname, '../uploads', f.filename))));
     }
 
     // Generate slug if name or category changed
@@ -348,8 +379,8 @@ router.put('/:id', authenticateToken, upload.array('images', 10), async (req, re
     }
 
     await pool.execute(
-      `UPDATE products SET name=?, category_id=?, subcategory_id=?, mrp=?, selling_price=?, discounted_price=?, description=?, stock=?, material=?, color=?, size=?, dimensions=?, weight=?, warranty=?, delivery_info=?, featured=?, new_arrival=?, images=?, slug=?, brand=? WHERE id=?`,
-      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null, req.params.id]
+      `UPDATE products SET name=?, category_id=?, subcategory_id=?, mrp=?, selling_price=?, discounted_price=?, description=?, stock=?, material=?, color=?, size=?, dimensions=?, weight=?, warranty=?, delivery_info=?, featured=?, new_arrival=?, images=?, slug=?, brand=?, size_prices=?, size_mrps=? WHERE id=?`,
+      [name, category_id || null, subcategory_id || null, mrp, selling_price || null, discounted_price || null, description || null, stock || 0, material || null, color || null, size || null, dimensions || null, weight || null, warranty || null, delivery_info || null, featured === 'true' || featured === true ? 1 : 0, new_arrival === 'true' || new_arrival === true ? 1 : 0, JSON.stringify(images), slug, brand || null, sizePrices, sizeMrps, req.params.id]
     );
 
     res.json({ message: 'Product updated successfully', slug });

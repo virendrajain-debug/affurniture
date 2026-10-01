@@ -234,12 +234,11 @@ function Categories({ token }) {
   }
 
   // 5. Image Upload Helper
-  const handleImageUpload = async (catId, file) => {
+  const handleImageUpload = async (catId, catName, file) => {
     if (!file) return
     setUploadingId(catId)
     const formData = new FormData()
     formData.append('image', file)
-    formData.append('file', file)
     try {
       const uploadRes = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
@@ -256,7 +255,7 @@ function Categories({ token }) {
               'Content-Type': 'application/json',
               ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
             },
-            body: JSON.stringify({ image: url }),
+            body: JSON.stringify({ name: catName, image: url }),
           })
           if (saveRes.ok) {
             showToast('Banner image updated successfully', 'success')
@@ -367,7 +366,7 @@ function Categories({ token }) {
             </span>
 
             {/* Thumbnail */}
-            <label style={{ cursor: uploadingId === cat.id ? 'wait' : 'pointer', flexShrink: 0, position: 'relative' }} title="Click to upload category banner image">
+            <label style={{ cursor: uploadingId === cat.id ? 'wait' : 'pointer', flexShrink: 0, position: 'relative' }} title="Click to upload category banner image (Recommended: 600 x 400 pixels)">
               <img
                 src={getAssetUrl(cat.image)}
                 alt={cat.name}
@@ -380,7 +379,7 @@ function Categories({ token }) {
                   <div style={{ width: '18px', height: '18px', border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                 </div>
               )}
-              <input type="file" accept="image/*" hidden onChange={(e) => handleImageUpload(cat.id, e.target.files[0])} />
+              <input type="file" accept="image/*" hidden onChange={(e) => handleImageUpload(cat.id, cat.name, e.target.files[0])} />
             </label>
 
             {/* Category Name & Inline Edit */}

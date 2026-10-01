@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { stripHtml } from '../utils'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -61,7 +62,7 @@ function WinzPage() {
                     </div>
                   </div>
                   <div className="winz-product-info">
-                    {p.description && <p>{p.description}</p>}
+                    {stripHtml(p.description) && <p>{stripHtml(p.description)}</p>}
                     <Link
                       to={`/winz-quote?product=${encodeURIComponent(p.name)}`}
                       className="winz-quote-btn"

@@ -18,7 +18,7 @@ function Header() {
   const [allCategories, setAllCategories] = useState([])
   const [headerCatIds, setHeaderCatIds] = useState([])
   const [settings, setSettings] = useState({})
-  const [logoUrl, setLogoUrl] = useState('/logo.png')
+  const [logoUrl, setLogoUrl] = useState('/logo.webp')
   const [socialLinks, setSocialLinks] = useState([])
   const headerRef = useRef(null)
   const searchRef = useRef(null)
@@ -60,7 +60,7 @@ function Header() {
             const subs = Array.isArray(cat.subcategories) && cat.subcategories.length > 0
               ? cat.subcategories.map(s => ({
                   label: s.name,
-                  href: `/category/${catSlug}?subcategory_id=${s.id}`,
+                  href: `/category/${catSlug}?sub_id=${s.id}`,
                 }))
               : []
             return {

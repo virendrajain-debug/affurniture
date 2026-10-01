@@ -44,7 +44,7 @@ const Input = ({ label, value, onChange, placeholder, full, type = 'text' }) => 
   </div>
 )
 
-const ImageUploader = ({ label, value, onChange, fileRef, uploading, uploadFn }) => (
+const ImageUploader = ({ label, value, onChange, fileRef, uploading, uploadFn, sizeHint }) => (
   <div>
     <label style={S.label}>{label || 'Image'}</label>
     <div style={S.uploadRow}>
@@ -58,6 +58,7 @@ const ImageUploader = ({ label, value, onChange, fileRef, uploading, uploadFn })
           {uploading ? 'Uploading...' : 'Browse Image'}
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => { if (e.target.files?.[0]) uploadFn(e.target.files[0], onChange) }} />
+        {sizeHint && <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)' }}>Recommended: {sizeHint}</span>}
         <input
           type="text"
           value={value || ''}
@@ -93,7 +94,7 @@ const PromoForm = ({ label, banner, setBanner, fileRef, uploading, uploadFn }) =
   <div style={{ paddingBottom: 20, marginBottom: 20, borderBottom: '1px solid var(--border-color, #e5e1d8)' }}>
     <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', color: 'var(--text-primary, #28241f)' }}>{label}</h4>
     <div style={S.grid}>
-      <ImageUploader value={banner.image} onChange={url => setBanner(prev => ({ ...prev, image: url }))} fileRef={fileRef} uploading={!!uploading} uploadFn={uploadFn} />
+      <ImageUploader value={banner.image} onChange={url => setBanner(prev => ({ ...prev, image: url }))} fileRef={fileRef} uploading={!!uploading} uploadFn={uploadFn} sizeHint="1440 x 400 pixels" />
       <Input label="Badge Text" value={banner.badge} onChange={v => setBanner(prev => ({ ...prev, badge: v }))} placeholder="e.g. AF WEEKLY SPECIAL" />
       <Input label="Title" value={banner.title} onChange={v => setBanner(prev => ({ ...prev, title: v }))} placeholder="e.g. Bring comfort home." />
       <Input label="Subtitle" value={banner.subtitle} onChange={v => setBanner(prev => ({ ...prev, subtitle: v }))} full placeholder="Subtitle copy..." />
@@ -318,7 +319,7 @@ function HomeManager({ token }) {
               {editingSlide !== null ? `Edit Slide #${editingSlide + 1}` : 'Add New Slide'}
             </h4>
             <div style={S.grid}>
-              <ImageUploader value={slideDraft.image} onChange={url => setSlideDraft(p => ({ ...p, image: url }))} fileRef={slideFileRef} uploading={!!uploadingField} uploadFn={uploadImage} />
+              <ImageUploader value={slideDraft.image} onChange={url => setSlideDraft(p => ({ ...p, image: url }))} fileRef={slideFileRef} uploading={!!uploadingField} uploadFn={uploadImage} sizeHint="1920 x 520 pixels" />
               <Input label="Tagline" value={slideDraft.tagline} onChange={v => setSlideDraft(p => ({ ...p, tagline: v }))} placeholder="e.g. AF FURNISHINGS" />
               <Input label="Title" value={slideDraft.title} onChange={v => setSlideDraft(p => ({ ...p, title: v }))} placeholder="e.g. Comfort made for everyday living." />
               <Input label="Description" value={slideDraft.description} onChange={v => setSlideDraft(p => ({ ...p, description: v }))} full placeholder="Short description..." />
@@ -390,8 +391,8 @@ function HomeManager({ token }) {
             />
           </div>
           <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <ImageUploader label="Image 1 (Main)" value={aboutForm.image_1} onChange={url => setAboutForm(p => ({ ...p, image_1: url }))} fileRef={aboutImg1Ref} uploading={!!uploadingField} uploadFn={uploadImage} />
-            <ImageUploader label="Image 2 (Secondary)" value={aboutForm.image_2} onChange={url => setAboutForm(p => ({ ...p, image_2: url }))} fileRef={aboutImg2Ref} uploading={!!uploadingField} uploadFn={uploadImage} />
+            <ImageUploader label="Image 1 (Main)" value={aboutForm.image_1} onChange={url => setAboutForm(p => ({ ...p, image_1: url }))} fileRef={aboutImg1Ref} uploading={!!uploadingField} uploadFn={uploadImage} sizeHint="900 x 600 pixels" />
+            <ImageUploader label="Image 2 (Secondary)" value={aboutForm.image_2} onChange={url => setAboutForm(p => ({ ...p, image_2: url }))} fileRef={aboutImg2Ref} uploading={!!uploadingField} uploadFn={uploadImage} sizeHint="900 x 600 pixels" />
           </div>
           <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
             <Input label="Address" value={aboutForm.address} onChange={v => setAboutForm(p => ({ ...p, address: v }))} placeholder="e.g. Auckland, NZ" />

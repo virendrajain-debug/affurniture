@@ -12,7 +12,7 @@ function SocialIcon({ platform }) {
 function Footer() {
   const [socialLinks, setSocialLinks] = useState([])
   const [about, setAbout] = useState({})
-  const [logoUrl, setLogoUrl] = useState('/logo.png')
+  const [logoUrl, setLogoUrl] = useState('/logo.webp')
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
 

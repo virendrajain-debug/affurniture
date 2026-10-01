@@ -1,5 +1,5 @@
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { API_BASE, getAssetUrl } from './config'
 import Header from './components/Header'
 import Hero from './components/Hero'
@@ -11,21 +11,22 @@ import Stores from './components/Stores'
 import AboutSection from './components/AboutSection'
 import Testimonials from './components/Testimonials'
 import Footer from './components/Footer'
-import ContactPage from './pages/ContactPage'
-import TermsPage from './pages/TermsPage'
-import AboutPage from './pages/AboutPage'
-import WinzPage from './pages/WinzPage'
-import WinzQuote from './pages/WinzQuote'
-import ProductDetail from './pages/ProductDetail'
-import PrivacyPage from './pages/PrivacyPage'
-import DeliveryInfoPage from './pages/DeliveryInfoPage'
-import ReturnsPage from './pages/ReturnsPage'
-import ApplyForFinance from './pages/ApplyForFinance'
-import CategoryPage from './pages/CategoryPage'
-import OnSalePage from './pages/OnSalePage'
-import StoreLocationPage from './pages/StoreLocationPage'
-import SearchPage from './pages/SearchPage'
-import DynamicPage from './pages/DynamicPage'
+
+const ContactPage = lazy(() => import('./pages/ContactPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const WinzPage = lazy(() => import('./pages/WinzPage'))
+const WinzQuote = lazy(() => import('./pages/WinzQuote'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const DeliveryInfoPage = lazy(() => import('./pages/DeliveryInfoPage'))
+const ReturnsPage = lazy(() => import('./pages/ReturnsPage'))
+const ApplyForFinance = lazy(() => import('./pages/ApplyForFinance'))
+const CategoryPage = lazy(() => import('./pages/CategoryPage'))
+const OnSalePage = lazy(() => import('./pages/OnSalePage'))
+const StoreLocationPage = lazy(() => import('./pages/StoreLocationPage'))
+const SearchPage = lazy(() => import('./pages/SearchPage'))
+const DynamicPage = lazy(() => import('./pages/DynamicPage'))
 import './App.css'
 
 function ScrollToTop() {
@@ -112,24 +113,26 @@ function App() {
   return (
     <HashRouter>
       <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/product/:slug" element={<ProductDetail />} />
-        <Route path="/category/:slug" element={<CategoryPage />} />
-        <Route path="/on-sale" element={<OnSalePage />} />
-        <Route path="/store-locations" element={<StoreLocationPage />} />
-        <Route path="/apply-for-finance" element={<ApplyForFinance />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/winz" element={<WinzPage />} />
-        <Route path="/winz-quote" element={<WinzQuote />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/privacy-policy" element={<PrivacyPage />} />
-        <Route path="/delivery-info" element={<DeliveryInfoPage />} />
-        <Route path="/returns" element={<ReturnsPage />} />
-        <Route path="/page/:slug" element={<DynamicPage />} />
-      </Routes>
+      <Suspense fallback={<div style={{display:'grid',placeItems:'center',height:'100vh',font:'500 16px "DM Sans"',color:'#72695d'}}>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/product/:slug" element={<ProductDetail />} />
+          <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/on-sale" element={<OnSalePage />} />
+          <Route path="/store-locations" element={<StoreLocationPage />} />
+          <Route path="/apply-for-finance" element={<ApplyForFinance />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/winz" element={<WinzPage />} />
+          <Route path="/winz-quote" element={<WinzQuote />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPage />} />
+          <Route path="/delivery-info" element={<DeliveryInfoPage />} />
+          <Route path="/returns" element={<ReturnsPage />} />
+          <Route path="/page/:slug" element={<DynamicPage />} />
+        </Routes>
+      </Suspense>
     </HashRouter>
   )
 }

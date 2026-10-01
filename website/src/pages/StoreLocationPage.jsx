@@ -43,7 +43,7 @@ function StoreLocationPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=2000&q=85" alt="Our Stores" />
+          <img src="https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&w=1200&q=80" alt="Our Stores" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>VISIT US</span>
             <h1>Our Store Locations</h1>

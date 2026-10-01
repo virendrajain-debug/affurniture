@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { stripHtml } from '../utils'
 
 function ProductGrid({ sectionId, label, title, category, compact }) {
   const [products, setProducts] = useState([])
@@ -110,6 +111,8 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
             const imgSrc = getImg(p)
             const weekly = getWeeklyPrice(p.selling_price || p.mrp)
             const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
+            const desc = stripHtml(p.description)
+            const shortDesc = desc ? desc.substring(0, 80) + (desc.length > 80 ? '...' : '') : ''
             return (
               <article key={p.id} className="product-card">
                 <Link to={`/product/${p.slug || p.id}`} className="product-card-img">
@@ -120,7 +123,7 @@ function ProductGrid({ sectionId, label, title, category, compact }) {
                   <Link to={`/product/${p.slug || p.id}`} className="product-card-link">
                     <h3>{p.name}</h3>
                   </Link>
-                  <p className="product-card-desc">{p.description ? p.description.substring(0, 80) + (p.description.length > 80 ? '...' : '') : ''}</p>
+                  <p className="product-card-desc">{shortDesc}</p>
                   <div className="product-pricing">
                     {p.selling_price && (
                       <span className="product-price">${Number(p.selling_price).toLocaleString()}</span>

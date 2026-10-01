@@ -6,7 +6,6 @@
 //      * Featured on Homepage toggle
 //      * On Sale toggle & Discounted Price calculation
 //      * Interactive Hex Color Palette + Custom Color Swatches
-//      * Dimensions (Width x Depth x Height & formatted text)
 //      * Sizes & Configurations chips
 //      * Material, Warranty, and Delivery Terms
 //      * Multi-image Gallery with Drag-and-drop, URL input, and Primary Image selector
@@ -165,9 +164,8 @@ function ProductList({ token }) {
     discounted_price: '',
     weekly_price: '',
     stock: 10,
-    material: '',
-    dimensions: '',
-    weight: '',
+      material: '',
+      weight: '',
     warranty: '5 Years Frame & Foam Warranty',
     delivery_info: '2-5 business days across Auckland / Nationwide delivery',
     featured: false,
@@ -178,7 +176,7 @@ function ProductList({ token }) {
 
   const [form, setForm] = useState(initialForm)
 
-  // Images State - Thumbnail (1) + Extra Review Images (up to 5)
+  // Images State - Thumbnail (1) + Extra Review Images (up to 20)
   const [thumbnailImage, setThumbnailImage] = useState('')
   const [newThumbnailFile, setNewThumbnailFile] = useState(null)
   const [extraImages, setExtraImages] = useState([])
@@ -194,6 +192,8 @@ function ProductList({ token }) {
 
   // Sizes State
   const [selectedSizes, setSelectedSizes] = useState([])
+  const [sizePrices, setSizePrices] = useState({})   // { "Queen": "1299" }
+  const [sizeMrps, setSizeMrps] = useState({})       // { "Queen": "1599" }
   const [customSizeInput, setCustomSizeInput] = useState('')
 
   const authToken = getAuthToken(token)
@@ -240,6 +240,8 @@ function ProductList({ token }) {
     setDirectImageUrl('')
     setSelectedColors([])
     setSelectedSizes([])
+    setSizePrices({})
+    setSizeMrps({})
     setActiveProductId(null)
     setIsCreating(true)
     setModalOpen(true)
@@ -268,7 +270,6 @@ function ProductList({ token }) {
       weekly_price: product.weekly_price || '',
       stock: product.stock !== undefined ? product.stock : 10,
       material: product.material || '',
-      dimensions: product.dimensions || '',
       weight: product.weight || '',
       warranty: product.warranty || '5 Years Frame & Foam Warranty',
       delivery_info: product.delivery_info || '2-5 business days across Auckland',
@@ -287,7 +288,7 @@ function ProductList({ token }) {
     const validImgs = imgs.filter(Boolean)
     if (validImgs.length > 0) {
       setThumbnailImage(validImgs[0])
-      setExtraImages(validImgs.slice(1, 6))
+      setExtraImages(validImgs.slice(1, 21))
     } else {
       setThumbnailImage('')
       setExtraImages([])
@@ -310,12 +311,39 @@ function ProductList({ token }) {
       setSelectedColors([])
     }
 
-    // Parse sizes
-    if (product.size) {
-      setSelectedSizes(product.size.split(',').map(s => s.trim()).filter(Boolean))
-    } else {
-      setSelectedSizes([])
+    // Parse sizes + per-size prices
+    const sizeList = product.size ? product.size.split(',').map(s => s.trim()).filter(Boolean) : []
+    setSelectedSizes(sizeList)
+
+    let parsedSizePrices = {}
+    try {
+      parsedSizePrices = product.size_prices ? JSON.parse(product.size_prices) : {}
+    } catch {
+      parsedSizePrices = {}
     }
+    const nextSizePrices = {}
+    sizeList.forEach(name => {
+      const value = parsedSizePrices[name]
+      if (value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value))) {
+        nextSizePrices[name] = String(value)
+      }
+    })
+    setSizePrices(nextSizePrices)
+
+    let parsedSizeMrps = {}
+    try {
+      parsedSizeMrps = product.size_mrps ? JSON.parse(product.size_mrps) : {}
+    } catch {
+      parsedSizeMrps = {}
+    }
+    const nextSizeMrps = {}
+    sizeList.forEach(name => {
+      const value = parsedSizeMrps[name]
+      if (value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value))) {
+        nextSizeMrps[name] = String(value)
+      }
+    })
+    setSizeMrps(nextSizeMrps)
 
     setModalOpen(true)
     document.body.style.overflow = 'hidden'
@@ -375,6 +403,14 @@ function ProductList({ token }) {
     }
   }
 
+  const handleSizePriceChange = (size, value) => {
+    setSizePrices(prev => ({ ...prev, [size]: value }))
+  }
+
+  const handleSizeMrpChange = (size, value) => {
+    setSizeMrps(prev => ({ ...prev, [size]: value }))
+  }
+
   // Direct image URL adder
   const handleAddDirectImageUrl = () => {
     const url = directImageUrl.trim()
@@ -382,14 +418,14 @@ function ProductList({ token }) {
     if (!url.startsWith('http')) return showToast('Please enter a valid image URL (e.g. https://...)', 'warning')
     if (dragTarget === 'thumbnail') {
       setThumbnailImage(url)
-    } else if (dragTarget === 'extra' && extraImages.length < 5) {
+    } else if (dragTarget === 'extra' && extraImages.length < 20) {
       setExtraImages(prev => [...prev, url])
     } else {
       // Default: add to extras if under limit
-      if (extraImages.length < 5) {
+      if (extraImages.length < 20) {
         setExtraImages(prev => [...prev, url])
       } else {
-        return showToast('Maximum 5 extra review images allowed', 'warning')
+        return showToast('Maximum 20 extra review images allowed', 'warning')
       }
     }
     setDirectImageUrl('')
@@ -405,9 +441,9 @@ function ProductList({ token }) {
       setNewThumbnailFile(files[0])
       showToast('Thumbnail image queued for upload', 'info')
     } else {
-      const remaining = 5 - extraImages.length - newExtraFiles.length
+      const remaining = 20 - extraImages.length - newExtraFiles.length
       if (remaining <= 0) {
-        showToast('Maximum 5 extra review images allowed', 'warning')
+        showToast('Maximum 20 extra review images allowed', 'warning')
         return
       }
       const accepted = files.slice(0, remaining)
@@ -426,9 +462,9 @@ function ProductList({ token }) {
       setNewThumbnailFile(files[0])
       showToast('Thumbnail image queued for upload', 'info')
     } else {
-      const remaining = 5 - extraImages.length - newExtraFiles.length
+      const remaining = 20 - extraImages.length - newExtraFiles.length
       if (remaining <= 0) {
-        showToast('Maximum 5 extra review images allowed', 'warning')
+        showToast('Maximum 20 extra review images allowed', 'warning')
         return
       }
       const accepted = files.slice(0, remaining)
@@ -462,7 +498,6 @@ function ProductList({ token }) {
       formData.append('weekly_price', form.weekly_price || '')
       formData.append('stock', form.stock || 0)
       formData.append('material', form.material || '')
-      formData.append('dimensions', form.dimensions || '')
       formData.append('weight', form.weight || '')
       formData.append('warranty', form.warranty || '')
       formData.append('delivery_info', form.delivery_info || '')
@@ -474,6 +509,26 @@ function ProductList({ token }) {
       const colorString = selectedColors.map(c => `${c.name} (${c.hex})`).join(', ')
       formData.append('color', colorString)
       formData.append('size', selectedSizes.join(', '))
+
+      // Per-size prices: only sizes that are still selected are kept
+      const sizePriceMap = {}
+      selectedSizes.forEach(name => {
+        const raw = sizePrices[name]
+        if (raw === undefined || raw === null || raw === '') return
+        const price = Number(raw)
+        if (Number.isFinite(price) && price >= 0) sizePriceMap[name] = price
+      })
+      formData.append('size_prices', JSON.stringify(sizePriceMap))
+
+      // Per-size MRP (strikethrough price): only sizes that are still selected are kept
+      const sizeMrpMap = {}
+      selectedSizes.forEach(name => {
+        const raw = sizeMrps[name]
+        if (raw === undefined || raw === null || raw === '') return
+        const price = Number(raw)
+        if (Number.isFinite(price) && price >= 0) sizeMrpMap[name] = price
+      })
+      formData.append('size_mrps', JSON.stringify(sizeMrpMap))
 
       // Build ordered images array: thumbnail first, then extras
       const orderedExisting = []
@@ -886,7 +941,7 @@ function ProductList({ token }) {
                   {isCreating ? 'Add New Product' : `Edit Product: ${form.name}`}
                 </h3>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  Configure product specifications, live pricing, image gallery, color palette, and dimensions.
+                  Configure product specifications, live pricing, image gallery, and color palette.
                 </span>
               </div>
               <button
@@ -1132,7 +1187,7 @@ function ProductList({ token }) {
                           Click or drag to upload thumbnail
                         </p>
                         <span style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                          PNG, JPG, WebP. This is the main product image.
+                          PNG, JPG, WebP &middot; Recommended: <strong>1200 x 900 px</strong> (4:3) &middot; Max 5 MB
                         </span>
                       </>
                     )}
@@ -1143,7 +1198,7 @@ function ProductList({ token }) {
                 {/* Extra Review Images Section */}
                 <div style={{ background: 'var(--sidebar-bg)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
                   <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontWeight: 700 }}>
-                    Extra Review Images (up to 5)
+                    Extra Review Images (up to 20)
                   </label>
 
                   {/* Add by URL */}
@@ -1224,7 +1279,7 @@ function ProductList({ token }) {
                   )}
 
                   {/* Dropzone for extras */}
-                  {(extraImages.length + newExtraFiles.length) < 5 && (
+                  {(extraImages.length + newExtraFiles.length) < 20 && (
                     <div
                       onDrop={(e) => handleDrop(e, 'extra')}
                       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); setDragTarget('extra') }}
@@ -1248,24 +1303,24 @@ function ProductList({ token }) {
                         Drag & drop or click to add more images
                       </p>
                       <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>
-                        {5 - extraImages.length - newExtraFiles.length} slot(s) remaining
+                        {20 - extraImages.length - newExtraFiles.length} slot(s) remaining &middot; Recommended: <strong>1200 x 900 px</strong> (4:3) &middot; Max 5 MB each
                       </span>
                       <input id="extra-file-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => handleFileSelect(e, 'extra')} />
                     </div>
                   )}
 
-                  {(extraImages.length + newExtraFiles.length) >= 5 && (
+                  {(extraImages.length + newExtraFiles.length) >= 20 && (
                     <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center', padding: '8px' }}>
-                      Maximum 5 extra review images reached.
+                      Maximum 20 extra review images reached.
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* Section 4: Color Palette, Dimensions & Specifications */}
+              {/* Section 4: Color Palette & Specifications */}
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)', display: 'block', marginBottom: '10px' }}>
-                  04. Color Palette, Dimensions & Specifications
+                  04. Color Palette & Specifications
                 </span>
                 
                 {/* Color Palette Builder */}
@@ -1361,20 +1416,8 @@ function ProductList({ token }) {
                   )}
                 </div>
 
-                {/* Dimensions & Specifications */}
+                {/* Specifications */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Dimensions (e.g. 210cm W x 95cm D x 85cm H)</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      name="dimensions"
-                      value={form.dimensions}
-                      onChange={handleFormChange}
-                      placeholder="e.g. 210cm W x 95cm D x 85cm H"
-                    />
-                  </div>
-
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Material / Fabric / Timber</label>
                     <input
@@ -1455,6 +1498,63 @@ function ProductList({ token }) {
                       + Add Size
                     </button>
                   </div>
+
+                  {/* Price per size */}
+                  {selectedSizes.length > 0 && (
+                    <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                      <p style={{ margin: '0 0 8px', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', color: 'var(--accent-color, #d4af37)' }}>
+                        Price per size
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
+                        {selectedSizes.map(size => (
+                          <div
+                            key={size}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'var(--header-bg)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                            }}
+                          >
+                            <span
+                              title={size}
+                              style={{ fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                            >
+                              {size}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700 }} title="Regular price / MRP">MRP</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={sizeMrps[size] ?? ''}
+                              onChange={(e) => handleSizeMrpChange(size, e.target.value)}
+                              placeholder="0"
+                              aria-label={`MRP for ${size}`}
+                              style={{ width: '70px', padding: '5px 7px', fontSize: '0.8rem', background: 'var(--sidebar-bg)', border: '1px solid var(--border-color)', borderRadius: '5px', color: 'var(--text-primary)', outline: 'none' }}
+                            />
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700 }}>$</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={sizePrices[size] ?? ''}
+                              onChange={(e) => handleSizePriceChange(size, e.target.value)}
+                              placeholder="0"
+                              aria-label={`Price for ${size}`}
+                              style={{ width: '70px', padding: '5px 7px', fontSize: '0.8rem', background: 'var(--sidebar-bg)', border: '1px solid var(--border-color)', borderRadius: '5px', color: 'var(--text-primary)', outline: 'none' }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                        MRP is the regular (struck-through) price, $ is the sale price. Leave blank to fall back to the default product price for that size.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

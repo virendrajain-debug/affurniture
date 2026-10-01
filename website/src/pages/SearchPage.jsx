@@ -36,7 +36,7 @@ function SearchPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=2000&q=85" alt="Search" />
+          <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=80" alt="Search" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>SEARCH</span>
             <h1>Search Results</h1>

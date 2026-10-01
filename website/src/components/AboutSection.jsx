@@ -28,8 +28,8 @@ function AboutSection() {
       </div>
       <div className="about-grid">
         <div className="about-image-col">
-          <img src={getAssetUrl(about?.image_1) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=85'} alt="Our showroom" className="about-img-main" />
-          <img src={getAssetUrl(about?.image_2) || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=600&q=85'} alt="Quality furniture" className="about-img-secondary" />
+          <img src={getAssetUrl(about?.image_1) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=85'} alt="Our showroom" className="about-img-main" loading="lazy" decoding="async" />
+          <img src={getAssetUrl(about?.image_2) || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=600&q=85'} alt="Quality furniture" className="about-img-secondary" loading="lazy" decoding="async" />
         </div>
         <div className="about-text-col">
           {about?.tagline && <h3>{about.tagline}</h3>}

@@ -105,7 +105,6 @@ function WinzInventory({ token }) {
     setUploadingImage(true)
     const formData = new FormData()
     formData.append('image', file)
-    formData.append('file', file)
 
     try {
       const res = await fetch(`${API_BASE}/api/upload`, {
@@ -419,6 +418,7 @@ function WinzInventory({ token }) {
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', display: 'block' }}>
                       {uploadingImage ? 'Uploading...' : '+ Click to upload product image'}
                     </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #888)', display: 'block', marginTop: '4px' }}>Recommended: 600 x 600 pixels</span>
                   </div>
                 )}
                 <input

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { API_BASE, getAssetUrl } from '../config'
+import { stripHtml } from '../utils'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
@@ -11,7 +12,7 @@ function CategoryPage() {
   const { slug } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const subSlug = searchParams.get('sub') || ''
-  const subId = searchParams.get('sub_id') || ''
+  const subId = searchParams.get('sub_id') || searchParams.get('subcategory_id') || ''
   const currentPage = parseInt(searchParams.get('page')) || 1
 
   const [products, setProducts] = useState([])
@@ -295,6 +296,8 @@ function CategoryPage() {
                       const imgSrc = getImg(p)
                       const hasDiscount = p.selling_price && p.mrp && Number(p.selling_price) < Number(p.mrp)
                       const price = p.selling_price || p.mrp
+                      const desc = stripHtml(p.description)
+                      const shortDesc = desc ? (desc.length > 80 ? desc.substring(0, 80) + '...' : desc) : `Comfortable ${p.category_name || 'furniture'} piece.`
                       return (
                         <article key={p.id} className="catalog-card">
                           <Link to={`/product/${p.slug || p.id}`} className="catalog-card-image">
@@ -304,7 +307,7 @@ function CategoryPage() {
                             </div>
                           </Link>
                           <div className="catalog-card-body">
-                            <p className="catalog-card-desc">{p.description ? (p.description.length > 80 ? p.description.substring(0, 80) + '...' : p.description) : `Comfortable ${p.category_name || 'furniture'} piece.`}</p>
+                            <p className="catalog-card-desc">{shortDesc}</p>
                             <div className="catalog-card-pricing">
                               {hasDiscount ? (
                                 <>

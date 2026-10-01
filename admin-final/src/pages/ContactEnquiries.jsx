@@ -161,7 +161,7 @@ function ContactEnquiries({ token }) {
           background: var(--card-bg, rgba(255, 255, 255, 0.03));
           border: 1px solid var(--border-color);
           border-radius: 14px;
-          overflow: hidden;
+          overflow-x: auto;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 

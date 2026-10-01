@@ -24,7 +24,7 @@ function DeliveryInfoPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={getAssetUrl(banners.delivery_info_banner) || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=2000&q=85'} alt="Delivery Information" />
+          <img src={getAssetUrl(banners.delivery_info_banner) || 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=80'} alt="Delivery Information" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>SHIPPING</span>
             <h1>Delivery Information</h1>

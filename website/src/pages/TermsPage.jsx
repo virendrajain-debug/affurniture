@@ -24,7 +24,7 @@ function TermsPage() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner">
-          <img src={getAssetUrl(banners.terms_banner) || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=2000&q=85'} alt="Terms and Conditions" />
+          <img src={getAssetUrl(banners.terms_banner) || 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80'} alt="Terms and Conditions" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>LEGAL</span>
             <h1>Terms &amp; Conditions</h1>

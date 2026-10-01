@@ -72,7 +72,7 @@ function ApplyForFinance() {
         <Header />
         <main className="about-page">
           <section className="terms-hero-banner" style={{ height: '400px' }}>
-            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85" alt="Finance" />
+            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80" alt="Finance" loading="lazy" decoding="async" />
             <div className="terms-hero-overlay">
               <span>FINANCE</span>
               <h1>Apply for Finance</h1>
@@ -99,7 +99,7 @@ function ApplyForFinance() {
       <Header />
       <main className="about-page">
         <section className="terms-hero-banner" style={{ height: '400px' }}>
-          <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=2000&q=85" alt="Finance" />
+          <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1200&q=80" alt="Finance" loading="lazy" decoding="async" />
           <div className="terms-hero-overlay">
             <span>FINANCE</span>
             <h1>Apply for Finance</h1>

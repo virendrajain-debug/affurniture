@@ -51,7 +51,7 @@ function Stores() {
         {stores.map((s, i) => (
           <article key={s.id || i} className={`fade-in stagger-${i + 1}`}>
             <div className="store-img-wrap">
-              <img src={s.img} alt={s.city} />
+              <img src={s.img} alt={s.city} loading="lazy" decoding="async" />
             </div>
             <div className="store-content">
               <h3>{s.city}</h3>
